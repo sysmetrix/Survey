@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>설문 교차분석 대시보드</title>
+<title>설문 교차분석 대시보드 | 부천여성청소년재단</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -11,50 +11,63 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:#1a1a1a}
-:root{--accent:#2563eb;--accent-light:#dbeafe;--border:#e8e5df;--bg-alt:#faf9f7;--text-muted:#8a857e;--text-sec:#5a5650;--success:#16a34a;--danger:#dc2626;--warning:#d97706}
-
-/* Layout */
-.header{background:#fff;border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.header-title{font-size:14px;font-weight:700;color:var(--accent)}
-.header-sub{font-size:12px;color:var(--text-muted);margin-left:10px}
-.container{display:flex;min-height:calc(100vh - 48px)}
+:root{--accent:#1d4ed8;--accent2:#2563eb;--accent-light:#dbeafe;--border:#e8e5df;--bg-alt:#faf9f7;--text-muted:#8a857e;--text-sec:#5a5650;--success:#16a34a;--danger:#dc2626;--warning:#d97706;--brand:#1e3a5f}
+.header{background:#fff;border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-title{font-size:14px;font-weight:700;color:var(--brand)}
+.header-sub{font-size:12px;color:var(--text-muted)}
+.header-right{display:flex;align-items:center;gap:6px}
+.container{display:flex;min-height:calc(100vh - 46px)}
 .sidebar{width:230px;background:#fff;border-right:1px solid var(--border);padding:14px 12px;overflow-y:auto;flex-shrink:0}
 .main{flex:1;padding:16px 22px;overflow-y:auto}
-
-/* Upload Screen */
-.upload-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8f7f4}
-.upload-box{max-width:480px;width:100%;padding:0 20px;text-align:center}
-.upload-label{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:0.1em;margin-bottom:8px}
-.upload-h1{font-size:26px;font-weight:800;letter-spacing:-0.03em;line-height:1.4;margin-bottom:12px}
-.upload-desc{font-size:14px;color:var(--text-sec);line-height:1.7;margin-bottom:32px}
-.drop-zone{border:2px dashed var(--border);border-radius:14px;padding:44px 28px;cursor:pointer;transition:all .2s;background:#fff}
-.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--accent-light)}
-.drop-zone .icon{font-size:40px;margin-bottom:14px}
-.drop-zone .label{font-size:15px;font-weight:600;margin-bottom:4px}
+.upload-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#f8f7f4 0%,#eef2f7 100%)}
+.upload-box{max-width:540px;width:100%;padding:0 20px}
+.brand-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px;justify-content:center}
+.brand-icon{width:44px;height:44px;background:var(--brand);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff}
+.brand-text{text-align:left}
+.brand-name{font-size:15px;font-weight:800;color:var(--brand)}
+.brand-dept{font-size:11px;color:var(--text-sec);font-weight:500}
+.upload-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--accent2);background:var(--accent-light);padding:4px 12px;border-radius:99px;margin-bottom:10px}
+.upload-h1{font-size:24px;font-weight:800;letter-spacing:-0.03em;line-height:1.4;margin-bottom:6px;text-align:center;color:var(--brand)}
+.upload-h2{font-size:14px;color:var(--text-sec);text-align:center;margin-bottom:24px;line-height:1.6}
+.drop-zone{border:2px dashed var(--border);border-radius:14px;padding:36px 24px;cursor:pointer;transition:all .2s;background:#fff;text-align:center}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent2);background:var(--accent-light)}
+.drop-zone .icon{font-size:36px;margin-bottom:10px}
+.drop-zone .label{font-size:14px;font-weight:600;margin-bottom:3px}
 .drop-zone .hint{font-size:12px;color:var(--text-muted)}
-.demo-btn{margin-top:20px;padding:10px 22px;font-size:13px;font-weight:600;background:transparent;border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text-sec);transition:all .15s}
-.demo-btn:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent)}
-.guide-box{margin-top:32px;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid var(--border);text-align:left;font-size:12px;color:var(--text-sec);line-height:1.8}
+.demo-btn{margin-top:16px;padding:10px 20px;font-size:13px;font-weight:600;background:#fff;border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text-sec);transition:all .15s;font-family:inherit}
+.demo-btn:hover{background:var(--accent-light);color:var(--accent2);border-color:var(--accent2)}
+.proc-guide{margin-top:24px;background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden}
+.proc-title{padding:14px 18px;font-size:13px;font-weight:700;color:var(--brand);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.proc-steps{padding:16px 18px}
+.proc-step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+.proc-step:last-child{margin-bottom:0}
+.proc-num{width:28px;height:28px;border-radius:50%;background:var(--accent-light);color:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.proc-content{flex:1}
+.proc-content strong{font-size:13px;display:block;margin-bottom:2px}
+.proc-content span{font-size:12px;color:var(--text-sec);line-height:1.6}
+.guide-box{margin-top:16px;padding:14px 18px;background:#fff;border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--text-sec);line-height:1.8}
 .guide-box strong{color:#1a1a1a}
+/* History link on upload */
+.history-link{margin-top:16px;text-align:center}
+.history-link a{font-size:13px;color:var(--accent2);text-decoration:none;font-weight:600;cursor:pointer}
+.history-link a:hover{text-decoration:underline}
 
-/* Sidebar */
 .sb-label{font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:5px}
 .sb-select{width:100%;padding:6px 8px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--bg-alt);outline:none;font-family:inherit}
 .sb-btns{display:flex;gap:4px;margin-bottom:6px}
-.sb-btn{flex:1;padding:3px;font-size:10px;border:none;border-radius:4px;cursor:pointer;font-weight:600}
-.sb-btn-all{background:var(--accent-light);color:var(--accent)}
+.sb-btn{flex:1;padding:3px;font-size:10px;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:inherit}
+.sb-btn-all{background:var(--accent-light);color:var(--accent2)}
 .sb-btn-none{background:var(--bg-alt);color:var(--text-muted);border:1px solid var(--border)}
 .cb-row{display:flex;align-items:center;gap:5px;padding:4px 5px;border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:1px}
 .cb-row.active{background:var(--accent-light)}
-.cb-row input{accent-color:var(--accent);width:14px;height:14px}
+.cb-row input{accent-color:var(--accent2);width:14px;height:14px}
 .sb-info{margin-top:12px;padding:8px 10px;background:var(--bg-alt);border-radius:6px;font-size:11px;color:var(--text-muted);line-height:1.8}
 
-/* Tabs */
 .tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
 .tab-btn{padding:6px 12px;font-size:12px;font-weight:500;background:transparent;color:var(--text-sec);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s}
-.tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.tab-btn.active{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700}
 
-/* Cards */
 .card{background:#fff;border-radius:10px;border:1px solid var(--border);padding:14px 18px;margin-bottom:16px}
 .card-title{font-size:14px;font-weight:700;margin-bottom:3px}
 .card-sub{font-size:11px;color:var(--text-muted);margin-bottom:12px}
@@ -63,15 +76,14 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .stat-label{font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px}
 .stat-val{font-size:21px;font-weight:800}
 
-/* Heatmap table */
 .ht{width:100%;border-collapse:collapse;font-size:12px}
 .ht th{padding:7px 6px;border-bottom:2px solid var(--border);color:var(--text-sec);font-weight:600;text-align:center}
 .ht th:first-child{text-align:left;min-width:70px}
-.ht td{padding:5px 6px;border-bottom:1px solid #f0ede8;text-align:center;font-weight:700;transition:background .2s}
+.ht td{padding:5px 6px;border-bottom:1px solid #f0ede8;text-align:center;font-weight:700}
 .ht td:first-child{text-align:left;font-weight:600}
+.total-row td{background:#f0f4ff !important;color:var(--brand) !important;font-weight:800 !important;border-top:2px solid var(--accent2);border-bottom:2px solid var(--accent2)}
 
-/* Top/Bottom */
-.tb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .tb-box{border-radius:8px;padding:11px 14px;font-size:12px}
 .tb-top{background:#f0fdf4;border:1px solid #bbf7d0}
 .tb-bot{background:#fef2f2;border:1px solid #fecaca}
@@ -79,85 +91,146 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .tb-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06)}
 .tb-row:last-child{border:none}
 
-/* Detail table */
 .dt{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
 .dt th{padding:6px 7px;border-bottom:2px solid var(--border);color:var(--text-sec);font-weight:600;text-align:center;background:var(--bg-alt)}
 .dt th:first-child{text-align:left}
 .dt td{padding:5px 7px;border-bottom:1px solid #f0ede8;text-align:center}
 .dt td:first-child{text-align:left;font-weight:600}
-.dt-label{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);padding:3px 8px;background:var(--accent-light);border-radius:4px;margin-bottom:6px}
+.dt .total-row td{background:#f0f4ff;color:var(--brand);font-weight:800;border-top:2px solid var(--accent2)}
+.dt-label{display:inline-block;font-size:12px;font-weight:700;color:var(--accent2);padding:3px 8px;background:var(--accent-light);border-radius:4px;margin-bottom:6px}
+
+.analysis-box{background:linear-gradient(135deg,#fefefe,#f8faff);border:1px solid #d0d9e8;border-radius:10px;padding:18px 20px;margin-bottom:16px;line-height:1.9;font-size:13px;color:#2d3748}
+.analysis-box h3{font-size:14px;font-weight:700;color:var(--brand);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.analysis-section{margin-bottom:12px}
+.analysis-section:last-child{margin-bottom:0}
+.analysis-highlight{background:#fef3c7;padding:1px 5px;border-radius:3px;font-weight:600}
+.analysis-good{color:var(--success);font-weight:700}
+.analysis-bad{color:var(--danger);font-weight:700}
+.abtn-row{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.abtn{padding:6px 14px;font-size:11px;font-weight:600;border:1px solid #bfdbfe;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s}
+.abtn-copy{background:var(--accent-light);color:var(--accent2)}
+.abtn-docx{background:#f0fdf4;color:var(--success);border-color:#bbf7d0}
+.abtn-gdoc{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.abtn:hover{opacity:.8}
+
+/* Export buttons in header */
+.exp-btn{padding:5px 10px;font-size:11px;font-weight:600;border-radius:5px;cursor:pointer;font-family:inherit;border:1px solid;transition:all .15s}
+.exp-docx{background:#f0fdf4;color:var(--success);border-color:#bbf7d0}
+.exp-gdoc{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.exp-btn:hover{opacity:.8}
+
+/* History */
+.hist-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;cursor:pointer;transition:all .15s}
+.hist-card:hover{border-color:var(--accent2);box-shadow:0 2px 8px rgba(37,99,235,.1)}
+.hist-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.hist-name{font-size:13px;font-weight:700;color:var(--brand)}
+.hist-date{font-size:11px;color:var(--text-muted)}
+.hist-stats{display:flex;gap:10px;font-size:11px;color:var(--text-sec)}
+.hist-stat{background:var(--bg-alt);padding:2px 8px;border-radius:4px}
+.hist-actions{display:flex;gap:4px;margin-top:8px}
+.hist-del{font-size:10px;color:var(--danger);background:none;border:1px solid #fecaca;border-radius:4px;padding:2px 8px;cursor:pointer;font-family:inherit}
+.hist-del:hover{background:#fef2f2}
+.hist-empty{text-align:center;padding:40px;color:var(--text-muted)}
 
 .chart-wrap{position:relative;width:100%;margin-bottom:8px}
 .footer{margin-top:20px;padding:10px 0;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);text-align:center}
-
-/* New file btn */
 .new-btn{padding:5px 12px;font-size:12px;font-weight:600;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text-sec);font-family:inherit}
-.new-btn:hover{background:var(--accent-light);color:var(--accent)}
-
+.new-btn:hover{background:var(--accent-light);color:var(--accent2)}
 .hidden{display:none}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--brand);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
 </style>
 </head>
 <body>
 
-<!-- ===== UPLOAD SCREEN ===== -->
+<div id="toast" class="toast"></div>
+
+<!-- UPLOAD SCREEN -->
 <div id="uploadScreen" class="upload-screen">
   <div class="upload-box">
-    <div class="upload-label">SURVEY CROSS-ANALYSIS</div>
-    <h1 class="upload-h1">설문 데이터<br>교차분석 대시보드</h1>
-    <p class="upload-desc">CSV 또는 Excel 파일을 업로드하면<br>교차집단별 만족도 분석이 자동으로 수행됩니다.</p>
+    <div class="brand-bar">
+      <div class="brand-icon">🏛️</div>
+      <div class="brand-text"><div class="brand-name">부천여성청소년재단</div><div class="brand-dept">전략경영실 전략기획부</div></div>
+    </div>
+    <div style="text-align:center"><span class="upload-badge">SURVEY CROSS-ANALYSIS</span></div>
+    <h1 class="upload-h1">사업 설문 데이터<br>교차분석 대시보드</h1>
+    <p class="upload-h2">부천여성청소년재단 사업 만족도 조사, 경영평가,<br>정책 수요 조사 등 설문 데이터의 교차집단 분석 도구</p>
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="icon">📂</div>
       <div class="label">파일을 드래그하거나 클릭하여 업로드</div>
       <div class="hint">.csv · .tsv · .xlsx · .xls</div>
     </div>
     <input type="file" id="fileInput" accept=".csv,.tsv,.xlsx,.xls" style="display:none">
-    <button class="demo-btn" onclick="loadDemo()">🧪 데모 데이터로 체험하기 (300명)</button>
+    <div style="text-align:center">
+      <button class="demo-btn" onclick="loadDemo()">🧪 데모 데이터로 체험하기 (300명)</button>
+    </div>
+    <div class="history-link"><a onclick="showHistoryPage()">📂 이전 분석 이력 보기 (<span id="histCount">0</span>건)</a></div>
+    <div class="proc-guide">
+      <div class="proc-title">📋 분석 절차 안내</div>
+      <div class="proc-steps">
+        <div class="proc-step"><div class="proc-num">1</div><div class="proc-content"><strong>데이터 준비</strong><span>Excel 또는 CSV 설문 결과 파일 준비. 1행 변수명, 2행부터 응답 데이터.</span></div></div>
+        <div class="proc-step"><div class="proc-num">2</div><div class="proc-content"><strong>파일 업로드</strong><span>위 영역에 파일 드래그 또는 클릭. 교차변수·척도변수 자동 감지.</span></div></div>
+        <div class="proc-step"><div class="proc-num">3</div><div class="proc-content"><strong>교차변수 선택</strong><span>좌측 사이드바에서 분석 기준(성별, 연령대, 지역 등) 선택.</span></div></div>
+        <div class="proc-step"><div class="proc-num">4</div><div class="proc-content"><strong>분석 결과 확인</strong><span>6개 탭에서 시각화와 자동 분석 리포트 확인.</span></div></div>
+        <div class="proc-step"><div class="proc-num">5</div><div class="proc-content"><strong>보고서 추출</strong><span>DOCX 또는 Google Docs 형식으로 전체 분석 결과를 문서로 내보내기.</span></div></div>
+      </div>
+    </div>
     <div class="guide-box">
       <strong>📌 데이터 형식 가이드</strong><br>
-      <strong>교차변수</strong> — 성별, 연령대, 지역, 신분 등 (범주형)<br>
+      <strong>교차변수</strong> — 성별, 연령대, 지역, 신분 등 (2~20개 범주)<br>
       <strong>척도변수</strong> — 1~5점 리커트 척도 (정수 값)<br>
-      <strong>1행</strong> — 변수명(헤더), <strong>2행부터</strong> — 응답 데이터<br>
       변수 유형은 자동 감지됩니다.
     </div>
   </div>
 </div>
 
-<!-- ===== DASHBOARD ===== -->
+<!-- HISTORY PAGE -->
+<div id="historyPage" class="hidden" style="min-height:100vh;background:#f8f7f4">
+  <div class="header">
+    <div class="header-left"><span class="header-title">📂 분석 이력</span></div>
+    <button class="new-btn" onclick="hideHistoryPage()">← 돌아가기</button>
+  </div>
+  <div style="max-width:700px;margin:0 auto;padding:24px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700;color:var(--brand)">저장된 분석 이력</div>
+      <button class="hist-del" onclick="clearAllHistory()" style="font-size:11px">🗑️ 전체 삭제</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
   <div class="header">
-    <div style="display:flex;align-items:center">
-      <span class="header-title">📊 설문 교차분석</span>
+    <div class="header-left">
+      <span class="header-title">🏛️ 부천여성청소년재단 · 설문 교차분석</span>
       <span class="header-sub" id="fileLabel"></span>
     </div>
-    <button class="new-btn" onclick="resetAll()">🔄 새 파일</button>
+    <div class="header-right">
+      <button class="exp-btn exp-docx" onclick="exportDocx()" title="Word 문서 다운로드">📥 DOCX</button>
+      <button class="exp-btn exp-gdoc" onclick="exportGoogleDocs()" title="Google Docs용 복사">📋 GDocs</button>
+      <button class="new-btn" onclick="resetAll()">🔄 새 파일</button>
+    </div>
   </div>
   <div class="container">
     <div class="sidebar">
-      <div style="margin-bottom:16px">
-        <div class="sb-label">🔀 교차변수</div>
-        <select class="sb-select" id="crossSelect" onchange="onCrossChange()"></select>
-      </div>
-      <div>
-        <div class="sb-label">📏 척도변수</div>
-        <div class="sb-btns">
-          <button class="sb-btn sb-btn-all" onclick="selectAllScales()">전체</button>
-          <button class="sb-btn sb-btn-none" onclick="clearScales()">초기화</button>
-        </div>
-        <div id="scaleList"></div>
-      </div>
+      <div style="margin-bottom:16px"><div class="sb-label">🔀 교차변수</div>
+        <select class="sb-select" id="crossSelect" onchange="onCrossChange()"></select></div>
+      <div><div class="sb-label">📏 척도변수</div>
+        <div class="sb-btns"><button class="sb-btn sb-btn-all" onclick="selectAllScales()">전체</button><button class="sb-btn sb-btn-none" onclick="clearScales()">초기화</button></div>
+        <div id="scaleList"></div></div>
       <div class="sb-info" id="sbInfo"></div>
     </div>
     <div class="main" id="mainArea">
       <div class="tabs" id="tabBar"></div>
       <div id="tabContent"></div>
-      <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 교차분석 대시보드 v1.0</div>
+      <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 교차분석 대시보드 v3.0</div>
     </div>
   </div>
 </div>
 
 <script>
-/* ===== STATE ===== */
-let DATA=[], CROSS=[], SCALE=[], currentCross="", selectedScales=[], currentTab="overview";
+let DATA=[],CROSS=[],SCALE=[],currentCross="",selectedScales=[],currentTab="overview",currentFileName="";
 const PALETTE=["#2563eb","#e11d48","#059669","#d97706","#7c3aed","#0891b2","#be123c","#4f46e5"];
 const PLIGHT=["#dbeafe","#ffe4e6","#d1fae5","#fef3c7","#ede9fe","#cffafe","#fecdd3","#e0e7ff"];
 const TABS=[
@@ -165,267 +238,373 @@ const TABS=[
   {id:"heat",label:"🔥 히트맵"},{id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"}
 ];
 let charts={};
-
-/* ===== STATS ===== */
 const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
 const sdev=a=>{if(a.length<2)return 0;const m=avg(a);return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/(a.length-1));};
 
-/* ===== DETECT ===== */
 function detect(data){
-  const hdrs=Object.keys(data[0]);
-  const cross=[],scale=[];
-  hdrs.forEach(h=>{
-    const vals=data.map(r=>r[h]);
-    const nums=vals.filter(v=>!isNaN(v)&&v!==""&&v!==null).map(Number);
-    const uq=[...new Set(nums)];
+  const hdrs=Object.keys(data[0]);const cross=[],scale=[];
+  hdrs.forEach(h=>{const vals=data.map(r=>r[h]);const nums=vals.filter(v=>!isNaN(v)&&v!==""&&v!==null).map(Number);const uq=[...new Set(nums)];
     if(nums.length>5&&uq.every(n=>n>=1&&n<=5&&Number.isInteger(n))&&uq.length<=5){scale.push(h);}
-    else{
-      const ne=vals.filter(v=>v!==""&&v!==null&&v!==undefined);
-      const u=[...new Set(ne)];
-      if(u.length>=2&&u.length<=20&&u.length<ne.length*0.5)cross.push(h);
-    }
-  });
+    else{const ne=vals.filter(v=>v!==""&&v!==null&&v!==undefined);const u=[...new Set(ne)];if(u.length>=2&&u.length<=20&&u.length<ne.length*0.5)cross.push(h);}});
   return{cross,scale};
 }
+function analyze(data,cv,sv){
+  const g={};data.forEach(r=>{const k=String(r[cv]||"무응답").trim()||"무응답";const v=Number(r[sv]);if(isNaN(v))return;if(!g[k])g[k]=[];g[k].push(v);});
+  return Object.entries(g).map(([g,v])=>({group:g,mean:avg(v),std:sdev(v),n:v.length,
+    dist:[1,2,3,4,5].map(s=>v.filter(x=>x===s).length),pct:[1,2,3,4,5].map(s=>+(v.filter(x=>x===s).length/v.length*100).toFixed(1))})).sort((a,b)=>b.mean-a.mean);
+}
+function calcTotal(data,sv){
+  const v=data.map(r=>Number(r[sv])).filter(x=>!isNaN(x));
+  return{group:"종합",mean:avg(v),std:sdev(v),n:v.length,dist:[1,2,3,4,5].map(s=>v.filter(x=>x===s).length),pct:[1,2,3,4,5].map(s=>+(v.filter(x=>x===s).length/v.length*100).toFixed(1))};
+}
 
-/* ===== ANALYZE ===== */
-function analyze(data,crossVar,scaleVar){
-  const groups={};
-  data.forEach(row=>{
-    const k=String(row[crossVar]||"무응답").trim()||"무응답";
-    const v=Number(row[scaleVar]);
-    if(isNaN(v))return;
-    if(!groups[k])groups[k]=[];
-    groups[k].push(v);
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2000);}
+
+/* ===== ANALYSIS TEXT (plain) ===== */
+function genAnalysisPlain(multi,allGroups,gm){
+  const N=DATA.length;let t="";
+  const gmL=gm>=4?"매우 긍정적":gm>=3.5?"긍정적":gm>=3?"보통 수준":"개선 필요";
+  t+=`[총괄 요약]\n총 ${N}명 대상, ${selectedScales.length}개 문항, ${currentCross} 기준 ${allGroups.length}개 집단 교차분석. 전체 평균 ${gm.toFixed(2)}점(5점 만점), ${gmL}.\n\n`;
+  const im=multi.map(d=>{const a=DATA.map(r=>Number(r[d.name])).filter(v=>!isNaN(v));return{name:d.name,mean:avg(a)};}).sort((a,b)=>b.mean-a.mean);
+  if(im.length){const b=im[0],w=im[im.length-1];t+=`[문항별 분석]\n최고: '${b.name}'(${b.mean.toFixed(2)}점), 최저: '${w.name}'(${w.mean.toFixed(2)}점), 격차 ${(b.mean-w.mean).toFixed(2)}점.\n\n`;}
+  const gMeans=allGroups.map(g=>{const v=[];selectedScales.forEach(sv=>DATA.forEach(r=>{if(String(r[currentCross]||"").trim()===g){const x=Number(r[sv]);if(!isNaN(x))v.push(x);}}));return{group:g,mean:avg(v),n:DATA.filter(r=>String(r[currentCross]||"").trim()===g).length};}).sort((a,b)=>b.mean-a.mean);
+  if(gMeans.length>=2){t+=`[${currentCross}별 집단 간 차이]\n최고: '${gMeans[0].group}'(${gMeans[0].mean.toFixed(2)}점, n=${gMeans[0].n}), 최저: '${gMeans[gMeans.length-1].group}'(${gMeans[gMeans.length-1].mean.toFixed(2)}점, n=${gMeans[gMeans.length-1].n}), 격차 ${(gMeans[0].mean-gMeans[gMeans.length-1].mean).toFixed(2)}점.\n\n`;}
+  const alerts=[];multi.forEach(d=>d.results.forEach(r=>{if(r.mean<3)alerts.push(`'${d.name}'의 ${r.group}(${r.mean.toFixed(2)}점)`);}));
+  t+=`[주목 포인트]\n`;t+=alerts.length?`3.0점 미만 항목: ${alerts.slice(0,5).join(", ")}. 개선 필요.\n\n`:`특별한 우려 항목 없음.\n\n`;
+  const weak=im.filter(x=>x.mean<gm).slice(-3);
+  t+=`[개선 제언]\n`;if(weak.length){t+=`평균 이하 문항: ${weak.map(w=>`'${w.name}'(${w.mean.toFixed(2)}점)`).join(", ")}에 대한 개선 방안 수립 권장.`;}
+  return t;
+}
+
+/* ===== ANALYSIS HTML ===== */
+function genAnalysisHtml(multi,allGroups,gm){
+  const N=DATA.length;let t="";
+  const gmL=gm>=4?"매우 긍정적":gm>=3.5?"긍정적":gm>=3?"보통 수준":"개선이 필요한 수준";
+  t+=`<div class="analysis-section"><strong>📌 총괄 요약</strong><br>본 조사는 총 <span class="analysis-highlight">${N}명</span>을 대상으로 ${selectedScales.length}개 문항, ${currentCross} 기준 ${allGroups.length}개 집단 교차분석을 수행하였습니다. 전체 평균은 <strong>${gm.toFixed(2)}점</strong>(5점 만점)으로 <strong>${gmL}</strong>입니다.</div>`;
+  const im=multi.map(d=>{const a=DATA.map(r=>Number(r[d.name])).filter(v=>!isNaN(v));return{name:d.name,mean:avg(a),std:sdev(a)};}).sort((a,b)=>b.mean-a.mean);
+  if(im.length){const b=im[0],w=im[im.length-1],gap=(b.mean-w.mean).toFixed(2);
+    t+=`<div class="analysis-section"><strong>📊 문항별 분석</strong><br>최고 만족 문항: '<span class="analysis-good">${b.name}</span>'(${b.mean.toFixed(2)}점), 최저: '<span class="analysis-bad">${w.name}</span>'(${w.mean.toFixed(2)}점). 격차 ${gap}점${Number(gap)>=1?", 낮은 문항 집중 개선 필요.":Number(gap)>=0.5?", 하위 문항 보완 권장.":", 전반적으로 균일."}</div>`;}
+  const gMeans=allGroups.map(g=>{const v=[];selectedScales.forEach(sv=>DATA.forEach(r=>{if(String(r[currentCross]||"").trim()===g){const x=Number(r[sv]);if(!isNaN(x))v.push(x);}}));return{group:g,mean:avg(v),n:DATA.filter(r=>String(r[currentCross]||"").trim()===g).length};}).sort((a,b)=>b.mean-a.mean);
+  if(gMeans.length>=2){const tG=gMeans[0],bG=gMeans[gMeans.length-1],gGap=(tG.mean-bG.mean).toFixed(2);
+    t+=`<div class="analysis-section"><strong>👥 ${currentCross}별 집단 간 차이</strong><br>'<span class="analysis-good">${tG.group}</span>'(${tG.mean.toFixed(2)}점, n=${tG.n})이 최고, '<span class="analysis-bad">${bG.group}</span>'(${bG.mean.toFixed(2)}점, n=${bG.n})이 최저. 격차 ${gGap}점${Number(gGap)>=0.5?`. '${bG.group}' 맞춤형 개선 필요.`:`, 집단 간 차이 크지 않음.`}</div>`;}
+  const alerts=[];multi.forEach(d=>d.results.forEach(r=>{if(r.mean<3)alerts.push({item:d.name,group:r.group,mean:r.mean});if(r.pct[0]+r.pct[1]>=30)alerts.push({item:d.name,group:r.group,neg:r.pct[0]+r.pct[1],type:"neg"});}));
+  t+=`<div class="analysis-section"><strong>⚠️ 주목 포인트</strong><br>`;
+  const lows=alerts.filter(a=>!a.type).slice(0,3),negs=alerts.filter(a=>a.type==="neg").slice(0,2);
+  if(!lows.length&&!negs.length){t+=`특별히 우려 항목 없음. 전반적 양호.`;}
+  else{if(lows.length)t+=`3.0점 미만: ${lows.map(a=>`'${a.item}'의 ${a.group}(${a.mean.toFixed(2)}점)`).join(", ")}. `;if(negs.length)t+=`부정 응답 30%↑: ${negs.map(a=>`'${a.item}'의 ${a.group}(${a.neg.toFixed(1)}%)`).join(", ")}. `;t+=`원인 분석·개선 조치 필요.`;}
+  t+=`</div>`;
+  const weak=im.filter(x=>x.mean<gm).slice(-3);
+  t+=`<div class="analysis-section"><strong>💡 개선 제언</strong><br>`;if(weak.length){t+=`평균 이하 문항: ${weak.map(w=>`'${w.name}'(${w.mean.toFixed(2)}점)`).join(", ")} 개선 방안 수립 권장. `;}
+  const weakG=gMeans.filter(g=>g.mean<gm);if(weakG.length)t+=`${weakG.map(g=>`'${g.group}'`).join("·")} 집단 특성 반영 서비스 개선 필요.`;
+  t+=`</div>`;return t;
+}
+
+/* ===== DOCX EXPORT ===== */
+function exportDocx(){
+  if(!DATA.length)return;
+  const multi=selectedScales.map(sv=>({name:sv,results:analyze(DATA,currentCross,sv)}));
+  const allGroups=[...new Set(multi.flatMap(d=>d.results.map(r=>r.group)))];
+  const grandAll=[];selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
+  const gm=avg(grandAll);
+  const now=new Date();const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
+
+  let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><style>
+body{font-family:'맑은 고딕',sans-serif;font-size:11pt;line-height:1.8;color:#1a1a1a}
+h1{font-size:18pt;color:#1e3a5f;border-bottom:3px solid #1e3a5f;padding-bottom:8px;margin-bottom:16px}
+h2{font-size:14pt;color:#1e3a5f;margin-top:24px;margin-bottom:10px;border-left:4px solid #2563eb;padding-left:10px}
+h3{font-size:12pt;color:#2563eb;margin-top:16px;margin-bottom:8px}
+table{border-collapse:collapse;width:100%;margin:10px 0 16px}
+th{background:#f0f4ff;color:#1e3a5f;font-weight:700;padding:6px 8px;border:1px solid #d0d9e8;font-size:10pt;text-align:center}
+td{padding:5px 8px;border:1px solid #e8e5df;font-size:10pt;text-align:center}
+th:first-child,td:first-child{text-align:left}
+.total td{background:#f0f4ff;color:#1e3a5f;font-weight:700;border-top:2px solid #2563eb}
+.good{color:#16a34a;font-weight:700}.bad{color:#dc2626;font-weight:700}
+.meta{color:#5a5650;font-size:10pt;margin-bottom:16px}
+.footer{margin-top:30px;padding-top:10px;border-top:1px solid #e8e5df;color:#8a857e;font-size:9pt;text-align:center}
+</style></head><body>`;
+
+  html+=`<h1>설문 교차분석 결과 보고서</h1>`;
+  html+=`<p class="meta">분석일: ${dateStr} | 파일: ${currentFileName} | 응답자: ${DATA.length}명 | 교차변수: ${currentCross} | 분석 문항: ${selectedScales.length}개</p>`;
+  html+=`<p class="meta">부천여성청소년재단 전략경영실 전략기획부</p>`;
+
+  // 분석 리포트 (plain text)
+  html+=`<h2>1. 분석 요약</h2>`;
+  const plainAnalysis=genAnalysisPlain(multi,allGroups,gm);
+  html+=`<p>${plainAnalysis.replace(/\n/g,"<br>")}</p>`;
+
+  // 총괄 통계
+  html+=`<h2>2. 총괄 통계</h2>`;
+  html+=`<table><tr><th>항목</th><th>값</th></tr>`;
+  html+=`<tr><td>전체 응답자</td><td>${DATA.length}명</td></tr>`;
+  html+=`<tr><td>분석 문항 수</td><td>${selectedScales.length}개</td></tr>`;
+  html+=`<tr><td>교차집단 수</td><td>${allGroups.length}개 (${currentCross})</td></tr>`;
+  html+=`<tr><td>전체 평균</td><td><strong>${gm.toFixed(2)}점</strong></td></tr></table>`;
+
+  // 히트맵 테이블
+  html+=`<h2>3. ${currentCross}별 문항 평균 (교차분석표)</h2>`;
+  html+=`<table><tr><th>${currentCross}</th>`;
+  multi.forEach(d=>{html+=`<th>${d.name}</th>`;});html+=`</tr>`;
+  allGroups.forEach(g=>{
+    html+=`<tr><td><strong>${g}</strong></td>`;
+    multi.forEach(d=>{const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;
+      const cls=v!==null?(v>=3.5?"good":v<3?"bad":""):"";
+      html+=`<td class="${cls}">${v!==null?v.toFixed(2):"-"}</td>`;});
+    html+=`</tr>`;});
+  html+=`<tr class="total"><td><strong>종합</strong></td>`;
+  multi.forEach(d=>{const t=calcTotal(DATA,d.name);html+=`<td>${t.mean.toFixed(2)}</td>`;});
+  html+=`</tr></table>`;
+
+  // 상세표
+  html+=`<h2>4. 문항별 상세 분석</h2>`;
+  multi.forEach(item=>{
+    const total=calcTotal(DATA,item.name);
+    html+=`<h3>${item.name}</h3>`;
+    html+=`<table><tr><th>${currentCross}</th><th>N</th><th>평균(M)</th><th>SD</th><th>1점</th><th>2점</th><th>3점</th><th>4점</th><th>5점</th></tr>`;
+    item.results.forEach(r=>{
+      const cls=r.mean>=3.5?"good":r.mean<3?"bad":"";
+      html+=`<tr><td>${r.group}</td><td>${r.n}</td><td class="${cls}">${r.mean.toFixed(2)}</td><td>${r.std.toFixed(2)}</td>`;
+      r.dist.forEach((d,i)=>{html+=`<td>${d} (${r.pct[i]}%)</td>`;});html+=`</tr>`;});
+    html+=`<tr class="total"><td>종합</td><td>${total.n}</td><td>${total.mean.toFixed(2)}</td><td>${total.std.toFixed(2)}</td>`;
+    total.dist.forEach((d,i)=>{html+=`<td>${d} (${total.pct[i]}%)</td>`;});html+=`</tr></table>`;
   });
-  return Object.entries(groups).map(([g,vals])=>({
-    group:g,mean:avg(vals),std:sdev(vals),n:vals.length,
-    dist:[1,2,3,4,5].map(s=>vals.filter(v=>v===s).length),
-    pct:[1,2,3,4,5].map(s=>+(vals.filter(v=>v===s).length/vals.length*100).toFixed(1)),
-  })).sort((a,b)=>b.mean-a.mean);
+
+  html+=`<div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 교차분석 대시보드 v3.0 자동 생성</div>`;
+  html+=`</body></html>`;
+
+  const blob=new Blob(["\ufeff"+html],{type:"application/msword;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=`교차분석_보고서_${dateStr.replace(/\./g,"")}.doc`;a.click();
+  URL.revokeObjectURL(a.href);
+  toast("📥 DOCX 파일 다운로드 완료!");
+}
+
+/* ===== GOOGLE DOCS EXPORT ===== */
+function exportGoogleDocs(){
+  if(!DATA.length)return;
+  const multi=selectedScales.map(sv=>({name:sv,results:analyze(DATA,currentCross,sv)}));
+  const allGroups=[...new Set(multi.flatMap(d=>d.results.map(r=>r.group)))];
+  const grandAll=[];selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
+  const gm=avg(grandAll);
+  const now=new Date();const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
+
+  let html=`<h1 style="color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:6px">설문 교차분석 결과 보고서</h1>`;
+  html+=`<p style="color:#5a5650;font-size:10pt">분석일: ${dateStr} | ${currentFileName} | ${DATA.length}명 | ${currentCross} 기준 | ${selectedScales.length}개 문항<br>부천여성청소년재단 전략경영실 전략기획부</p>`;
+
+  html+=`<h2 style="color:#1e3a5f">1. 분석 요약</h2>`;
+  html+=`<p>${genAnalysisPlain(multi,allGroups,gm).replace(/\n/g,"<br>")}</p>`;
+
+  html+=`<h2 style="color:#1e3a5f">2. ${currentCross}별 문항 평균</h2>`;
+  html+=`<table style="border-collapse:collapse;width:100%"><tr><th style="background:#f0f4ff;border:1px solid #ccc;padding:4px 6px">${currentCross}</th>`;
+  multi.forEach(d=>{html+=`<th style="background:#f0f4ff;border:1px solid #ccc;padding:4px 6px">${d.name}</th>`;});html+=`</tr>`;
+  allGroups.forEach(g=>{html+=`<tr><td style="border:1px solid #ccc;padding:4px 6px;font-weight:700">${g}</td>`;
+    multi.forEach(d=>{const r=d.results.find(x=>x.group===g);html+=`<td style="border:1px solid #ccc;padding:4px 6px;text-align:center">${r?r.mean.toFixed(2):"-"}</td>`;});html+=`</tr>`;});
+  html+=`<tr><td style="border:1px solid #ccc;padding:4px 6px;font-weight:700;background:#f0f4ff">종합</td>`;
+  multi.forEach(d=>{const t=calcTotal(DATA,d.name);html+=`<td style="border:1px solid #ccc;padding:4px 6px;text-align:center;background:#f0f4ff;font-weight:700">${t.mean.toFixed(2)}</td>`;});
+  html+=`</tr></table>`;
+
+  html+=`<h2 style="color:#1e3a5f">3. 문항별 상세</h2>`;
+  multi.forEach(item=>{
+    const total=calcTotal(DATA,item.name);
+    html+=`<h3 style="color:#2563eb">${item.name}</h3>`;
+    html+=`<table style="border-collapse:collapse;width:100%"><tr>`;
+    [currentCross,"N","M","SD","1점","2점","3점","4점","5점"].forEach(h=>{html+=`<th style="background:#f0f4ff;border:1px solid #ccc;padding:3px 5px;font-size:9pt">${h}</th>`;});
+    html+=`</tr>`;
+    item.results.forEach(r=>{html+=`<tr><td style="border:1px solid #ccc;padding:3px 5px;font-weight:600">${r.group}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center">${r.n}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700;color:${r.mean>=3.5?"#16a34a":r.mean<3?"#dc2626":"#1a1a1a"}">${r.mean.toFixed(2)}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center">${r.std.toFixed(2)}</td>`;
+      r.dist.forEach((d,i)=>{html+=`<td style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-size:9pt">${d}(${r.pct[i]}%)</td>`;});html+=`</tr>`;});
+    html+=`<tr><td style="border:1px solid #ccc;padding:3px 5px;background:#f0f4ff;font-weight:700">종합</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center;background:#f0f4ff">${total.n}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center;background:#f0f4ff;font-weight:700">${total.mean.toFixed(2)}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center;background:#f0f4ff">${total.std.toFixed(2)}</td>`;
+    total.dist.forEach((d,i)=>{html+=`<td style="border:1px solid #ccc;padding:3px 5px;text-align:center;background:#f0f4ff">${d}(${total.pct[i]}%)</td>`;});html+=`</tr></table>`;
+  });
+
+  // Copy as rich text
+  const blob=new Blob([html],{type:"text/html"});
+  const item=new ClipboardItem({"text/html":blob,"text/plain":new Blob([genAnalysisPlain(multi,allGroups,gm)],{type:"text/plain"})});
+  navigator.clipboard.write([item]).then(()=>{
+    toast("📋 클립보드 복사 완료! Google Docs에 Ctrl+V로 붙여넣기하세요.");
+  }).catch(()=>{
+    // Fallback: plain text copy
+    navigator.clipboard.writeText(genAnalysisPlain(multi,allGroups,gm)).then(()=>{
+      toast("📋 텍스트로 복사됨. Google Docs에 붙여넣기하세요.");
+    });
+  });
+}
+
+/* ===== HISTORY ===== */
+function getHistory(){try{return JSON.parse(localStorage.getItem("surveyHistory")||"[]");}catch(e){return[];}}
+function saveHistory(){localStorage.setItem("surveyHistory",JSON.stringify(getHistory()));}
+function addToHistory(){
+  if(!DATA.length)return;
+  const multi=selectedScales.map(sv=>({name:sv,results:analyze(DATA,currentCross,sv)}));
+  const grandAll=[];selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
+  const gm=avg(grandAll);
+  const allGroups=[...new Set(multi.flatMap(d=>d.results.map(r=>r.group)))];
+  const entry={
+    id:Date.now(),date:new Date().toISOString(),fileName:currentFileName,
+    n:DATA.length,crossVar:currentCross,scaleCount:selectedScales.length,
+    groupCount:allGroups.length,grandMean:+gm.toFixed(2),
+    scales:selectedScales.slice(),
+    summary:genAnalysisPlain(multi,allGroups,gm).slice(0,500)
+  };
+  const hist=getHistory();hist.unshift(entry);
+  if(hist.length>50)hist.length=50;
+  localStorage.setItem("surveyHistory",JSON.stringify(hist));
+  updateHistCount();
+}
+function deleteHistory(id){
+  const hist=getHistory().filter(h=>h.id!==id);
+  localStorage.setItem("surveyHistory",JSON.stringify(hist));
+  renderHistoryList();updateHistCount();
+}
+function clearAllHistory(){
+  if(!confirm("전체 이력을 삭제하시겠습니까?"))return;
+  localStorage.setItem("surveyHistory","[]");renderHistoryList();updateHistCount();
+}
+function updateHistCount(){
+  const el=document.getElementById("histCount");if(el)el.textContent=getHistory().length;
+}
+function showHistoryPage(){
+  document.getElementById("uploadScreen").classList.add("hidden");
+  document.getElementById("historyPage").classList.remove("hidden");
+  renderHistoryList();
+}
+function hideHistoryPage(){
+  document.getElementById("historyPage").classList.add("hidden");
+  document.getElementById("uploadScreen").classList.remove("hidden");
+}
+function renderHistoryList(){
+  const hist=getHistory();const el=document.getElementById("historyList");
+  if(!hist.length){el.innerHTML=`<div class="hist-empty"><div style="font-size:32px;margin-bottom:8px">📭</div><div>저장된 분석 이력이 없습니다.</div><div style="font-size:12px;margin-top:4px">설문 데이터를 분석하면 자동으로 이력이 저장됩니다.</div></div>`;return;}
+  el.innerHTML=hist.map(h=>{
+    const d=new Date(h.date);const ds=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    const mc=h.grandMean>=3.5?"var(--success)":h.grandMean>=3?"var(--warning)":"var(--danger)";
+    return`<div class="hist-card">
+      <div class="hist-top"><span class="hist-name">${h.fileName}</span><span class="hist-date">${ds}</span></div>
+      <div class="hist-stats">
+        <span class="hist-stat">👥 ${h.n}명</span>
+        <span class="hist-stat">🔀 ${h.crossVar} (${h.groupCount}개)</span>
+        <span class="hist-stat">📏 ${h.scaleCount}개 문항</span>
+        <span class="hist-stat" style="color:${mc};font-weight:700">⭐ ${h.grandMean}점</span>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted);line-height:1.6;max-height:60px;overflow:hidden">${h.summary.slice(0,200)}...</div>
+      <div class="hist-actions"><button class="hist-del" onclick="event.stopPropagation();deleteHistory(${h.id})">🗑️ 삭제</button></div>
+    </div>`;
+  }).join("");
 }
 
 /* ===== FILE HANDLING ===== */
-const dz=document.getElementById("dropZone");
-const fi=document.getElementById("fileInput");
+const dz=document.getElementById("dropZone"),fi=document.getElementById("fileInput");
 dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("drag");});
 dz.addEventListener("dragleave",()=>dz.classList.remove("drag"));
 dz.addEventListener("drop",e=>{e.preventDefault();dz.classList.remove("drag");handleFile(e.dataTransfer.files[0]);});
 fi.addEventListener("change",e=>handleFile(e.target.files[0]));
 
 function handleFile(file){
-  if(!file)return;
-  const ext=file.name.split(".").pop().toLowerCase();
-  if(ext==="csv"||ext==="tsv"){
-    Papa.parse(file,{header:true,skipEmptyLines:true,complete:r=>initDashboard(r.data,file.name)});
-  }else if(ext==="xlsx"||ext==="xls"){
-    const reader=new FileReader();
-    reader.onload=e=>{
-      try{
-        const wb=XLSX.read(e.target.result,{type:"array"});
-        const ws=wb.Sheets[wb.SheetNames[0]];
-        const json=XLSX.utils.sheet_to_json(ws,{defval:""});
-        initDashboard(json,file.name);
-      }catch(err){alert("엑셀 파싱 실패: "+err.message);}
-    };
-    reader.readAsArrayBuffer(file);
-  }else{alert("지원 형식: .csv, .tsv, .xlsx, .xls");}
+  if(!file)return;const ext=file.name.split(".").pop().toLowerCase();
+  if(ext==="csv"||ext==="tsv"){Papa.parse(file,{header:true,skipEmptyLines:true,complete:r=>initDashboard(r.data,file.name)});}
+  else if(ext==="xlsx"||ext==="xls"){const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:"array"});initDashboard(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}),file.name);}catch(err){alert("엑셀 파싱 실패");}};reader.readAsArrayBuffer(file);}
+  else{alert("지원: .csv .tsv .xlsx .xls");}
 }
 
-/* ===== DEMO DATA ===== */
 function loadDemo(){
-  const G=["남성","여성"],A=["10대","20대","30대","40대","50대 이상"];
-  const R=["소사","원미","오정","상동"],S=["청소년","청년","학부모","실무자"];
+  const G=["남성","여성"],A=["10대","20대","30대","40대","50대 이상"],R=["소사","원미","오정","상동"],S=["청소년","청년","학부모","실무자"];
   const Q=["전반적 만족도","프로그램 내용","강사 전문성","시설 환경","접근성","재참여 의향","타인 추천","행정 서비스"];
   const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
-  const demo=Array.from({length:300},(_,i)=>{
-    const row={"번호":i+1,"성별":pick(G),"연령대":pick(A),"지역":pick(R),"신분":pick(S)};
-    Q.forEach(q=>{row[q]=Math.random()<0.15?Math.ceil(Math.random()*2):Math.floor(Math.random()*3)+3;});
-    return row;
-  });
-  initDashboard(demo,"데모_설문데이터_300명.csv");
+  initDashboard(Array.from({length:300},(_,i)=>{const row={"번호":i+1,"성별":pick(G),"연령대":pick(A),"지역":pick(R),"신분":pick(S)};Q.forEach(q=>{row[q]=Math.random()<.15?Math.ceil(Math.random()*2):Math.floor(Math.random()*3)+3;});return row;}),"데모_설문데이터_300명.csv");
 }
 
-/* ===== INIT ===== */
 function initDashboard(data,name){
-  DATA=data;
-  const t=detect(data);
-  CROSS=t.cross; SCALE=t.scale;
-  currentCross=CROSS[0]||"";
-  selectedScales=[...SCALE.slice(0,8)];
-  currentTab="overview";
-
+  DATA=data;currentFileName=name;const t=detect(data);CROSS=t.cross;SCALE=t.scale;
+  currentCross=CROSS[0]||"";selectedScales=[...SCALE.slice(0,8)];currentTab="overview";
   document.getElementById("uploadScreen").classList.add("hidden");
+  document.getElementById("historyPage").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
   document.getElementById("fileLabel").textContent=name+" · "+data.length+"명";
-
-  // Cross select
-  const cs=document.getElementById("crossSelect");
-  cs.innerHTML=CROSS.map(v=>`<option value="${v}">${v}</option>`).join("");
-  cs.value=currentCross;
-
-  renderScaleList();
-  renderTabs();
-  renderContent();
+  const cs=document.getElementById("crossSelect");cs.innerHTML=CROSS.map(v=>`<option value="${v}">${v}</option>`).join("");cs.value=currentCross;
+  renderScaleList();renderTabs();renderContent();
+  setTimeout(()=>addToHistory(),500);
 }
 
 function resetAll(){
-  DATA=[];CROSS=[];SCALE=[];
-  Object.values(charts).forEach(c=>{if(c&&c.destroy)c.destroy();});
-  charts={};
-  document.getElementById("dashboard").classList.add("hidden");
-  document.getElementById("uploadScreen").classList.remove("hidden");
+  DATA=[];CROSS=[];SCALE=[];Object.values(charts).forEach(c=>{if(c&&c.destroy)c.destroy();});charts={};
+  document.getElementById("dashboard").classList.add("hidden");document.getElementById("uploadScreen").classList.remove("hidden");updateHistCount();
 }
 
-/* ===== SIDEBAR ===== */
 function renderScaleList(){
-  const el=document.getElementById("scaleList");
-  el.innerHTML=SCALE.map(sv=>{
-    const checked=selectedScales.includes(sv)?"checked":"";
-    const cls=selectedScales.includes(sv)?"cb-row active":"cb-row";
-    return `<label class="${cls}"><input type="checkbox" ${checked} onchange="toggleScale('${sv}')">${sv}</label>`;
-  }).join("");
+  document.getElementById("scaleList").innerHTML=SCALE.map(sv=>`<label class="cb-row${selectedScales.includes(sv)?" active":""}"><input type="checkbox" ${selectedScales.includes(sv)?"checked":""} onchange="toggleScale('${sv}')">${sv}</label>`).join("");
   document.getElementById("sbInfo").innerHTML=`교차변수 ${CROSS.length}개 · 척도변수 ${SCALE.length}개 · 응답 ${DATA.length}건`;
 }
 function onCrossChange(){currentCross=document.getElementById("crossSelect").value;renderContent();}
-function toggleScale(sv){
-  if(selectedScales.includes(sv))selectedScales=selectedScales.filter(x=>x!==sv);
-  else selectedScales.push(sv);
-  renderScaleList();renderContent();
-}
+function toggleScale(sv){if(selectedScales.includes(sv))selectedScales=selectedScales.filter(x=>x!==sv);else selectedScales.push(sv);renderScaleList();renderContent();}
 function selectAllScales(){selectedScales=[...SCALE];renderScaleList();renderContent();}
 function clearScales(){selectedScales=[];renderScaleList();renderContent();}
-
-/* ===== TABS ===== */
-function renderTabs(){
-  document.getElementById("tabBar").innerHTML=TABS.map(t=>
-    `<button class="tab-btn${currentTab===t.id?" active":""}" onclick="switchTab('${t.id}')">${t.label}</button>`
-  ).join("");
-}
+function renderTabs(){document.getElementById("tabBar").innerHTML=TABS.map(t=>`<button class="tab-btn${currentTab===t.id?" active":""}" onclick="switchTab('${t.id}')">${t.label}</button>`).join("");}
 function switchTab(id){currentTab=id;renderTabs();renderContent();}
+function heatColor(v,mn,mx){const r=mx===mn?.5:(v-mn)/(mx-mn);return`rgb(${Math.round(240-r*200)},${Math.round(253-r*80)},${Math.round(244-r*190)})`;}
+function heatText(v,mn,mx){return(mx===mn?.5:(v-mn)/(mx-mn))>.55?"#fff":"#1a1a1a";}
 
-/* ===== HEAT COLOR ===== */
-function heatColor(val,mn,mx){
-  const r=mx===mn?0.5:(val-mn)/(mx-mn);
-  return `rgb(${Math.round(240-r*200)},${Math.round(253-r*80)},${Math.round(244-r*190)})`;
-}
-function heatText(val,mn,mx){const r=mx===mn?0.5:(val-mn)/(mx-mn);return r>0.55?"#fff":"#1a1a1a";}
+function copyAnalysis(){const el=document.getElementById("analysisText");if(!el)return;navigator.clipboard.writeText(el.innerText).then(()=>{toast("📋 분석 리포트 복사 완료!");});}
 
-/* ===== RENDER ===== */
 function renderContent(){
-  Object.values(charts).forEach(c=>{if(c&&c.destroy)c.destroy();});
-  charts={};
-  if(!selectedScales.length){
-    document.getElementById("tabContent").innerHTML=`<div style="text-align:center;padding:50px;color:var(--text-muted)"><div style="font-size:32px;margin-bottom:10px">📏</div><div style="font-size:14px;font-weight:600">척도변수를 1개 이상 선택해주세요</div></div>`;
-    return;
-  }
-
+  Object.values(charts).forEach(c=>{if(c&&c.destroy)c.destroy();});charts={};
+  if(!selectedScales.length){document.getElementById("tabContent").innerHTML=`<div style="text-align:center;padding:50px;color:var(--text-muted)"><div style="font-size:32px;margin-bottom:10px">📏</div><div style="font-size:14px;font-weight:600">척도변수를 1개 이상 선택해주세요</div></div>`;return;}
   const single=analyze(DATA,currentCross,selectedScales[0]);
+  const singleTotal=calcTotal(DATA,selectedScales[0]);
   const multi=selectedScales.map(sv=>({name:sv,results:analyze(DATA,currentCross,sv)}));
   const allGroups=[...new Set(multi.flatMap(d=>d.results.map(r=>r.group)))];
   const allMeans=multi.flatMap(d=>d.results.map(r=>r.mean));
   const hMin=Math.min(...allMeans),hMax=Math.max(...allMeans);
-  const grandAll=[];
-  selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
-  const gm=avg(grandAll);
-
-  const el=document.getElementById("tabContent");
+  const grandAll=[];selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
+  const gm=avg(grandAll);const el=document.getElementById("tabContent");
 
   if(currentTab==="overview"){
-    let html=`<div class="stat-row">`;
-    [{i:"👥",l:"전체 응답",v:DATA.length+"명"},{i:"📏",l:"분석 문항",v:selectedScales.length+"개"},{i:"🔀",l:"교차집단",v:allGroups.length+"개"},
-     {i:"⭐",l:"전체 평균",v:gm.toFixed(2),c:gm>=3.5?"var(--success)":"var(--warning)"}
-    ].forEach(s=>{
-      html+=`<div class="stat-card"><div class="stat-label">${s.i} ${s.l}</div><div class="stat-val" style="color:${s.c||'#1a1a1a'}">${s.v}</div></div>`;
-    });
-    html+=`</div>`;
-
-    // Heatmap
-    html+=`<div class="card"><div class="card-title">🔥 ${currentCross}별 문항 평균 히트맵</div><div class="card-sub">색상이 진할수록 높은 평균</div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
-    multi.forEach(d=>{html+=`<th title="${d.name}">${d.name.length>6?d.name.slice(0,6)+"…":d.name}</th>`;});
-    html+=`</tr></thead><tbody>`;
-    allGroups.forEach(g=>{
-      html+=`<tr><td>${g}</td>`;
-      multi.forEach(d=>{
-        const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;
-        html+=`<td style="background:${v!==null?heatColor(v,hMin,hMax):'var(--bg-alt)'};color:${v!==null?heatText(v,hMin,hMax):'var(--text-muted)'}">${v!==null?v.toFixed(2):"-"}</td>`;
-      });
-      html+=`</tr>`;
-    });
-    html+=`</tbody></table></div></div>`;
-
-    // Top/Bottom
-    const flat=multi.flatMap(d=>d.results.map(r=>({...r,item:d.name})));
-    const sorted=[...flat].sort((a,b)=>b.mean-a.mean);
-    const top3=sorted.slice(0,3),bot3=sorted.slice(-3).reverse();
-    html+=`<div class="tb-grid"><div class="tb-box tb-top"><div class="tb-title" style="color:var(--success)">🏆 Top 3</div>`;
-    top3.forEach(x=>{html+=`<div class="tb-row"><span><strong>${x.item}</strong> <span style="color:var(--text-muted)">(${x.group})</span></span><span style="font-weight:800;color:var(--success)">${x.mean.toFixed(2)}</span></div>`;});
-    html+=`</div><div class="tb-box tb-bot"><div class="tb-title" style="color:var(--danger)">⚠️ Bottom 3</div>`;
-    bot3.forEach(x=>{html+=`<div class="tb-row"><span><strong>${x.item}</strong> <span style="color:var(--text-muted)">(${x.group})</span></span><span style="font-weight:800;color:var(--danger)">${x.mean.toFixed(2)}</span></div>`;});
-    html+=`</div></div>`;
-    el.innerHTML=html;
+    let h=`<div class="stat-row">`;
+    [{i:"👥",l:"전체 응답",v:DATA.length+"명"},{i:"📏",l:"분석 문항",v:selectedScales.length+"개"},{i:"🔀",l:"교차집단",v:allGroups.length+"개"},{i:"⭐",l:"종합 평균",v:gm.toFixed(2)+"점",c:gm>=3.5?"var(--success)":"var(--warning)"}
+    ].forEach(s=>{h+=`<div class="stat-card"><div class="stat-label">${s.i} ${s.l}</div><div class="stat-val" style="color:${s.c||'#1a1a1a'}">${s.v}</div></div>`;});h+=`</div>`;
+    h+=`<div class="analysis-box"><h3>📝 자동 분석 리포트</h3><div id="analysisText">${genAnalysisHtml(multi,allGroups,gm)}</div>
+    <div class="abtn-row"><button class="abtn abtn-copy" onclick="copyAnalysis()">📋 리포트 복사</button><button class="abtn abtn-docx" onclick="exportDocx()">📥 DOCX 다운로드</button><button class="abtn abtn-gdoc" onclick="exportGoogleDocs()">📋 Google Docs 복사</button></div></div>`;
+    h+=`<div class="card"><div class="card-title">🔥 ${currentCross}별 문항 평균 히트맵</div><div class="card-sub">하단 종합 평균 포함</div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
+    multi.forEach(d=>{h+=`<th title="${d.name}">${d.name.length>6?d.name.slice(0,6)+"…":d.name}</th>`;});h+=`</tr></thead><tbody>`;
+    allGroups.forEach(g=>{h+=`<tr><td>${g}</td>`;multi.forEach(d=>{const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;h+=`<td style="background:${v!==null?heatColor(v,hMin,hMax):'var(--bg-alt)'};color:${v!==null?heatText(v,hMin,hMax):'var(--text-muted)'}">${v!==null?v.toFixed(2):"-"}</td>`;});h+=`</tr>`;});
+    h+=`<tr class="total-row"><td>📊 종합</td>`;multi.forEach(d=>{const t=calcTotal(DATA,d.name);h+=`<td>${t.mean.toFixed(2)}</td>`;});h+=`</tr></tbody></table></div></div>`;
+    const flat=multi.flatMap(d=>d.results.map(r=>({...r,item:d.name})));const sorted=[...flat].sort((a,b)=>b.mean-a.mean);
+    h+=`<div class="tb-grid"><div class="tb-box tb-top"><div class="tb-title" style="color:var(--success)">🏆 Top 3</div>`;sorted.slice(0,3).forEach(x=>{h+=`<div class="tb-row"><span><strong>${x.item}</strong> <span style="color:var(--text-muted)">(${x.group})</span></span><span style="font-weight:800;color:var(--success)">${x.mean.toFixed(2)}</span></div>`;});
+    h+=`</div><div class="tb-box tb-bot"><div class="tb-title" style="color:var(--danger)">⚠️ Bottom 3</div>`;sorted.slice(-3).reverse().forEach(x=>{h+=`<div class="tb-row"><span><strong>${x.item}</strong> <span style="color:var(--text-muted)">(${x.group})</span></span><span style="font-weight:800;color:var(--danger)">${x.mean.toFixed(2)}</span></div>`;});h+=`</div></div>`;
+    el.innerHTML=h;
   }
-
   else if(currentTab==="bar"){
-    el.innerHTML=`<div class="card"><div class="card-title">📊 ${currentCross}별 "${selectedScales[0]}" 평균</div><div class="card-sub">좌측에서 교차변수·척도변수를 바꿔보세요</div><div class="chart-wrap"><canvas id="barChart"></canvas></div><div id="barBadges" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"></div></div>`;
-    const ctx=document.getElementById("barChart").getContext("2d");
-    charts.bar=new Chart(ctx,{type:"bar",data:{
-      labels:single.map(d=>d.group),
-      datasets:[{label:"평균",data:single.map(d=>d.mean),backgroundColor:single.map((_,i)=>PALETTE[i%PALETTE.length]),borderRadius:6,maxBarThickness:50}]
-    },options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)}}},scales:{y:{min:0,max:5,ticks:{stepSize:1}}}}});
-    document.getElementById("barBadges").innerHTML=single.map((d,i)=>`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:${PLIGHT[i%PLIGHT.length]};color:${PALETTE[i%PALETTE.length]};font-weight:600">${d.group} n=${d.n} M=${d.mean.toFixed(2)} SD=${d.std.toFixed(2)}</span>`).join("");
+    const wt=[...single,singleTotal];el.innerHTML=`<div class="card"><div class="card-title">📊 ${currentCross}별 "${selectedScales[0]}" 평균</div><div class="card-sub">종합 평균 포함</div><div class="chart-wrap"><canvas id="barChart"></canvas></div><div id="barBadges" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"></div></div>`;
+    const ctx=document.getElementById("barChart").getContext("2d");charts.bar=new Chart(ctx,{type:"bar",data:{labels:wt.map(d=>d.group),datasets:[{label:"평균",data:wt.map(d=>d.mean),backgroundColor:wt.map((_,i)=>i===wt.length-1?"#1e3a5f":PALETTE[i%PALETTE.length]),borderRadius:6,maxBarThickness:50}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)}}},scales:{y:{min:0,max:5,ticks:{stepSize:1}}}}});
+    document.getElementById("barBadges").innerHTML=wt.map((d,i)=>`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:${i===wt.length-1?"#e0e7ff":PLIGHT[i%PLIGHT.length]};color:${i===wt.length-1?"#1e3a5f":PALETTE[i%PALETTE.length]};font-weight:600">${d.group} n=${d.n} M=${d.mean.toFixed(2)} SD=${d.std.toFixed(2)}</span>`).join("");
   }
-
   else if(currentTab==="dist"){
-    el.innerHTML=`<div class="card"><div class="card-title">📈 ${currentCross}별 "${selectedScales[0]}" 응답분포</div><div class="card-sub">1~5점 비율(%) 누적 막대</div><div class="chart-wrap"><canvas id="distChart"></canvas></div></div>`;
-    const dc=["#dc2626","#f97316","#eab308","#22c55e","#2563eb"];
-    const ctx=document.getElementById("distChart").getContext("2d");
-    charts.dist=new Chart(ctx,{type:"bar",data:{
-      labels:single.map(d=>d.group),
-      datasets:[1,2,3,4,5].map((s,i)=>({label:s+"점",data:single.map(d=>d.pct[i]),backgroundColor:dc[i]}))
-    },options:{responsive:true,indexAxis:"y",scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+"%"}},y:{stacked:true}},plugins:{tooltip:{callbacks:{label:c=>c.parsed.x+"%"}}}}});
+    const wt=[...single,singleTotal];el.innerHTML=`<div class="card"><div class="card-title">📈 응답분포</div><div class="card-sub">종합 포함</div><div class="chart-wrap"><canvas id="distChart"></canvas></div></div>`;
+    const dc=["#dc2626","#f97316","#eab308","#22c55e","#2563eb"];const ctx=document.getElementById("distChart").getContext("2d");
+    charts.dist=new Chart(ctx,{type:"bar",data:{labels:wt.map(d=>d.group),datasets:[1,2,3,4,5].map((s,i)=>({label:s+"점",data:wt.map(d=>d.pct[s-1]),backgroundColor:dc[i]}))},options:{responsive:true,indexAxis:"y",scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+"%"}},y:{stacked:true}},plugins:{tooltip:{callbacks:{label:c=>c.parsed.x+"%"}}}}});
   }
-
   else if(currentTab==="heat"){
-    let html=`<div class="card"><div class="card-title">🔥 전체 히트맵</div><div class="card-sub">${currentCross} × 전체 척도변수</div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
-    multi.forEach(d=>{html+=`<th title="${d.name}">${d.name.length>6?d.name.slice(0,6)+"…":d.name}</th>`;});
-    html+=`</tr></thead><tbody>`;
-    allGroups.forEach(g=>{
-      html+=`<tr><td>${g}</td>`;
-      multi.forEach(d=>{const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;
-        html+=`<td style="background:${v!==null?heatColor(v,hMin,hMax):'var(--bg-alt)'};color:${v!==null?heatText(v,hMin,hMax):'var(--text-muted)'}">${v!==null?v.toFixed(2):"-"}</td>`;});
-      html+=`</tr>`;});
-    html+=`</tbody></table></div></div>`;
-    el.innerHTML=html;
+    let h=`<div class="card"><div class="card-title">🔥 전체 히트맵</div><div class="card-sub">종합 포함</div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
+    multi.forEach(d=>{h+=`<th title="${d.name}">${d.name.length>6?d.name.slice(0,6)+"…":d.name}</th>`;});h+=`</tr></thead><tbody>`;
+    allGroups.forEach(g=>{h+=`<tr><td>${g}</td>`;multi.forEach(d=>{const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;h+=`<td style="background:${v!==null?heatColor(v,hMin,hMax):'var(--bg-alt)'};color:${v!==null?heatText(v,hMin,hMax):'var(--text-muted)'}">${v!==null?v.toFixed(2):"-"}</td>`;});h+=`</tr>`;});
+    h+=`<tr class="total-row"><td>📊 종합</td>`;multi.forEach(d=>{const t=calcTotal(DATA,d.name);h+=`<td>${t.mean.toFixed(2)}</td>`;});h+=`</tr></tbody></table></div></div>`;el.innerHTML=h;
   }
-
   else if(currentTab==="radar"){
-    el.innerHTML=`<div class="card"><div class="card-title">🕸️ ${currentCross}별 항목 프로파일</div><div class="card-sub">교차집단별 5점 척도 레이더</div><div class="chart-wrap"><canvas id="radarChart"></canvas></div></div>`;
-    const labels=multi.map(d=>d.name.length>6?d.name.slice(0,6)+"…":d.name);
-    const datasets=allGroups.map((g,i)=>({
-      label:g,data:multi.map(d=>{const r=d.results.find(x=>x.group===g);return r?+r.mean.toFixed(2):0;}),
-      borderColor:PALETTE[i%PALETTE.length],backgroundColor:PALETTE[i%PALETTE.length]+"1a",borderWidth:2,pointRadius:3
-    }));
-    const ctx=document.getElementById("radarChart").getContext("2d");
-    charts.radar=new Chart(ctx,{type:"radar",data:{labels,datasets},options:{responsive:true,scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:10}},pointLabels:{font:{size:11}}}},plugins:{legend:{position:"bottom",labels:{font:{size:11}}}}}});
+    el.innerHTML=`<div class="card"><div class="card-title">🕸️ 레이더</div><div class="card-sub">종합 포함</div><div class="chart-wrap"><canvas id="radarChart"></canvas></div></div>`;
+    const labels=multi.map(d=>d.name.length>6?d.name.slice(0,6)+"…":d.name);const gWT=[...allGroups,"종합"];
+    const ds=gWT.map((g,i)=>{const isT=g==="종합";return{label:g,data:multi.map(d=>{if(isT){return+calcTotal(DATA,d.name).mean.toFixed(2);}const r=d.results.find(x=>x.group===g);return r?+r.mean.toFixed(2):0;}),borderColor:isT?"#1e3a5f":PALETTE[i%PALETTE.length],backgroundColor:(isT?"#1e3a5f":PALETTE[i%PALETTE.length])+"1a",borderWidth:isT?3:2,borderDash:isT?[6,3]:[],pointRadius:isT?4:3};});
+    const ctx=document.getElementById("radarChart").getContext("2d");charts.radar=new Chart(ctx,{type:"radar",data:{labels,datasets:ds},options:{responsive:true,scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:10}},pointLabels:{font:{size:11}}}},plugins:{legend:{position:"bottom",labels:{font:{size:11}}}}}});
   }
-
   else if(currentTab==="table"){
-    let html=`<div class="card"><div class="card-title">📑 교차분석 상세표</div><div class="card-sub">${currentCross} × ${selectedScales.join(", ")}</div>`;
-    multi.forEach(item=>{
-      html+=`<div class="dt-label">${item.name}</div><table class="dt"><thead><tr><th>${currentCross}</th><th>N</th><th>M</th><th>SD</th><th>1점</th><th>2점</th><th>3점</th><th>4점</th><th>5점</th></tr></thead><tbody>`;
-      item.results.forEach(r=>{
-        const mc=r.mean>=3.5?"var(--success)":r.mean>=3?"var(--warning)":"var(--danger)";
-        html+=`<tr><td>${r.group}</td><td>${r.n}</td><td style="font-weight:700;color:${mc}">${r.mean.toFixed(2)}</td><td style="color:var(--text-muted)">${r.std.toFixed(2)}</td>`;
-        r.dist.forEach((d,di)=>{html+=`<td style="color:var(--text-muted)">${d} (${r.pct[di]}%)</td>`;});
-        html+=`</tr>`;
-      });
-      html+=`</tbody></table>`;
-    });
-    html+=`</div>`;
-    el.innerHTML=html;
+    let h=`<div class="card"><div class="card-title">📑 상세표</div><div class="card-sub">종합 포함</div>`;
+    multi.forEach(item=>{const total=calcTotal(DATA,item.name);h+=`<div class="dt-label">${item.name}</div><table class="dt"><thead><tr>`;
+      [currentCross,"N","M","SD","1점","2점","3점","4점","5점"].forEach(x=>{h+=`<th>${x}</th>`;});h+=`</tr></thead><tbody>`;
+      item.results.forEach(r=>{const mc=r.mean>=3.5?"var(--success)":r.mean<3?"var(--danger)":"#1a1a1a";h+=`<tr><td>${r.group}</td><td>${r.n}</td><td style="font-weight:700;color:${mc}">${r.mean.toFixed(2)}</td><td style="color:var(--text-muted)">${r.std.toFixed(2)}</td>`;r.dist.forEach((d,i)=>{h+=`<td style="color:var(--text-muted)">${d}(${r.pct[i]}%)</td>`;});h+=`</tr>`;});
+      h+=`<tr class="total-row"><td>📊 종합</td><td>${total.n}</td><td style="font-weight:800">${total.mean.toFixed(2)}</td><td>${total.std.toFixed(2)}</td>`;total.dist.forEach((d,i)=>{h+=`<td>${d}(${total.pct[i]}%)</td>`;});h+=`</tr></tbody></table>`;});
+    h+=`</div>`;el.innerHTML=h;
   }
 }
+
+// Init history count
+updateHistCount();
 </script>
 </body>
 </html>
