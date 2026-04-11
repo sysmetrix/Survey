@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -154,7 +155,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
     </div>
     <div style="text-align:center"><span class="upload-badge">SURVEY CROSS-ANALYSIS</span></div>
     <h1 class="upload-h1">사업 설문 데이터<br>교차분석 대시보드</h1>
-    <p class="upload-h2">부천여성청소년재단 사업 만족도 조사, 경영평가,<br>정책 수요 조사 등 설문 데이터의 교차집단 분석 도구</p>
+    <p class="upload-h2">부천여성청소년재단 사업 만족도 조사,<br>정책 수요 조사 등 설문 데이터의 교차집단 분석 도구</p>
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="icon">📂</div>
       <div class="label">파일을 드래그하거나 클릭하여 업로드</div>
@@ -164,7 +165,8 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
     <div style="text-align:center">
       <button class="demo-btn" onclick="loadDemo()">🧪 데모 데이터로 체험하기 (300명)</button>
     </div>
-    <div class="history-link"><a onclick="showHistoryPage()">📂 이전 분석 이력 보기 (<span id="histCount">0</span>건)</a></div>
+    <div class="history-link"><a onclick="showHistoryPage()">📂 이전 분석 이력 보기 (<span id="histCount">0</span>건)</a>
+    <div style="font-size:11px;color:#8a857e;margin-top:4px">⚠️ 이력은 현재 브라우저에만 저장 · 다른 PC에서는 보이지 않음 · 24시간 후 자동 삭제</div></div>
     <div class="proc-guide">
       <div class="proc-title">📋 분석 절차 안내</div>
       <div class="proc-steps">
@@ -191,6 +193,9 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
     <button class="new-btn" onclick="hideHistoryPage()">← 돌아가기</button>
   </div>
   <div style="max-width:700px;margin:0 auto;padding:24px 20px">
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#78350f;line-height:1.6">
+      ⚠️ <strong>저장 안내</strong> — 분석 이력은 이 브라우저에만 저장되며, 다른 PC·다른 브라우저에서는 보이지 않습니다. 또한 <strong>24시간이 지난 이력은 자동으로 삭제</strong>되며, 브라우저 저장 용량 한도는 약 5MB입니다.
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div style="font-size:16px;font-weight:700;color:var(--brand)">저장된 분석 이력</div>
       <button class="hist-del" onclick="clearAllHistory()" style="font-size:11px">🗑️ 전체 삭제</button>
@@ -235,7 +240,8 @@ const PALETTE=["#2563eb","#e11d48","#059669","#d97706","#7c3aed","#0891b2","#be1
 const PLIGHT=["#dbeafe","#ffe4e6","#d1fae5","#fef3c7","#ede9fe","#cffafe","#fecdd3","#e0e7ff"];
 const TABS=[
   {id:"overview",label:"📋 총괄"},{id:"bar",label:"📊 집단비교"},{id:"dist",label:"📈 응답분포"},
-  {id:"heat",label:"🔥 히트맵"},{id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"}
+  {id:"heat",label:"🔥 히트맵"},{id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"},
+  {id:"raw",label:"📄 원본데이터"}
 ];
 let charts={};
 const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
@@ -300,8 +306,14 @@ function genAnalysisHtml(multi,allGroups,gm){
 }
 
 /* ===== DOCX EXPORT ===== */
-function exportDocx(){
+async function exportDocx(){
   if(!DATA.length)return;
+  toast("📥 DOCX 생성 중... (차트 렌더링)");
+  // Pre-render all chart tabs to capture
+  const chartImgs={};
+  for(const t of ["bar","dist","radar"]){currentTab=t;renderTabs();renderContent();await new Promise(r=>setTimeout(r,400));const b64=getChartBase64(t);if(b64)chartImgs[t]=b64;}
+  currentTab="overview";renderTabs();renderContent();await new Promise(r=>setTimeout(r,300));
+  const heatB64=await getElementBase64("#heatCard").catch(()=>null);
   const multi=selectedScales.map(sv=>({name:sv,results:analyze(DATA,currentCross,sv)}));
   const allGroups=[...new Set(multi.flatMap(d=>d.results.map(r=>r.group)))];
   const grandAll=[];selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
@@ -332,6 +344,13 @@ th:first-child,td:first-child{text-align:left}
   html+=`<h2>1. 분석 요약</h2>`;
   const plainAnalysis=genAnalysisPlain(multi,allGroups,gm);
   html+=`<p>${plainAnalysis.replace(/\n/g,"<br>")}</p>`;
+
+  // 차트 이미지 삽입
+  html+=`<h2>📊 시각화 자료</h2>`;
+  if(chartImgs.bar)html+=`<h3>집단 비교 차트</h3><img src="${chartImgs.bar}" style="max-width:600px;width:100%"><br>`;
+  if(chartImgs.dist)html+=`<h3>응답 분포 차트</h3><img src="${chartImgs.dist}" style="max-width:600px;width:100%"><br>`;
+  if(chartImgs.radar)html+=`<h3>레이더 차트</h3><img src="${chartImgs.radar}" style="max-width:600px;width:100%"><br>`;
+  if(heatB64)html+=`<h3>히트맵</h3><img src="${heatB64}" style="max-width:600px;width:100%"><br>`;
 
   // 총괄 통계
   html+=`<h2>2. 총괄 통계</h2>`;
@@ -394,6 +413,9 @@ function exportGoogleDocs(){
   html+=`<h2 style="color:#1e3a5f">1. 분석 요약</h2>`;
   html+=`<p>${genAnalysisPlain(multi,allGroups,gm).replace(/\n/g,"<br>")}</p>`;
 
+  // Add charts if available
+  ["bar","dist","radar"].forEach(k=>{const b64=getChartBase64(k);if(b64){const ttl={bar:"집단 비교",dist:"응답 분포",radar:"레이더 차트"}[k];html+=`<h3 style="color:#2563eb">📊 ${ttl}</h3><img src="${b64}" style="max-width:100%;border:1px solid #e8e5df">`;}});
+
   html+=`<h2 style="color:#1e3a5f">2. ${currentCross}별 문항 평균</h2>`;
   html+=`<table style="border-collapse:collapse;width:100%"><tr><th style="background:#f0f4ff;border:1px solid #ccc;padding:4px 6px">${currentCross}</th>`;
   multi.forEach(d=>{html+=`<th style="background:#f0f4ff;border:1px solid #ccc;padding:4px 6px">${d.name}</th>`;});html+=`</tr>`;
@@ -430,7 +452,21 @@ function exportGoogleDocs(){
 }
 
 /* ===== HISTORY ===== */
-function getHistory(){try{return JSON.parse(localStorage.getItem("surveyHistory")||"[]");}catch(e){return[];}}
+function getHistory(){try{const h=JSON.parse(localStorage.getItem("surveyHistory")||"[]");const cutoff=Date.now()-86400000;const filtered=h.filter(x=>new Date(x.date).getTime()>cutoff);if(filtered.length!==h.length)localStorage.setItem("surveyHistory",JSON.stringify(filtered));return filtered;}catch(e){return[];}}
+
+/* HTML element to PNG (transparent bg) */
+function downloadElementPNG(selector,filename){
+  const el=document.querySelector(selector);if(!el){toast("⚠️ 요소를 찾을 수 없습니다");return;}
+  html2canvas(el,{backgroundColor:null,scale:2}).then(canvas=>{
+    canvas.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename+".png";a.click();URL.revokeObjectURL(a.href);toast("📥 PNG 다운로드 완료!");});
+  });
+}
+/* Get element as base64 for docx embedding */
+function getElementBase64(selector){
+  return new Promise(res=>{const el=document.querySelector(selector);if(!el){res(null);return;}
+    html2canvas(el,{backgroundColor:"#ffffff",scale:2}).then(c=>res(c.toDataURL("image/png"))).catch(()=>res(null));
+  });
+}
 function saveHistory(){localStorage.setItem("surveyHistory",JSON.stringify(getHistory()));}
 function addToHistory(){
   if(!DATA.length)return;
@@ -442,7 +478,7 @@ function addToHistory(){
     id:Date.now(),date:new Date().toISOString(),fileName:currentFileName,
     n:DATA.length,crossVar:currentCross,scaleCount:selectedScales.length,
     groupCount:allGroups.length,grandMean:+gm.toFixed(2),
-    scales:selectedScales.slice(),
+    scales:selectedScales.slice(),rawData:DATA,
     summary:genAnalysisPlain(multi,allGroups,gm).slice(0,500)
   };
   const hist=getHistory();hist.unshift(entry);
@@ -477,16 +513,15 @@ function renderHistoryList(){
   el.innerHTML=hist.map(h=>{
     const d=new Date(h.date);const ds=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
     const mc=h.grandMean>=3.5?"var(--success)":h.grandMean>=3?"var(--warning)":"var(--danger)";
-    return`<div class="hist-card">
-      <div class="hist-top"><span class="hist-name">${h.fileName}</span><span class="hist-date">${ds}</span></div>
-      <div class="hist-stats">
-        <span class="hist-stat">👥 ${h.n}명</span>
-        <span class="hist-stat">🔀 ${h.crossVar} (${h.groupCount}개)</span>
-        <span class="hist-stat">📏 ${h.scaleCount}개 문항</span>
-        <span class="hist-stat" style="color:${mc};font-weight:700">⭐ ${h.grandMean}점</span>
+    const hasData=h.rawData&&Array.isArray(h.rawData)&&h.rawData.length>0;
+    return`<div class="hist-card" onclick="loadHistoryEntry(${h.id})" style="${hasData?'':'opacity:0.6'}">
+      <div class="hist-top"><span class="hist-name">📂 ${h.fileName}${hasData?'':' <span style=\"font-size:10px;color:#dc2626\">(구버전-복원불가)</span>'}</span><span class="hist-date">${ds}</span></div>
+      <div class="hist-stats"><span class="hist-stat">👥 ${h.n}명</span><span class="hist-stat">🔀 ${h.crossVar} (${h.groupCount}개)</span><span class="hist-stat">📏 ${h.scaleCount}개 문항</span><span class="hist-stat" style="color:${mc};font-weight:700">⭐ ${h.grandMean}점</span></div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted);line-height:1.6;max-height:60px;overflow:hidden">${(h.summary||'').slice(0,200)}...</div>
+      <div class="hist-actions">
+        ${hasData?`<button class="hist-del" style="background:#dbeafe;color:#2563eb;border-color:#bfdbfe" onclick="event.stopPropagation();loadHistoryEntry(${h.id})">📂 이 데이터 열기</button>`:''}
+        <button class="hist-del" onclick="event.stopPropagation();deleteHistory(${h.id})">🗑️ 삭제</button>
       </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-muted);line-height:1.6;max-height:60px;overflow:hidden">${h.summary.slice(0,200)}...</div>
-      <div class="hist-actions"><button class="hist-del" onclick="event.stopPropagation();deleteHistory(${h.id})">🗑️ 삭제</button></div>
     </div>`;
   }).join("");
 }
@@ -544,6 +579,48 @@ function heatText(v,mn,mx){return(mx===mn?.5:(v-mn)/(mx-mn))>.55?"#fff":"#1a1a1a
 
 function copyAnalysis(){const el=document.getElementById("analysisText");if(!el)return;navigator.clipboard.writeText(el.innerText).then(()=>{toast("📋 분석 리포트 복사 완료!");});}
 
+/* ===== CHART PNG DOWNLOAD (transparent) ===== */
+function downloadChartPNG(chartKey,filename){
+  const c=charts[chartKey];if(!c)return;
+  const canvas=c.canvas;const tmp=document.createElement("canvas");
+  tmp.width=canvas.width;tmp.height=canvas.height;
+  const ctx=tmp.getContext("2d");ctx.drawImage(canvas,0,0);
+  tmp.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename+".png";a.click();URL.revokeObjectURL(a.href);toast("📥 PNG 다운로드 완료!");});
+}
+/* Get chart as base64 for embedding */
+function getChartBase64(chartKey){const c=charts[chartKey];if(!c)return null;return c.canvas.toDataURL("image/png");}
+
+/* ===== LOAD HISTORY ENTRY ===== */
+function loadHistoryEntry(id){
+  console.log("Loading history entry:",id);
+  const hist=getHistory();const entry=hist.find(h=>h.id===id);
+  if(!entry){alert("⚠️ 해당 이력을 찾을 수 없습니다.");return;}
+  if(!entry.rawData||!Array.isArray(entry.rawData)||!entry.rawData.length){
+    alert("⚠️ 이 이력은 구버전에 저장되어 원본 데이터가 없습니다.\n해당 이력을 삭제하고 파일을 새로 업로드해주세요.");
+    return;
+  }
+  try{
+    DATA=entry.rawData;currentFileName=entry.fileName||"이력 데이터";
+    const t=detect(DATA);CROSS=t.cross;SCALE=t.scale;
+    currentCross=entry.crossVar&&CROSS.includes(entry.crossVar)?entry.crossVar:(CROSS[0]||"");
+    selectedScales=(entry.scales||[]).filter(s=>SCALE.includes(s));
+    if(!selectedScales.length)selectedScales=SCALE.slice(0,8);
+    currentTab="overview";
+    document.getElementById("historyPage").classList.add("hidden");
+    document.getElementById("uploadScreen").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+    document.getElementById("fileLabel").textContent=currentFileName+" · "+DATA.length+"명 (이력 복원)";
+    const cs=document.getElementById("crossSelect");
+    cs.innerHTML=CROSS.map(v=>`<option value="${v}">${v}</option>`).join("");
+    cs.value=currentCross;
+    renderScaleList();renderTabs();renderContent();
+    toast("✅ 이력 데이터를 복원했습니다");
+  }catch(e){
+    console.error(e);
+    alert("⚠️ 이력 복원 중 오류 발생: "+e.message);
+  }
+}
+
 function renderContent(){
   Object.values(charts).forEach(c=>{if(c&&c.destroy)c.destroy();});charts={};
   if(!selectedScales.length){document.getElementById("tabContent").innerHTML=`<div style="text-align:center;padding:50px;color:var(--text-muted)"><div style="font-size:32px;margin-bottom:10px">📏</div><div style="font-size:14px;font-weight:600">척도변수를 1개 이상 선택해주세요</div></div>`;return;}
@@ -572,29 +649,48 @@ function renderContent(){
     el.innerHTML=h;
   }
   else if(currentTab==="bar"){
-    const wt=[...single,singleTotal];el.innerHTML=`<div class="card"><div class="card-title">📊 ${currentCross}별 "${selectedScales[0]}" 평균</div><div class="card-sub">종합 평균 포함</div><div class="chart-wrap"><canvas id="barChart"></canvas></div><div id="barBadges" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"></div></div>`;
+    const wt=[...single,singleTotal];el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="card-title">📊 ${currentCross}별 "${selectedScales[0]}" 평균</div><div class="card-sub">종합 평균 포함</div></div><button class="abtn abtn-copy" onclick="downloadChartPNG('bar','집단비교_${currentCross}')">📥 PNG</button></div><div class="chart-wrap"><canvas id="barChart"></canvas></div><div id="barBadges" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"></div></div>`;
     const ctx=document.getElementById("barChart").getContext("2d");charts.bar=new Chart(ctx,{type:"bar",data:{labels:wt.map(d=>d.group),datasets:[{label:"평균",data:wt.map(d=>d.mean),backgroundColor:wt.map((_,i)=>i===wt.length-1?"#1e3a5f":PALETTE[i%PALETTE.length]),borderRadius:6,maxBarThickness:50}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)}}},scales:{y:{min:0,max:5,ticks:{stepSize:1}}}}});
     document.getElementById("barBadges").innerHTML=wt.map((d,i)=>`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:${i===wt.length-1?"#e0e7ff":PLIGHT[i%PLIGHT.length]};color:${i===wt.length-1?"#1e3a5f":PALETTE[i%PALETTE.length]};font-weight:600">${d.group} n=${d.n} M=${d.mean.toFixed(2)} SD=${d.std.toFixed(2)}</span>`).join("");
   }
   else if(currentTab==="dist"){
-    const wt=[...single,singleTotal];el.innerHTML=`<div class="card"><div class="card-title">📈 응답분포</div><div class="card-sub">종합 포함</div><div class="chart-wrap"><canvas id="distChart"></canvas></div></div>`;
+    const wt=[...single,singleTotal];el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between"><div><div class="card-title">📈 응답분포</div><div class="card-sub">종합 포함</div></div><button class="abtn abtn-copy" onclick="downloadChartPNG('dist','응답분포_${currentCross}')">📥 PNG</button></div><div class="chart-wrap"><canvas id="distChart"></canvas></div></div>`;
     const dc=["#dc2626","#f97316","#eab308","#22c55e","#2563eb"];const ctx=document.getElementById("distChart").getContext("2d");
     charts.dist=new Chart(ctx,{type:"bar",data:{labels:wt.map(d=>d.group),datasets:[1,2,3,4,5].map((s,i)=>({label:s+"점",data:wt.map(d=>d.pct[s-1]),backgroundColor:dc[i]}))},options:{responsive:true,indexAxis:"y",scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+"%"}},y:{stacked:true}},plugins:{tooltip:{callbacks:{label:c=>c.parsed.x+"%"}}}}});
   }
   else if(currentTab==="heat"){
-    let h=`<div class="card"><div class="card-title">🔥 전체 히트맵</div><div class="card-sub">종합 포함</div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
+    let h=`<div class="card" id="heatCard"><div style="display:flex;justify-content:space-between"><div><div class="card-title">🔥 전체 히트맵</div><div class="card-sub">종합 포함</div></div><button class="abtn abtn-copy" onclick="downloadElementPNG('#heatCard','히트맵_${currentCross}')">📥 PNG</button></div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
     multi.forEach(d=>{h+=`<th title="${d.name}">${d.name.length>6?d.name.slice(0,6)+"…":d.name}</th>`;});h+=`</tr></thead><tbody>`;
     allGroups.forEach(g=>{h+=`<tr><td>${g}</td>`;multi.forEach(d=>{const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;h+=`<td style="background:${v!==null?heatColor(v,hMin,hMax):'var(--bg-alt)'};color:${v!==null?heatText(v,hMin,hMax):'var(--text-muted)'}">${v!==null?v.toFixed(2):"-"}</td>`;});h+=`</tr>`;});
     h+=`<tr class="total-row"><td>📊 종합</td>`;multi.forEach(d=>{const t=calcTotal(DATA,d.name);h+=`<td>${t.mean.toFixed(2)}</td>`;});h+=`</tr></tbody></table></div></div>`;el.innerHTML=h;
   }
   else if(currentTab==="radar"){
-    el.innerHTML=`<div class="card"><div class="card-title">🕸️ 레이더</div><div class="card-sub">종합 포함</div><div class="chart-wrap"><canvas id="radarChart"></canvas></div></div>`;
+    el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between"><div><div class="card-title">🕸️ 레이더</div><div class="card-sub">종합 포함</div></div><button class="abtn abtn-copy" onclick="downloadChartPNG('radar','레이더_${currentCross}')">📥 PNG</button></div><div class="chart-wrap"><canvas id="radarChart"></canvas></div></div>`;
     const labels=multi.map(d=>d.name.length>6?d.name.slice(0,6)+"…":d.name);const gWT=[...allGroups,"종합"];
     const ds=gWT.map((g,i)=>{const isT=g==="종합";return{label:g,data:multi.map(d=>{if(isT){return+calcTotal(DATA,d.name).mean.toFixed(2);}const r=d.results.find(x=>x.group===g);return r?+r.mean.toFixed(2):0;}),borderColor:isT?"#1e3a5f":PALETTE[i%PALETTE.length],backgroundColor:(isT?"#1e3a5f":PALETTE[i%PALETTE.length])+"1a",borderWidth:isT?3:2,borderDash:isT?[6,3]:[],pointRadius:isT?4:3};});
     const ctx=document.getElementById("radarChart").getContext("2d");charts.radar=new Chart(ctx,{type:"radar",data:{labels,datasets:ds},options:{responsive:true,scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:10}},pointLabels:{font:{size:11}}}},plugins:{legend:{position:"bottom",labels:{font:{size:11}}}}}});
   }
+  else if(currentTab==="raw"){
+    const hdrs=Object.keys(DATA[0]||{});
+    const search=window.rawSearch||"";
+    const filtered=search?DATA.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(search.toLowerCase()))):DATA;
+    const maxRows=500;const display=filtered.slice(0,maxRows);
+    let h=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div><div class="card-title">📄 원본 데이터 보기</div><div class="card-sub">업로드된 원본 응답 데이터 · 분석 값 검증용</div></div>
+      <div style="display:flex;gap:6px"><input type="text" id="rawSearchInput" placeholder="🔍 검색..." value="${search}" oninput="window.rawSearch=this.value;renderContent();setTimeout(()=>{const el=document.getElementById('rawSearchInput');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}},0)" style="padding:5px 10px;font-size:12px;border:1px solid #e8e5df;border-radius:5px;outline:none;font-family:inherit;width:160px"></div></div>
+      <div style="font-size:11px;color:#8a857e;margin-bottom:8px">전체 ${DATA.length}건 중 ${filtered.length}건 (${display.length}건 표시${filtered.length>maxRows?" · 최대 500건":""})</div>
+      <div style="overflow:auto;max-height:600px;border:1px solid #e8e5df;border-radius:6px"><table class="dt" style="margin:0;font-size:11px"><thead style="position:sticky;top:0;z-index:1"><tr>`;
+    h+=`<th style="background:#f0f4ff;min-width:40px">#</th>`;
+    hdrs.forEach(col=>{const isCross=CROSS.includes(col);const isScale=SCALE.includes(col);const bg=isCross?"#fef3c7":isScale?"#dbeafe":"#faf9f7";h+=`<th style="background:${bg};white-space:nowrap" title="${isCross?'교차변수':isScale?'척도변수':'기타'}">${col}${isCross?" 🔀":isScale?" 📏":""}</th>`;});
+    h+=`</tr></thead><tbody>`;
+    display.forEach((r,i)=>{h+=`<tr><td style="color:#8a857e">${i+1}</td>`;hdrs.forEach(col=>{const v=r[col];const isScale=SCALE.includes(col);const cls=isScale&&Number(v)<=2?"color:#dc2626;font-weight:700":isScale&&Number(v)>=4?"color:#16a34a;font-weight:700":"";h+=`<td style="text-align:${isScale||!isNaN(Number(v))?"center":"left"};${cls}">${v!==undefined&&v!==null&&v!==""?v:"-"}</td>`;});h+=`</tr>`;});
+    h+=`</tbody></table></div>
+      <div style="margin-top:10px;display:flex;gap:8px;font-size:11px;color:#5a5650"><span style="padding:2px 8px;background:#fef3c7;border-radius:4px">🔀 교차변수</span><span style="padding:2px 8px;background:#dbeafe;border-radius:4px">📏 척도변수</span><span style="padding:2px 8px;background:#faf9f7;border-radius:4px">기타</span></div>
+    </div>`;
+    el.innerHTML=h;
+  }
   else if(currentTab==="table"){
-    let h=`<div class="card"><div class="card-title">📑 상세표</div><div class="card-sub">종합 포함</div>`;
+    let h=`<div class="card" id="tableCard"><div style="display:flex;justify-content:space-between"><div><div class="card-title">📑 상세표</div><div class="card-sub">종합 포함</div></div><button class="abtn abtn-copy" onclick="downloadElementPNG('#tableCard','상세표_${currentCross}')">📥 PNG</button></div>`;
     multi.forEach(item=>{const total=calcTotal(DATA,item.name);h+=`<div class="dt-label">${item.name}</div><table class="dt"><thead><tr>`;
       [currentCross,"N","M","SD","1점","2점","3점","4점","5점"].forEach(x=>{h+=`<th>${x}</th>`;});h+=`</tr></thead><tbody>`;
       item.results.forEach(r=>{const mc=r.mean>=3.5?"var(--success)":r.mean<3?"var(--danger)":"#1a1a1a";h+=`<tr><td>${r.group}</td><td>${r.n}</td><td style="font-weight:700;color:${mc}">${r.mean.toFixed(2)}</td><td style="color:var(--text-muted)">${r.std.toFixed(2)}</td>`;r.dist.forEach((d,i)=>{h+=`<td style="color:var(--text-muted)">${d}(${r.pct[i]}%)</td>`;});h+=`</tr>`;});
