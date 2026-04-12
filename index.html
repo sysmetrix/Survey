@@ -241,11 +241,76 @@ const PLIGHT=["#dbeafe","#ffe4e6","#d1fae5","#fef3c7","#ede9fe","#cffafe","#fecd
 const TABS=[
   {id:"overview",label:"📋 총괄"},{id:"bar",label:"📊 집단비교"},{id:"dist",label:"📈 응답분포"},
   {id:"heat",label:"🔥 히트맵"},{id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"},
-  {id:"raw",label:"📄 원본데이터"}
+  {id:"raw",label:"📄 원본데이터"},{id:"stats",label:"🔬 통계검정"}
 ];
 let charts={};
 const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
 const sdev=a=>{if(a.length<2)return 0;const m=avg(a);return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/(a.length-1));};
+
+/* ===== 통계 검정 ===== */
+// t-검정 (2집단, Welch's t-test)
+function tTest(a,b){
+  if(a.length<2||b.length<2)return null;
+  const m1=avg(a),m2=avg(b),v1=sdev(a)**2,v2=sdev(b)**2;
+  const se=Math.sqrt(v1/a.length+v2/b.length);if(se===0)return null;
+  const t=(m1-m2)/se;
+  const df=Math.pow(v1/a.length+v2/b.length,2)/(Math.pow(v1/a.length,2)/(a.length-1)+Math.pow(v2/b.length,2)/(b.length-1));
+  // 근사 p-value (양측검정)
+  const x=df/(df+t*t);
+  const p=betaInc(df/2,0.5,x);
+  // 효과크기 Cohen's d
+  const pooledSd=Math.sqrt(((a.length-1)*v1+(b.length-1)*v2)/(a.length+b.length-2));
+  const d=pooledSd>0?(m1-m2)/pooledSd:0;
+  return{t:+t.toFixed(3),df:+df.toFixed(1),p:+p.toFixed(4),d:+d.toFixed(3)};
+}
+// 일원분산분석 (ANOVA, 3+ 집단)
+function anova(groups){
+  const flat=groups.flat();if(flat.length<3||groups.length<2)return null;
+  const grandMean=avg(flat);const k=groups.length,N=flat.length;
+  const ssb=groups.reduce((s,g)=>s+g.length*Math.pow(avg(g)-grandMean,2),0);
+  const ssw=groups.reduce((s,g)=>{const m=avg(g);return s+g.reduce((x,v)=>x+Math.pow(v-m,2),0);},0);
+  const dfb=k-1,dfw=N-k;if(dfw<=0||ssw===0)return null;
+  const msb=ssb/dfb,msw=ssw/dfw;const F=msb/msw;
+  const x=dfw/(dfw+dfb*F);const p=betaInc(dfw/2,dfb/2,x);
+  const etaSq=ssb/(ssb+ssw); // 효과크기 η²
+  return{F:+F.toFixed(3),df1:dfb,df2:dfw,p:+p.toFixed(4),etaSq:+etaSq.toFixed(3)};
+}
+// 불완전 베타함수 근사 (p-value 계산용)
+function betaInc(a,b,x){if(x<=0)return 1;if(x>=1)return 0;
+  const lbeta=lgamma(a)+lgamma(b)-lgamma(a+b);
+  const front=Math.exp(Math.log(x)*a+Math.log(1-x)*b-lbeta)/a;
+  let f=1,c=1,d=0;
+  for(let i=0;i<200;i++){
+    const m=i/2;let num;
+    if(i===0)num=1;
+    else if(i%2===0)num=(m*(b-m)*x)/((a+2*m-1)*(a+2*m));
+    else num=-((a+m)*(a+b+m)*x)/((a+2*m)*(a+2*m+1));
+    d=1+num*d;if(Math.abs(d)<1e-30)d=1e-30;d=1/d;
+    c=1+num/c;if(Math.abs(c)<1e-30)c=1e-30;
+    const delta=c*d;f*=delta;if(Math.abs(delta-1)<1e-8)break;
+  }
+  return 1-front*(f-1);
+}
+function lgamma(z){const c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let x=z,y=z,tmp=x+5.5;tmp-=(x+0.5)*Math.log(tmp);let ser=1.000000000190015;
+  for(let i=0;i<6;i++){y++;ser+=c[i]/y;}return -tmp+Math.log(2.5066282746310005*ser/x);
+}
+// Cronbach's alpha (신뢰도)
+function cronbachAlpha(data,items){
+  if(items.length<2)return null;
+  const rows=data.map(r=>items.map(i=>Number(r[i])).filter(v=>!isNaN(v)));
+  const valid=rows.filter(r=>r.length===items.length);if(valid.length<3)return null;
+  const k=items.length;
+  const itemVars=items.map((_,j)=>sdev(valid.map(r=>r[j]))**2);
+  const totalVar=sdev(valid.map(r=>r.reduce((s,v)=>s+v,0)))**2;if(totalVar===0)return null;
+  return+((k/(k-1))*(1-itemVars.reduce((s,v)=>s+v,0)/totalVar)).toFixed(3);
+}
+// 결측값 정보
+function missingInfo(data,col){
+  const total=data.length;
+  const missing=data.filter(r=>{const v=r[col];return v===""||v===null||v===undefined||(typeof v==="number"&&isNaN(v));}).length;
+  return{total,missing,valid:total-missing,missingPct:+((missing/total)*100).toFixed(1)};
+}
 
 function detect(data){
   const hdrs=Object.keys(data[0]);const cross=[],scale=[];
@@ -535,7 +600,7 @@ fi.addEventListener("change",e=>handleFile(e.target.files[0]));
 
 function handleFile(file){
   if(!file)return;const ext=file.name.split(".").pop().toLowerCase();
-  if(ext==="csv"||ext==="tsv"){Papa.parse(file,{header:true,skipEmptyLines:true,complete:r=>initDashboard(r.data,file.name)});}
+  if(ext==="csv"||ext==="tsv"){const reader=new FileReader();reader.onload=e=>{const buf=e.target.result;const bytes=new Uint8Array(buf);let text;if(bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF){text=new TextDecoder("utf-8").decode(buf);}else{try{text=new TextDecoder("utf-8",{fatal:true}).decode(buf);}catch(_){text=new TextDecoder("euc-kr").decode(buf);}}Papa.parse(text,{header:true,skipEmptyLines:true,complete:r=>initDashboard(r.data,file.name)});};reader.readAsArrayBuffer(file);}
   else if(ext==="xlsx"||ext==="xls"){const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:"array"});initDashboard(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""}),file.name);}catch(err){alert("엑셀 파싱 실패");}};reader.readAsArrayBuffer(file);}
   else{alert("지원: .csv .tsv .xlsx .xls");}
 }
@@ -565,9 +630,12 @@ function resetAll(){
 }
 
 function renderScaleList(){
-  document.getElementById("scaleList").innerHTML=SCALE.map(sv=>`<label class="cb-row${selectedScales.includes(sv)?" active":""}"><input type="checkbox" ${selectedScales.includes(sv)?"checked":""} onchange="toggleScale('${sv}')">${sv}</label>`).join("");
+  document.getElementById("scaleList").innerHTML=SCALE.map(sv=>`<label class="cb-row${selectedScales.includes(sv)?" active":""}"><input type="checkbox" ${selectedScales.includes(sv)?"checked":""} onchange="toggleScale('${sv}')"><span style="flex:1">${sv}</span><button onclick="event.preventDefault();event.stopPropagation();moveToCross('${sv}')" title="교차변수로 변경" style="font-size:9px;padding:1px 4px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:3px;cursor:pointer;font-family:inherit">→🔀</button></label>`).join("")+
+    (CROSS.length?`<div style="margin-top:10px;font-size:10px;color:var(--text-muted);font-weight:700">교차변수 목록</div>`+CROSS.map(cv=>`<div class="cb-row" style="justify-content:space-between"><span style="flex:1;color:var(--text-sec)">🔀 ${cv}</span><button onclick="moveToScale('${cv}')" title="척도변수로 변경" style="font-size:9px;padding:1px 4px;background:#dbeafe;color:#2563eb;border:1px solid #bfdbfe;border-radius:3px;cursor:pointer;font-family:inherit">→📏</button></div>`).join(""):"");
   document.getElementById("sbInfo").innerHTML=`교차변수 ${CROSS.length}개 · 척도변수 ${SCALE.length}개 · 응답 ${DATA.length}건`;
 }
+function moveToCross(name){SCALE=SCALE.filter(x=>x!==name);if(!CROSS.includes(name))CROSS.push(name);selectedScales=selectedScales.filter(x=>x!==name);const cs=document.getElementById("crossSelect");cs.innerHTML=CROSS.map(v=>`<option value="${v}">${v}</option>`).join("");cs.value=currentCross;renderScaleList();renderContent();toast("🔀 '"+name+"' → 교차변수");}
+function moveToScale(name){CROSS=CROSS.filter(x=>x!==name);if(!SCALE.includes(name))SCALE.push(name);if(currentCross===name)currentCross=CROSS[0]||"";const cs=document.getElementById("crossSelect");cs.innerHTML=CROSS.map(v=>`<option value="${v}">${v}</option>`).join("");cs.value=currentCross;renderScaleList();renderContent();toast("📏 '"+name+"' → 척도변수");}
 function onCrossChange(){currentCross=document.getElementById("crossSelect").value;renderContent();}
 function toggleScale(sv){if(selectedScales.includes(sv))selectedScales=selectedScales.filter(x=>x!==sv);else selectedScales.push(sv);renderScaleList();renderContent();}
 function selectAllScales(){selectedScales=[...SCALE];renderScaleList();renderContent();}
@@ -669,6 +737,34 @@ function renderContent(){
     const labels=multi.map(d=>d.name.length>6?d.name.slice(0,6)+"…":d.name);const gWT=[...allGroups,"종합"];
     const ds=gWT.map((g,i)=>{const isT=g==="종합";return{label:g,data:multi.map(d=>{if(isT){return+calcTotal(DATA,d.name).mean.toFixed(2);}const r=d.results.find(x=>x.group===g);return r?+r.mean.toFixed(2):0;}),borderColor:isT?"#1e3a5f":PALETTE[i%PALETTE.length],backgroundColor:(isT?"#1e3a5f":PALETTE[i%PALETTE.length])+"1a",borderWidth:isT?3:2,borderDash:isT?[6,3]:[],pointRadius:isT?4:3};});
     const ctx=document.getElementById("radarChart").getContext("2d");charts.radar=new Chart(ctx,{type:"radar",data:{labels,datasets:ds},options:{responsive:true,scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:10}},pointLabels:{font:{size:11}}}},plugins:{legend:{position:"bottom",labels:{font:{size:11}}}}}});
+  }
+  else if(currentTab==="stats"){
+    const alpha=cronbachAlpha(DATA,selectedScales);
+    const miss=selectedScales.map(sv=>({name:sv,...missingInfo(DATA,sv)}));
+    let h=`<div class="card"><div class="card-title">🔬 통계적 유의성 검정</div><div class="card-sub">${currentCross} 집단 간 평균 차이 검정 · 유의수준 α=0.05</div>`;
+    if(alpha!==null){const ac=alpha>=0.8?"var(--success)":alpha>=0.6?"var(--warning)":"var(--danger)";const al=alpha>=0.9?"매우 우수":alpha>=0.8?"양호":alpha>=0.7?"수용 가능":alpha>=0.6?"의심":"불량";
+      h+=`<div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px"><strong>📏 신뢰도 Cronbach's α</strong> = <span style="color:${ac};font-weight:800;font-size:14px">${alpha}</span> <span style="color:var(--text-muted)">(${al})</span> · ${selectedScales.length}개 문항</div>`;}
+    h+=`<table class="dt"><thead><tr><th>문항</th><th>검정</th><th>통계량</th><th>자유도</th><th>p-value</th><th>효과크기</th><th>유의성</th></tr></thead><tbody>`;
+    selectedScales.forEach(sv=>{
+      const groups={};DATA.forEach(r=>{const k=String(r[currentCross]||"").trim();const v=Number(r[sv]);if(isNaN(v)||!k)return;if(!groups[k])groups[k]=[];groups[k].push(v);});
+      const keys=Object.keys(groups);const arrs=keys.map(k=>groups[k]);let result=null,testName="";
+      if(keys.length===2){result=tTest(arrs[0],arrs[1]);testName="t-test";}
+      else if(keys.length>=3){result=anova(arrs);testName="ANOVA";}
+      if(!result){h+=`<tr><td>${sv}</td><td colspan="6" style="color:var(--text-muted)">검정 불가 (집단 부족)</td></tr>`;return;}
+      const sig=result.p<0.001?"***":result.p<0.01?"**":result.p<0.05?"*":"n.s.";
+      const sigColor=result.p<0.05?"var(--success)":"var(--text-muted)";
+      const stat=testName==="t-test"?`t=${result.t}`:`F=${result.F}`;
+      const df=testName==="t-test"?result.df:`${result.df1},${result.df2}`;
+      const eff=testName==="t-test"?`d=${result.d}`:`η²=${result.etaSq}`;
+      h+=`<tr><td>${sv}</td><td>${testName}</td><td>${stat}</td><td>${df}</td><td>${result.p}</td><td>${eff}</td><td style="color:${sigColor};font-weight:700">${sig}</td></tr>`;
+    });
+    h+=`</tbody></table><div style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.7">* p&lt;0.05, ** p&lt;0.01, *** p&lt;0.001, n.s. = 유의하지 않음<br>효과크기 해석: Cohen's d (0.2 작음 / 0.5 중간 / 0.8 큼), η² (0.01 작음 / 0.06 중간 / 0.14 큼)</div></div>`;
+    // 결측값
+    h+=`<div class="card"><div class="card-title">🕳️ 결측값 현황</div><div class="card-sub">문항별 무응답·결측 데이터 비율</div><table class="dt"><thead><tr><th>문항</th><th>전체</th><th>유효 응답</th><th>결측</th><th>결측률</th><th>품질</th></tr></thead><tbody>`;
+    miss.forEach(m=>{const qc=m.missingPct<5?"var(--success)":m.missingPct<15?"var(--warning)":"var(--danger)";const ql=m.missingPct<5?"우수":m.missingPct<15?"보통":"주의";
+      h+=`<tr><td>${m.name}</td><td>${m.total}</td><td>${m.valid}</td><td>${m.missing}</td><td style="font-weight:700;color:${qc}">${m.missingPct}%</td><td style="color:${qc};font-weight:600">${ql}</td></tr>`;});
+    h+=`</tbody></table></div>`;
+    el.innerHTML=h;
   }
   else if(currentTab==="raw"){
     const hdrs=Object.keys(DATA[0]||{});
