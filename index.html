@@ -146,6 +146,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .new-btn{padding:5px 12px;font-size:12px;font-weight:600;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text-sec);font-family:inherit}
 .new-btn:hover{background:var(--accent-light);color:var(--accent2)}
 .hidden{display:none}
+.modal-overlay{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--brand);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.show{opacity:1}
 /* ===== RESPONSIVE ===== */
@@ -174,6 +175,48 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 <body>
 
 <div id="toast" class="toast"></div>
+
+<!-- RELEASE NOTES MODAL -->
+<div id="releaseModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+<div style="background:#fff;border-radius:14px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+<span style="font-size:16px;font-weight:800;color:var(--brand)">📋 업데이트 내역</span>
+<button onclick="document.getElementById('releaseModal').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)">✕</button>
+</div>
+<div style="font-size:13px;color:var(--text-sec);line-height:1.9">
+<div style="margin-bottom:16px">
+<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v3.1 — 2026.04.12</div>
+<div style="padding-left:12px;border-left:3px solid var(--accent-light)">
+• 차트 수치 라벨 표시 (chartjs-plugin-datalabels)<br>
+• 차트 폰트 확대 및 가독성 개선<br>
+• DOCX 차트 이미지 문서 너비 맞춤<br>
+• HWPX 내보내기 추가 (검증된 OWPML 템플릿 기반)<br>
+• HWPX 내용 DOCX와 동일 구조로 통일<br>
+• 재단 CI 컬러(그린·퍼플·골드) 전면 적용<br>
+• 로고 심볼마크 적용 (투명 배경)
+</div></div>
+<div style="margin-bottom:16px">
+<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v3.0 — 2026.04.12</div>
+<div style="padding-left:12px;border-left:3px solid var(--accent-light)">
+• 한글 CSV 인코딩(EUC-KR/CP949) 자동 감지<br>
+• JSON 분석 이력 내보내기·불러오기<br>
+• 불성실 응답(straight-lining) 자동 감지·제외<br>
+• 시각적 위계 재설계 (종합 평균 히어로 카드)<br>
+• 색약자 대응 Wong 팔레트 적용<br>
+• 카드 fadeUp 애니메이션·hover 효과<br>
+• 모바일·태블릿 반응형 (1024px·640px 브레이크포인트)
+</div></div>
+<div style="margin-bottom:16px">
+<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v2.0 — 초기 릴리즈</div>
+<div style="padding-left:12px;border-left:3px solid var(--accent-light)">
+• 설문 교차분석 대시보드 최초 배포<br>
+• CSV/XLSX 파일 업로드·자동 변수 감지<br>
+• 히트맵·막대·분포·레이더 차트 4종<br>
+• DOCX·Google Docs 내보내기<br>
+• 분석 이력 localStorage 저장 (24시간 보존)
+</div></div>
+<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:12px">부천여성청소년재단 전략경영실 전략기획부</div>
+</div></div></div>
 
 <!-- UPLOAD SCREEN -->
 <div id="uploadScreen" class="upload-screen">
@@ -215,7 +258,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
     <div class="footer" style="margin-top:24px;border-top:none;padding:0">
       <span>부천여성청소년재단 전략경영실 전략기획부</span><br>
       <span style="font-size:10px;color:var(--text-muted)">설문 교차분석 대시보드 v3.1</span>
-      <a href="https://sysmetrix.github.io/survey-dashboard/releases" target="_blank" style="display:inline-block;margin-left:8px;font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--accent-light);padding:2px 8px;border-radius:4px">📋 업데이트 내역</a>
+      <a href="javascript:void(0)" onclick="document.getElementById('releaseModal').style.display='flex'" style="display:inline-block;margin-left:8px;font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--accent-light);padding:2px 8px;border-radius:4px">📋 업데이트 내역</a>
     </div>
   </div>
 </div>
