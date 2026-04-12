@@ -450,11 +450,13 @@ function genAnalysisHtml(multi,allGroups,gm){
 async function exportDocx(){
   if(!DATA.length)return;
   toast("📥 DOCX 생성 중... (차트 렌더링)");
-  // Pre-render all chart tabs to capture
-  const chartImgs={};
-  for(const t of ["bar","dist","radar"]){currentTab=t;renderTabs();renderContent();await new Promise(r=>setTimeout(r,400));const b64=getChartBase64(t);if(b64)chartImgs[t]=b64;}
-  currentTab="overview";renderTabs();renderContent();await new Promise(r=>setTimeout(r,300));
+  /* 1) overview 먼저 — 히트맵 캡처 */
+  currentTab="overview";renderTabs();renderContent();await new Promise(r=>setTimeout(r,600));
   const heatB64=await getElementBase64("#heatCard").catch(()=>null);
+  /* 2) 차트 탭 순회 캡처 (scale 축소) */
+  const chartImgs={};
+  for(const t of ["bar","dist","radar"]){currentTab=t;renderTabs();renderContent();await new Promise(r=>setTimeout(r,600));const b64=getChartBase64(t);if(b64)chartImgs[t]=b64;}
+  currentTab="overview";renderTabs();renderContent();
   const multi=selectedScales.map(sv=>({name:sv,results:analyze(DATA,currentCross,sv)}));
   const allGroups=[...new Set(multi.flatMap(d=>d.results.map(r=>r.group)))];
   const grandAll=[];selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
@@ -488,10 +490,10 @@ th:first-child,td:first-child{text-align:left}
 
   // 차트 이미지 삽입
   html+=`<h2>📊 시각화 자료</h2>`;
-  if(chartImgs.bar)html+=`<h3>집단 비교 차트</h3><img src="${chartImgs.bar}" style="width:100%"><br>`;
-  if(chartImgs.dist)html+=`<h3>응답 분포 차트</h3><img src="${chartImgs.dist}" style="width:100%"><br>`;
-  if(chartImgs.radar)html+=`<h3>레이더 차트</h3><img src="${chartImgs.radar}" style="width:100%"><br>`;
-  if(heatB64)html+=`<h3>히트맵</h3><img src="${heatB64}" style="width:100%"><br>`;
+  if(chartImgs.bar)html+=`<h3>집단 비교 차트</h3><img src="${chartImgs.bar}" style="width:640px;max-width:100%"><br>`;
+  if(chartImgs.dist)html+=`<h3>응답 분포 차트</h3><img src="${chartImgs.dist}" style="width:640px;max-width:100%"><br>`;
+  if(chartImgs.radar)html+=`<h3>레이더 차트</h3><img src="${chartImgs.radar}" style="width:640px;max-width:100%"><br>`;
+  if(heatB64)html+=`<h3>히트맵</h3><img src="${heatB64}" style="width:640px;max-width:100%"><br>`;
 
   // 총괄 통계
   html+=`<h2>2. 총괄 통계</h2>`;
@@ -1574,7 +1576,7 @@ function downloadElementPNG(selector,filename){
 /* Get element as base64 for docx embedding */
 function getElementBase64(selector){
   return new Promise(res=>{const el=document.querySelector(selector);if(!el){res(null);return;}
-    html2canvas(el,{backgroundColor:"#ffffff",scale:2}).then(c=>res(c.toDataURL("image/png"))).catch(()=>res(null));
+    html2canvas(el,{backgroundColor:"#ffffff",scale:1.5}).then(c=>{const maxW=1280;if(c.width<=maxW)return res(c.toDataURL("image/jpeg",0.85));const cv=document.createElement("canvas");cv.width=maxW;cv.height=Math.round(c.height*(maxW/c.width));cv.getContext("2d").drawImage(c,0,0,cv.width,cv.height);res(cv.toDataURL("image/jpeg",0.85));}).catch(()=>res(null));
   });
 }
 function saveHistory(){localStorage.setItem("surveyHistory",JSON.stringify(getHistory()));}
@@ -1750,7 +1752,7 @@ function downloadChartPNG(chartKey,filename){
   tmp.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename+".png";a.click();URL.revokeObjectURL(a.href);toast("📥 PNG 다운로드 완료!");});
 }
 /* Get chart as base64 for embedding */
-function getChartBase64(chartKey){const c=charts[chartKey];if(!c)return null;return c.canvas.toDataURL("image/png");}
+function getChartBase64(chartKey){const c=charts[chartKey];if(!c)return null;const src=c.canvas;const maxW=1280;if(src.width<=maxW)return src.toDataURL("image/jpeg",0.85);const cv=document.createElement("canvas");cv.width=maxW;cv.height=Math.round(src.height*(maxW/src.width));cv.getContext("2d").drawImage(src,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",0.85);}
 
 /* ===== LOAD HISTORY ENTRY ===== */
 function loadHistoryEntry(id){
