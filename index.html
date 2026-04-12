@@ -464,19 +464,24 @@ async function exportDocx(){
   const now=new Date();const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
 
   let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><style>
-body{font-family:'맑은 고딕',sans-serif;font-size:12pt;line-height:1.8;color:#1a1a1a}
-h1{font-size:18pt;color:#006D3A;border-bottom:3px solid #006D3A;padding-bottom:8px;margin-bottom:16px}
-h2{font-size:14pt;color:#006D3A;margin-top:24px;margin-bottom:10px;border-left:4px solid #5C2D91;padding-left:10px}
-h3{font-size:12pt;color:#5C2D91;margin-top:16px;margin-bottom:8px}
-table{border-collapse:collapse;width:100%;margin:10px 0 16px}
-th{background:#f0ebf5;color:#006D3A;font-weight:700;padding:6px 8px;border:1px solid #d0d9e8;font-size:11pt;text-align:center}
-td{padding:5px 8px;border:1px solid #e8e5df;font-size:11pt;text-align:center}
+<head><meta charset="utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+<style>
+@page{size:210mm 297mm;margin:2.5cm 2.5cm 2.5cm 2.5cm}
+body{font-family:'맑은 고딕',sans-serif;font-size:12pt;line-height:1.9;color:#1a1a1a;margin:0;padding:0}
+h1{font-size:20pt;color:#006D3A;border-bottom:3px solid #006D3A;padding-bottom:10px;margin-bottom:18px}
+h2{font-size:15pt;color:#006D3A;margin-top:28px;margin-bottom:12px;border-left:5px solid #5C2D91;padding-left:12px}
+h3{font-size:13pt;color:#5C2D91;margin-top:18px;margin-bottom:10px}
+p{font-size:12pt;line-height:1.9}
+table{border-collapse:collapse;width:100%;margin:12px 0 18px}
+th{background:#f0ebf5;color:#006D3A;font-weight:700;padding:7px 10px;border:1px solid #c0c8d8;font-size:11pt;text-align:center}
+td{padding:6px 10px;border:1px solid #d8d8d8;font-size:11pt;text-align:center}
 th:first-child,td:first-child{text-align:left}
 .total td{background:#f0ebf5;color:#006D3A;font-weight:700;border-top:2px solid #5C2D91}
 .good{color:#16a34a;font-weight:700}.bad{color:#dc2626;font-weight:700}
-.meta{color:#5a5650;font-size:10pt;margin-bottom:16px}
-.footer{margin-top:30px;padding-top:10px;border-top:1px solid #e8e5df;color:#8a857e;font-size:9pt;text-align:center}
+.meta{color:#5a5650;font-size:11pt;margin-bottom:18px}
+img{display:block;margin:10px auto;border:1px solid #e0e0e0}
+.footer{margin-top:30px;padding-top:10px;border-top:1px solid #d8d8d8;color:#8a857e;font-size:9pt;text-align:center}
 </style></head><body>`;
 
   html+=`<h1>설문 교차분석 결과 보고서</h1>`;
@@ -490,10 +495,10 @@ th:first-child,td:first-child{text-align:left}
 
   // 차트 이미지 삽입
   html+=`<h2>📊 시각화 자료</h2>`;
-  if(chartImgs.bar)html+=`<h3>집단 비교 차트</h3><img src="${chartImgs.bar}" style="width:640px;max-width:100%"><br>`;
-  if(chartImgs.dist)html+=`<h3>응답 분포 차트</h3><img src="${chartImgs.dist}" style="width:640px;max-width:100%"><br>`;
-  if(chartImgs.radar)html+=`<h3>레이더 차트</h3><img src="${chartImgs.radar}" style="width:640px;max-width:100%"><br>`;
-  if(heatB64)html+=`<h3>히트맵</h3><img src="${heatB64}" style="width:640px;max-width:100%"><br>`;
+  if(chartImgs.bar)html+=`<h3>집단 비교 차트</h3><img src="${chartImgs.bar}" width="560"><br>`;
+  if(chartImgs.dist)html+=`<h3>응답 분포 차트</h3><img src="${chartImgs.dist}" width="560"><br>`;
+  if(chartImgs.radar)html+=`<h3>레이더 차트</h3><img src="${chartImgs.radar}" width="560"><br>`;
+  if(heatB64)html+=`<h3>히트맵</h3><img src="${heatB64}" width="560"><br>`;
 
   // 총괄 통계
   html+=`<h2>2. 총괄 통계</h2>`;
@@ -551,8 +556,8 @@ async function exportHwpx(){
   const gm=avg(grandAll);
   const now=new Date();const ds=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
   const xe=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  const mkP=(text,charPr)=>`<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="${charPr||0}"><hp:t>${xe(text)}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
-  const mkTbl=(headers,rows)=>{const nc=headers.length;const cw=Math.floor(42520/nc);let t=`<hp:tbl id="0" noAdjust="0" rowCnt="${rows.length+1}" colCnt="${nc}" cellSpacing="0" borderFillIDRef="2"><hp:tblPr pageBreak="CELL" repeatHeader="1" rowSzSplitable="0"><hp:sz width="42520" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/>`;for(let i=0;i<nc;i++)t+=`<hp:cellZone startRowAddr="0" startColAddr="${i}" endRowAddr="0" endColAddr="${i}"/>`;t+=`</hp:tblPr>`;t+=`<hp:tr><hp:trPr height="0" sizetype="AT_LEAST"/>`;headers.forEach((h,i)=>{t+=`<hp:tc><hp:tcPr><hp:cellAddr colAddr="${i}" rowAddr="0"/><hp:cellSpan colSpan="1" rowSpan="1"/><hp:sz width="${cw}" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/><hp:tcMargin><hp:left width="80"/><hp:right width="80"/><hp:top width="40"/><hp:bottom width="40"/></hp:tcMargin><hp:borderFillIDRef>2</hp:borderFillIDRef></hp:tcPr><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${mkP(h,1)}</hp:subList></hp:tc>`;});t+=`</hp:tr>`;rows.forEach((row,ri)=>{t+=`<hp:tr><hp:trPr height="0" sizetype="AT_LEAST"/>`;row.forEach((cell,ci)=>{t+=`<hp:tc><hp:tcPr><hp:cellAddr colAddr="${ci}" rowAddr="${ri+1}"/><hp:cellSpan colSpan="1" rowSpan="1"/><hp:sz width="${cw}" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/><hp:tcMargin><hp:left width="80"/><hp:right width="80"/><hp:top width="40"/><hp:bottom width="40"/></hp:tcMargin><hp:borderFillIDRef>2</hp:borderFillIDRef></hp:tcPr><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${mkP(String(cell))}</hp:subList></hp:tc>`;});t+=`</hp:tr>`;});t+=`</hp:tbl>`;return t;};
+  const mkP=(text,charPr,paraPr)=>`<hp:p id="0" paraPrIDRef="${paraPr||0}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="${charPr||0}"><hp:t>${xe(text)}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
+  const mkTbl=(headers,rows)=>{const nc=headers.length;const cw=Math.floor(42520/nc);let t=`<hp:tbl id="0" noAdjust="0" rowCnt="${rows.length+1}" colCnt="${nc}" cellSpacing="0" borderFillIDRef="3"><hp:tblPr pageBreak="CELL" repeatHeader="1" rowSzSplitable="0"><hp:sz width="42520" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/>`;for(let i=0;i<nc;i++)t+=`<hp:cellZone startRowAddr="0" startColAddr="${i}" endRowAddr="0" endColAddr="${i}"/>`;t+=`</hp:tblPr>`;t+=`<hp:tr><hp:trPr height="0" sizetype="AT_LEAST"/>`;headers.forEach((h,i)=>{t+=`<hp:tc><hp:tcPr><hp:cellAddr colAddr="${i}" rowAddr="0"/><hp:cellSpan colSpan="1" rowSpan="1"/><hp:sz width="${cw}" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/><hp:tcMargin><hp:left width="80"/><hp:right width="80"/><hp:top width="40"/><hp:bottom width="40"/></hp:tcMargin><hp:borderFillIDRef>4</hp:borderFillIDRef></hp:tcPr><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${mkP(h,9)}</hp:subList></hp:tc>`;});t+=`</hp:tr>`;rows.forEach((row,ri)=>{t+=`<hp:tr><hp:trPr height="0" sizetype="AT_LEAST"/>`;row.forEach((cell,ci)=>{t+=`<hp:tc><hp:tcPr><hp:cellAddr colAddr="${ci}" rowAddr="${ri+1}"/><hp:cellSpan colSpan="1" rowSpan="1"/><hp:sz width="${cw}" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/><hp:tcMargin><hp:left width="80"/><hp:right width="80"/><hp:top width="40"/><hp:bottom width="40"/></hp:tcMargin><hp:borderFillIDRef>3</hp:borderFillIDRef></hp:tcPr><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${mkP(String(cell))}</hp:subList></hp:tc>`;});t+=`</hp:tr>`;});t+=`</hp:tbl>`;return t;};
   const SECPR=`<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134" tabStop="8000" tabStopVal="4000" tabStopUnit="HWPUNIT" outlineShapeIDRef="1" memoShapeIDRef="0" textVerticalWidthHead="0" masterPageCnt="0">
         <hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/>
         <hp:startNum pageStartsOn="BOTH" page="0" pic="0" tbl="0" equation="0"/>
@@ -588,27 +593,27 @@ async function exportHwpx(){
   const COLPR=`<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/></hp:ctrl>`;
   const SEC_NS=`xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf/" xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0"`;
   let sec="";
-  sec+=`<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="0">${SECPR}${COLPR}</hp:run><hp:run charPrIDRef="1"><hp:t>${xe("설문 교차분석 결과 보고서")}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
+  sec+=`<hp:p id="0" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="0">${SECPR}${COLPR}</hp:run><hp:run charPrIDRef="7"><hp:t>${xe("설문 교차분석 결과 보고서")}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
   sec+=mkP(`분석일: ${ds} | 파일: ${currentFileName} | 응답자: ${DATA.length}명 | 교차변수: ${currentCross} | 분석 문항: ${selectedScales.length}개`);
   sec+=mkP("부천여성청소년재단 전략경영실 전략기획부");
   sec+=mkP("");
-  sec+=mkP("1. 분석 요약",1);
+  sec+=mkP("1. 분석 요약",8);
   const plain=genAnalysisPlain(multi,allGroups,gm);
   plain.split("\n").filter(l=>l.trim()).forEach(l=>{sec+=mkP(l);});
   sec+=mkP("");
-  sec+=mkP("2. 총괄 통계",1);
+  sec+=mkP("2. 총괄 통계",8);
   sec+=mkTbl(["항목","값"],[["전체 응답자",DATA.length+"명"],["분석 문항 수",selectedScales.length+"개"],["교차집단 수",allGroups.length+"개 ("+currentCross+")"],["전체 평균",gm.toFixed(2)+"점"]]);
   sec+=mkP("");
-  sec+=mkP("3. "+currentCross+"별 문항 평균 (교차분석표)",1);
+  sec+=mkP("3. "+currentCross+"별 문항 평균 (교차분석표)",8);
   const hdrCols=[currentCross,...multi.map(d=>d.name)];
   const tblRows=[];
   allGroups.forEach(g=>{const row=[g];multi.forEach(d=>{const r=d.results.find(x=>x.group===g);row.push(r?r.mean.toFixed(2):"-");});tblRows.push(row);});
   const totalRow=["종합"];multi.forEach(d=>{const t=calcTotal(DATA,d.name);totalRow.push(t.mean.toFixed(2));});tblRows.push(totalRow);
   sec+=mkTbl(hdrCols,tblRows);
   sec+=mkP("");
-  sec+=mkP("4. 문항별 상세 분석",1);
+  sec+=mkP("4. 문항별 상세 분석",8);
   multi.forEach(item=>{
-    sec+=mkP(item.name,1);
+    sec+=mkP(item.name,8);
     const total=calcTotal(DATA,item.name);
     const dh=[currentCross,"N","평균","SD","1점","2점","3점","4점","5점"];
     const dr=[];
@@ -722,7 +727,7 @@ async function exportHwpx(){
         </hh:font>
       </hh:fontface>
     </hh:fontfaces>
-    <hh:borderFills itemCnt="2">
+    <hh:borderFills itemCnt="4">
       <hh:borderFill id="1" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">
         <hh:slash type="NONE" Crooked="0" isCounter="0"/>
         <hh:backSlash type="NONE" Crooked="0" isCounter="0"/>
@@ -743,6 +748,25 @@ async function exportHwpx(){
         <hc:fillBrush>
           <hc:winBrush faceColor="none" hatchColor="#999999" alpha="0"/>
         </hc:fillBrush>
+      </hh:borderFill>
+    <hh:borderFill id="3" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">
+        <hh:slash type="NONE" Crooked="0" isCounter="0"/>
+        <hh:backSlash type="NONE" Crooked="0" isCounter="0"/>
+        <hh:leftBorder type="SOLID" width="0.12 mm" color="#888888"/>
+        <hh:rightBorder type="SOLID" width="0.12 mm" color="#888888"/>
+        <hh:topBorder type="SOLID" width="0.12 mm" color="#888888"/>
+        <hh:bottomBorder type="SOLID" width="0.12 mm" color="#888888"/>
+        <hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>
+      </hh:borderFill>
+<hh:borderFill id="4" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">
+        <hh:slash type="NONE" Crooked="0" isCounter="0"/>
+        <hh:backSlash type="NONE" Crooked="0" isCounter="0"/>
+        <hh:leftBorder type="SOLID" width="0.12 mm" color="#888888"/>
+        <hh:rightBorder type="SOLID" width="0.12 mm" color="#888888"/>
+        <hh:topBorder type="SOLID" width="0.12 mm" color="#888888"/>
+        <hh:bottomBorder type="SOLID" width="0.12 mm" color="#888888"/>
+        <hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>
+        <hh:fillBrush><hh:winBrush faceColor="#E8E0F0" hatchColor="#000000" hatchStyle="NONE" alpha="0"/></hh:fillBrush>
       </hh:borderFill>
     </hh:borderFills>
     <hh:charProperties itemCnt="7">
@@ -822,6 +846,27 @@ async function exportHwpx(){
         <hh:strikeout shape="NONE" color="#000000"/>
         <hh:outline type="NONE"/>
         <hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>
+      </hh:charPr>
+    <hh:charPr id="7" height="1600" textColor="#006D3A" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="1" bold="1">
+        <hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
+        <hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>
+        <hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
+        <hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>
+        <hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
+      </hh:charPr>
+<hh:charPr id="8" height="1300" textColor="#006D3A" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="1" bold="1">
+        <hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
+        <hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>
+        <hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
+        <hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>
+        <hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
+      </hh:charPr>
+<hh:charPr id="9" height="1000" textColor="#006D3A" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="1" bold="1">
+        <hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
+        <hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>
+        <hh:spacing hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
+        <hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>
+        <hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>
       </hh:charPr>
     </hh:charProperties>
     <hh:tabProperties itemCnt="3">
@@ -1444,6 +1489,12 @@ async function exportHwpx(){
           </hp:default>
         </hp:switch>
         <hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>
+      </hh:paraPr>
+    <hh:paraPr id="20" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">
+        <hh:align horizontal="CENTER" vertical="BASELINE"/>
+        <hh:heading type="NONE" idRef="0" level="0"/>
+        <hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="1" widowOrphan="0" keepWithNext="0" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>
+        <hh:autoSpacing eAsianEng="0" eAsianNum="0"/>
       </hh:paraPr>
     </hh:paraProperties>
     <hh:styles itemCnt="23">
