@@ -690,7 +690,7 @@ function runRegression(dvId){
   t+=`</tbody></table><div style="margin-top:8px;font-size:10px;color:var(--text-muted)">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 n.s.=유의하지않음 | B는 5점 척도 기준 비표준화 계수</div>`;
   // 회귀분석 해설
   const R2Pct=Math.round(R2*100);const adjPct=Math.round(adj_R2*100);
-  const R2Level=R2>=0.5?"높은":"R2>=0.3?"중간":"낮은";
+  const R2Level=R2>=0.5?"높은":R2>=0.3?"중간":"낮은";
   t+=`<div class="analysis-box" style="margin-top:14px;margin-bottom:0"><h3>💡 회귀분석 해설</h3>`;
   t+=`<div class="analysis-section"><strong>📐 설명력 (R²)</strong><br>`;
   t+=`독립변수들이 '<span class="analysis-highlight">${dv}</span>'의 분산 중 <strong>${R2Pct}%</strong>를 설명합니다 (수정 R² = ${adjPct}%). `;
