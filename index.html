@@ -172,7 +172,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .hist-del:hover{background:#fef2f2}
 .hist-empty{text-align:center;padding:40px;color:var(--text-muted)}
 
-.chart-wrap{position:relative;width:100%;margin-bottom:8px}
+.chart-wrap{position:relative;width:100%;margin-bottom:8px;height:calc(100vh - 280px);min-height:340px;max-height:520px}
 .footer{margin-top:20px;padding:10px 0;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);text-align:center}
 .new-btn{padding:5px 12px;font-size:12px;font-weight:600;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text-sec);font-family:inherit}
 .new-btn:hover{background:var(--accent-light);color:var(--accent2)}
@@ -195,6 +195,9 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
   .stat-card,.stat-card-hero{min-width:100%}
   .card{padding:10px 12px}
   .tabs{gap:3px}.tab-btn{padding:5px 8px;font-size:11px}
+  .mode-bar{flex-wrap:wrap;gap:4px;padding:5px 6px}
+  .mode-btn{padding:5px 10px;font-size:11px}
+  .util-btn{padding:4px 7px;font-size:10px}
   .ht{font-size:10px}.ht th,.ht td{padding:3px 4px}
   .sidebar{max-height:180px;padding:8px 12px}
   .main{padding:10px 12px}
@@ -215,6 +218,16 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 <button onclick="document.getElementById('releaseModal').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)">✕</button>
 </div>
 <div style="font-size:13px;color:var(--text-sec);line-height:1.9">
+<div style="margin-bottom:16px">
+<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v4.2 — 2026.04.13</div>
+<div style="padding-left:12px;border-left:3px solid var(--accent-light)">
+• 2단 계층 탭 구조 도입 — 모드 바(종합분석/교차분석/심층분석) + 서브 탭<br>
+• 원본데이터·주관식 → 심층분석 서브탭 + 사이드바 하단 바로가기로 접근성 개선<br>
+• 반응형 모드바 — 좁은 화면에서 자동 줄바꿈<br>
+• DOCX 보고서에 <strong>상관행렬</strong> 섹션 추가 (섹션 6)<br>
+• <strong>ANOVA Tukey HSD 사후검정</strong> 추가 — 유의한 문항의 쌍별 집단 차이 분석<br>
+• 교차변수 선택 시 항상 교차분석 모드로 자동 전환
+</div></div>
 <div style="margin-bottom:16px">
 <div style="font-weight:700;color:var(--brand);margin-bottom:4px">v4.1 — 2026.04.13</div>
 <div style="padding-left:12px;border-left:3px solid var(--accent-light)">
@@ -371,13 +384,18 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
           <div id="scaleList"></div>
         </div>
       </div>
+      <!-- 데이터 바로가기 -->
+      <div style="margin-top:8px;display:flex;gap:4px">
+        <button onclick="switchMode('deep');switchTab('raw')" style="flex:1;padding:6px 4px;font-size:11px;font-weight:600;background:#faf9f7;color:var(--text-sec);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='var(--bg-alt)'" onmouseout="this.style.background='#faf9f7'">📄 원본데이터</button>
+        <button onclick="switchMode('deep');switchTab('text')" style="flex:1;padding:6px 4px;font-size:11px;font-weight:600;background:#faf9f7;color:var(--text-sec);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background='var(--bg-alt)'" onmouseout="this.style.background='#faf9f7'">💬 주관식</button>
+      </div>
       <div class="sb-info" id="sbInfo"></div>
     </div>
     <div class="main" id="mainArea">
       <div id="modeBar"></div>
       <div class="sub-bar" id="subBar"></div>
       <div id="tabContent"></div>
-      <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.1</div>
+      <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.2</div>
     </div>
   </div>
 </div>
@@ -388,7 +406,7 @@ const PALETTE=["#0072B2","#D55E00","#009E73","#E69F00","#CC79A7","#56B4E9","#F0E
 const PLIGHT=["#d0e8f7","#fce0d0","#c8f0e4","#fdf0c4","#f5dfe9","#d6eef9","#fdf8c4","#e0e0e0"];
 const TABS=[
   {id:"overview",label:"📋 총괄"},{id:"simple",label:"📊 종합분석"},{id:"bar",label:"📊 집단비교"},
-  {id:"dist",label:"📈 응답분포"},{id:"heat",label:"🔥 히트맵"},{id:"radar",label:"🕸️ 레이더"},
+  {id:"dist",label:"📈 응답분포"},{id:"heat",label:"🔥 히트맵"},{id:"radar",label:"🎯 점플롯"},
   {id:"table",label:"📑 상세표"},{id:"stats",label:"🔬 통계검정"},{id:"deep",label:"🧮 심층분석"},
   {id:"text",label:"💬 주관식"},{id:"raw",label:"📄 원본데이터"}
 ];
@@ -413,6 +431,26 @@ function tTest(a,b){
   return{t:+t.toFixed(3),df:+df.toFixed(1),p:+p.toFixed(4),d:+d.toFixed(3)};
 }
 // 일원분산분석 (ANOVA, 3+ 집단)
+// Tukey HSD 사후검정
+function tukeyHSD(groups,keys){
+  const N=groups.reduce((s,g)=>s+g.length,0);const k=groups.length;
+  if(k<2)return[];
+  const flat=groups.flat();const grandM=avg(flat);
+  const ssw=groups.reduce((s,g)=>{const m=avg(g);return s+g.reduce((x,v)=>x+(v-m)**2,0);},0);
+  const dfw=N-k;if(dfw<=0)return[];
+  const msw=ssw/dfw;
+  const results=[];
+  for(let i=0;i<k;i++){for(let j=i+1;j<k;j++){
+    const ni=groups[i].length,nj=groups[j].length;
+    const se=Math.sqrt(msw/2*(1/ni+1/nj));if(se===0)continue;
+    const q=Math.abs(avg(groups[i])-avg(groups[j]))/se;
+    // q분포 근사 (Studentized range — 보수적 근사)
+    const pApprox=Math.max(0,Math.min(1,1-Math.pow(1-Math.exp(-q*q/2),k-1)));
+    results.push({g1:keys[i],g2:keys[j],m1:+avg(groups[i]).toFixed(2),m2:+avg(groups[j]).toFixed(2),
+      diff:+(avg(groups[i])-avg(groups[j])).toFixed(2),q:+q.toFixed(3),sig:pApprox<0.001?"***":pApprox<0.01?"**":pApprox<0.05?"*":"n.s.",p:+pApprox.toFixed(4)});
+  }}
+  return results.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+}
 function anova(groups){
   const flat=groups.flat();if(flat.length<3||groups.length<2)return null;
   const grandMean=avg(flat);const k=groups.length,N=flat.length;
@@ -994,7 +1032,7 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0}
     total.dist.forEach((d,i)=>{html+=`<td>${d} (${total.pct[i]}%)</td>`;});html+=`</tr></table>`;
   });
 
-  html+=`<div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.1 자동 생성</div>`;
+  html+=`<div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.2 자동 생성</div>`;
 
   // 5. 종합 평균 분석 (문항별 전체 평균)
   html+=`<h2>5. 문항별 전체 평균 (종합분석)</h2>`;
@@ -1003,10 +1041,23 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0}
   simpleItems.forEach((it,i)=>{const cls=it.mean>=3.5?"good":it.mean<3?"bad":"";html+=`<tr><td>${i+1}</td><td>${it.name}</td><td>${it.n}</td><td class="${cls}">${it.mean.toFixed(2)}</td><td>${it.std.toFixed(2)}</td></tr>`;});
   html+=`</table>`;
 
-  // 6. 주관식 분석 (자동 감지된 경우)
+  // 6. 심층분석 — 상관행렬
+  if(selectedScales.length>=2){
+    html+=`<h2>6. 심층분석 — 상관행렬 (Pearson r)</h2>`;
+    const dvars=selectedScales;
+    const corRows=dvars.map(va=>dvars.map(vb=>{const pa=DATA.filter(r=>!isNaN(Number(r[va]))&&!isNaN(Number(r[vb])));return pearsonR(pa.map(r=>Number(r[va])),pa.map(r=>Number(r[vb])));}));
+    html+=`<table><tr><th></th>`;dvars.forEach(v=>{html+=`<th>${v.length>8?v.slice(0,8)+"…":v}</th>`;});html+=`</tr>`;
+    dvars.forEach((va,i)=>{html+=`<tr><td><strong>${va.length>10?va.slice(0,10)+"…":va}</strong></td>`;dvars.forEach((_,j)=>{const{r,p}=corRows[i][j];if(i===j){html+=`<td style="background:#f0ebf5;font-weight:700">1.00</td>`;}else{const sig=p!==null&&p<0.001?"***":p<0.01?"**":p<0.05?"*":"";const cls=r!==null&&Math.abs(r)>=0.5?"good":r!==null&&Math.abs(r)>=0.3?"":"";html+=`<td class="${cls}">${r!==null?r.toFixed(2)+sig:"-"}</td>`;}});html+=`</tr>`;});
+    html+=`</table><p style="font-size:10pt;color:#5a5650">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 | 0.1–0.3 약 · 0.3–0.5 중간 · 0.5 이상 강</p>`;
+    // 강한 상관쌍 요약
+    const strongPairs=[];dvars.forEach((va,i)=>dvars.forEach((vb,j)=>{if(i>=j)return;const{r,p}=corRows[i][j];if(r!==null&&Math.abs(r)>=0.4&&p<0.05)strongPairs.push({va,vb,r});}) );
+    if(strongPairs.length)html+=`<p><strong>주목할 상관쌍:</strong> ${strongPairs.map(p=>`'${p.va}' ↔ '${p.vb}' (r=${p.r.toFixed(2)})`).join(", ")}</p>`;
+  }
+
+  // 7. 주관식 분석 (자동 감지된 경우)
   const allTextCols=[...TEXT,...CROSS.filter(co=>DATA.some(r=>String(r[co]||"").length>10))];
   if(allTextCols.length){
-    html+=`<h2>6. 주관식 응답 분석</h2>`;
+    html+=`<h2>7. 주관식 응답 분석</h2>`;
     allTextCols.forEach(col=>{
       const vals=DATA.map(r=>String(r[col]||"").trim()).filter(v=>v.length>1);
       if(!vals.length)return;
@@ -2278,13 +2329,14 @@ const MODE_GROUPS={
   cross:{label:"🔀 교차분석",cls:"active-cross",tabs:[
     {id:"overview",label:"📋 총괄"},{id:"bar",label:"📊 집단비교"},
     {id:"dist",label:"📈 응답분포"},{id:"heat",label:"🔥 히트맵"},
-    {id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"},
+    {id:"radar",label:"🎯 점플롯"},{id:"table",label:"📑 상세표"},
   ],defaultTab:"overview"},
   deep:{label:"🧮 심층분석",cls:"active-deep",tabs:[
     {id:"stats",label:"🔬 통계검정"},{id:"deep",label:"🧮 심층분석"},
+    {id:"text",label:"💬 주관식"},{id:"raw",label:"📄 원본데이터"},
   ],defaultTab:"stats"},
 };
-const UTIL_TABS=[{id:"text",label:"💬 주관식"},{id:"raw",label:"📄 원본데이터"}];
+const UTIL_TABS=[];  // text·raw → 심층분석 서브탭으로 이동
 // 탭 ID → 모드 역방향 맵
 function tabToMode(id){
   if(id==="simple")return"simple";
@@ -2351,8 +2403,14 @@ function onCrossChange(){currentCross=document.getElementById("crossSelect")?.va
 function toggleScale(sv){if(selectedScales.includes(sv))selectedScales=selectedScales.filter(x=>x!==sv);else selectedScales.push(sv);renderScaleList();renderContent();}
 function selectAllScales(){selectedScales=[...SCALE];renderScaleList();renderContent();}
 function clearScales(){selectedScales=[];renderScaleList();renderContent();}
-function heatColor(v,mn,mx){const r=mx===mn?.5:(v-mn)/(mx-mn);return`rgb(${Math.round(240-r*200)},${Math.round(253-r*80)},${Math.round(244-r*190)})`;}
-function heatText(v,mn,mx){return(mx===mn?.5:(v-mn)/(mx-mn))>.55?"#fff":"#1a1a1a";}
+function heatColor(v,mn,mx){
+  // 발산형 히트맵: 3.5 기준 → 낮을수록 빨강, 높을수록 초록, 중간=흰색
+  const mid=3.5,range=Math.max(mx-mid,mid-mn,0.5);
+  const t=(v-mid)/range;  // -1(최저)~0(중간)~+1(최고)
+  if(t>=0){const g=Math.round(255-t*80);return`rgb(${Math.round(255-t*200)},${g},${Math.round(255-t*180)})`;}
+  else{const abs=Math.abs(t);return`rgb(255,${Math.round(255-abs*180)},${Math.round(255-abs*200)})`;}
+}
+function heatText(v,mn,mx){const mid=3.5,range=Math.max(mx-mid,mid-mn,0.5);return Math.abs((v-mid)/range)>.55?"#fff":"#1a1a1a";}
 
 function copyAnalysis(){const el=document.getElementById("analysisText");if(!el)return;navigator.clipboard.writeText(el.innerText).then(()=>{toast("📋 분석 리포트 복사 완료!");});}
 
@@ -2418,7 +2476,7 @@ function renderContent(){
     h+=`</div>`;
     h+=`<div class="analysis-box"><h3>📝 자동 분석 리포트</h3><div id="analysisText">${genAnalysisHtml(multi,allGroups,gm)}</div>
     <div class="abtn-row"><button class="abtn abtn-docx" onclick="exportDocx()">📥 DOCX 다운로드</button><button class="abtn" style="background:var(--accent-light);color:var(--accent);border-color:#d4bde8" onclick="exportHwpx()">📥 HWPX 다운로드</button><button class="abtn abtn-gdoc" onclick="exportGoogleDocs()">📋 리포트 복사</button></div></div>`;
-    h+=`<div class="card"><div class="card-title">🔥 ${currentCross}별 문항 평균 히트맵</div><div class="card-sub">하단 종합 평균 포함</div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
+    h+=`<div class="card"><div class="card-title">🔥 ${currentCross}별 문항 평균 히트맵</div><div class="card-sub">3.5 기준 발산형 · 🟢높음↔🔴낮음</div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
     multi.forEach(d=>{h+=`<th title="${d.name}">${d.name.length>6?d.name.slice(0,6)+"…":d.name}</th>`;});h+=`</tr></thead><tbody>`;
     allGroups.forEach(g=>{h+=`<tr><td>${g}</td>`;multi.forEach(d=>{const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;h+=`<td style="background:${v!==null?heatColor(v,hMin,hMax):'var(--bg-alt)'};color:${v!==null?heatText(v,hMin,hMax):'var(--text-muted)'}">${v!==null?v.toFixed(2):"-"}</td>`;});h+=`</tr>`;});
     h+=`<tr class="total-row"><td>📊 종합</td>`;multi.forEach(d=>{const t=calcTotal(DATA,d.name);h+=`<td>${t.mean.toFixed(2)}</td>`;});h+=`</tr></tbody></table></div></div>`;
@@ -2428,26 +2486,207 @@ function renderContent(){
     el.innerHTML=h;
   }
   else if(currentTab==="bar"){
-    const wt=[...single,singleTotal];el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="card-title">📊 ${currentCross}별 "${selectedScales[0]}" 평균</div><div class="card-sub">종합 평균 포함</div></div><button class="abtn abtn-copy" onclick="downloadChartPNG('bar','집단비교_${currentCross}')">📥 PNG</button></div><div class="chart-wrap"><canvas id="barChart"></canvas></div><div id="barBadges" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"></div></div>`;
-    const ctx=document.getElementById("barChart").getContext("2d");charts.bar=new Chart(ctx,{type:"bar",data:{labels:wt.map(d=>d.group),datasets:[{label:"평균",data:wt.map(d=>d.mean),backgroundColor:wt.map((_,i)=>i===wt.length-1?"#006D3A":PALETTE[i%PALETTE.length]),borderRadius:6,maxBarThickness:60}]},plugins:[ChartDataLabels],options:{responsive:true,plugins:{legend:{display:false},datalabels:{anchor:"end",align:"top",font:{size:13,weight:"bold"},formatter:v=>v.toFixed(2)},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)}}},scales:{y:{min:0,max:5,ticks:{stepSize:1,font:{size:12}}},x:{ticks:{font:{size:12}}}}}});
-    document.getElementById("barBadges").innerHTML=wt.map((d,i)=>`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:${i===wt.length-1?"#e8ddf2":PLIGHT[i%PLIGHT.length]};color:${i===wt.length-1?"#006D3A":PALETTE[i%PALETTE.length]};font-weight:600">${d.group} n=${d.n} M=${d.mean.toFixed(2)} SD=${d.std.toFixed(2)}</span>`).join("");
+    const wt=[...single,singleTotal];
+    const grandMean=calcTotal(DATA,selectedScales[0]).mean;
+    const topG=single.reduce((a,b)=>a.mean>b.mean?a:b,single[0]);
+    const botG=single.reduce((a,b)=>a.mean<b.mean?a:b,single[0]);
+    const diff=+(topG.mean-botG.mean).toFixed(2);
+    const descTxt=`${currentCross}별로 '${selectedScales[0]}' 문항의 평균을 비교합니다. 전체 평균은 ${grandMean.toFixed(2)}점(점선)이며, '${topG.group}'(${topG.mean.toFixed(2)}점)이 가장 높고 '${botG.group}'(${botG.mean.toFixed(2)}점)이 가장 낮습니다. 집단 간 격차는 ${diff}점입니다.`;
+    el.innerHTML=`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <div><div class="card-title">📊 ${currentCross}별 집단 비교 — "${selectedScales[0]}"</div>
+        <div class="card-sub">수평 막대 · 점선=전체 평균(${grandMean.toFixed(2)}점) · 집단 수: ${single.length}개</div></div>
+        <button class="abtn abtn-copy" onclick="downloadChartPNG('bar','집단비교_${currentCross}')">📥 PNG</button>
+      </div>
+      <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+      <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
+      <div id="barBadges" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px"></div>
+    </div>`;
+    const ctx=document.getElementById("barChart").getContext("2d");
+    charts.bar=new Chart(ctx,{
+      type:"bar",
+      data:{
+        labels:wt.map(d=>d.group),
+        datasets:[{
+          label:"평균",data:wt.map(d=>d.mean),
+          backgroundColor:wt.map((_,i)=>i===wt.length-1?"#006D3A26":PALETTE[i%PALETTE.length]+"cc"),
+          borderColor:wt.map((_,i)=>i===wt.length-1?"#006D3A":PALETTE[i%PALETTE.length]),
+          borderWidth:2,borderRadius:4,borderSkipped:false,barThickness:28
+        }]
+      },
+      plugins:[ChartDataLabels,{
+        id:"baselinePl",
+        afterDraw(chart){
+          const {ctx:cx,scales:{x}}=chart;const yAx=chart.scales.y||chart.scales.x;
+          const meta=chart.getDatasetMeta(0);if(!meta.data.length)return;
+          const bVal=grandMean;
+          // 수평 막대이므로 x축이 값축
+          const xPos=chart.scales.x.getPixelForValue(bVal);
+          const top=chart.chartArea.top,bot=chart.chartArea.bottom;
+          cx.save();cx.beginPath();cx.moveTo(xPos,top);cx.lineTo(xPos,bot);
+          cx.strokeStyle="#006D3A";cx.lineWidth=2;cx.setLineDash([6,4]);cx.stroke();
+          cx.fillStyle="#006D3A";cx.font="bold 11px Pretendard,sans-serif";
+          cx.fillText("전체 "+bVal.toFixed(2),xPos+4,top+14);cx.restore();
+        }
+      }],
+      options:{
+        indexAxis:"y",responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          datalabels:{anchor:"end",align:"end",font:{size:14,weight:"bold"},
+            color:ctx=>ctx.dataIndex===wt.length-1?"#006D3A":"#1a1a1a",
+            formatter:v=>v.toFixed(2)+"점"},
+          tooltip:{callbacks:{label:c=>"평균 "+c.parsed.x.toFixed(2)+"점"}}
+        },
+        scales:{
+          x:{min:0,max:5,ticks:{stepSize:1,font:{size:13}},grid:{color:"#f0ede8"},
+             title:{display:true,text:"평균 (5점 만점)",font:{size:13},color:"#5a5650"}},
+          y:{ticks:{font:{size:13,weight:"600"}},grid:{display:false}}
+        }
+      }
+    });
+    document.getElementById("barBadges").innerHTML=wt.map((d,i)=>`<span style="font-size:11px;padding:3px 9px;border-radius:99px;background:${i===wt.length-1?"#e8ddf2":PLIGHT[i%PLIGHT.length]};color:${i===wt.length-1?"#006D3A":PALETTE[i%PALETTE.length]};font-weight:600">${d.group} n=${d.n} M=${d.mean.toFixed(2)} SD=${d.std.toFixed(2)}</span>`).join("");
   }
   else if(currentTab==="dist"){
-    const wt=[...single,singleTotal];el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between"><div><div class="card-title">📈 응답분포</div><div class="card-sub">종합 포함</div></div><button class="abtn abtn-copy" onclick="downloadChartPNG('dist','응답분포_${currentCross}')">📥 PNG</button></div><div class="chart-wrap"><canvas id="distChart"></canvas></div></div>`;
-    const dc=["#D55E00","#E69F00","#F0E442","#009E73","#0072B2"];const ctx=document.getElementById("distChart").getContext("2d");
-    charts.dist=new Chart(ctx,{type:"bar",data:{labels:wt.map(d=>d.group),datasets:[1,2,3,4,5].map((s,i)=>({label:s+"점",data:wt.map(d=>d.pct[s-1]),backgroundColor:dc[i]}))},plugins:[ChartDataLabels],options:{responsive:true,indexAxis:"y",scales:{x:{stacked:true,max:100,ticks:{callback:v=>v+"%",font:{size:12}}},y:{stacked:true,ticks:{font:{size:12}}}},plugins:{datalabels:{display:ctx=>ctx.dataset.data[ctx.dataIndex]>=8,color:"#fff",font:{size:10,weight:"bold"},formatter:v=>v.toFixed(0)+"%"},tooltip:{callbacks:{label:c=>c.parsed.x+"%"}},legend:{labels:{font:{size:12}}}}}});
+    // 발산형 누적 막대: 1~2점 왼쪽(부정), 3점 중립, 4~5점 오른쪽(긍정)
+    const wt=[...single,singleTotal];
+    // 긍정/부정 비율 분석
+    const posRates=wt.map(d=>d.pct[3]+d.pct[4]);
+    const negRates=wt.map(d=>d.pct[0]+d.pct[1]);
+    const topPos=wt[posRates.indexOf(Math.max(...posRates))];
+    const descTxt=`'${selectedScales[0]}' 문항의 ${currentCross}별 응답 분포입니다. 막대가 오른쪽으로 길수록 긍정(4~5점) 응답 비율이 높고, 왼쪽으로 길수록 부정(1~2점) 응답이 많습니다. '${topPos.group}'의 긍정 응답 비율이 ${posRates[wt.indexOf(topPos)].toFixed(1)}%로 가장 높습니다.`;
+    el.innerHTML=`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <div><div class="card-title">📈 응답 분포 (발산형) — "${selectedScales[0]}"</div>
+        <div class="card-sub">← 부정(1~2점) · 중립(3점) · 긍정(4~5점) → · 집단별 비율(%)</div></div>
+        <button class="abtn abtn-copy" onclick="downloadChartPNG('dist','응답분포_${currentCross}')">📥 PNG</button>
+      </div>
+      <div class="chart-wrap"><canvas id="distChart"></canvas></div>
+      <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
+    </div>`;
+    const ctx=document.getElementById("distChart").getContext("2d");
+    // 데이터셋: 부정(1점·2점 음수), 중립(3점), 긍정(4점·5점)
+    const ds=[
+      {label:"1점(매우 불만)",data:wt.map(d=>-d.pct[0]),backgroundColor:"#b91c1c",stack:"neg"},
+      {label:"2점(불만)",      data:wt.map(d=>-d.pct[1]),backgroundColor:"#ef4444",stack:"neg"},
+      {label:"3점(보통)",      data:wt.map(d=>d.pct[2]), backgroundColor:"#d1d5db",stack:"pos"},
+      {label:"4점(만족)",      data:wt.map(d=>d.pct[3]), backgroundColor:"#22c55e",stack:"pos"},
+      {label:"5점(매우 만족)",  data:wt.map(d=>d.pct[4]), backgroundColor:"#15803d",stack:"pos"},
+    ];
+    charts.dist=new Chart(ctx,{
+      type:"bar",data:{labels:wt.map(d=>d.group),datasets:ds},
+      plugins:[ChartDataLabels,{
+        id:"zeroLine",
+        afterDraw(chart){const {ctx:cx,chartArea:{top,bottom},scales:{x}}=chart;const zx=x.getPixelForValue(0);cx.save();cx.beginPath();cx.moveTo(zx,top);cx.lineTo(zx,bottom);cx.strokeStyle="#374151";cx.lineWidth=1.5;cx.stroke();cx.restore();}
+      }],
+      options:{
+        indexAxis:"y",responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{position:"bottom",labels:{font:{size:12},padding:12}},
+          datalabels:{display:ctx=>Math.abs(ctx.dataset.data[ctx.dataIndex])>=7,
+            color:"#fff",font:{size:11,weight:"bold"},
+            formatter:v=>Math.abs(v).toFixed(0)+"%"},
+          tooltip:{callbacks:{label:c=>c.dataset.label+": "+Math.abs(c.parsed.x).toFixed(1)+"%"}}
+        },
+        scales:{
+          x:{stacked:true,ticks:{callback:v=>Math.abs(v)+"%",font:{size:13}},
+             grid:{color:"#f0ede8"},title:{display:true,text:"← 부정      긍정 →",font:{size:12},color:"#5a5650"}},
+          y:{stacked:true,ticks:{font:{size:13,weight:"600"}}}
+        }
+      }
+    });
   }
   else if(currentTab==="heat"){
-    let h=`<div class="card" id="heatCard"><div style="display:flex;justify-content:space-between"><div><div class="card-title">🔥 전체 히트맵</div><div class="card-sub">종합 포함</div></div><button class="abtn abtn-copy" onclick="downloadElementPNG('#heatCard','히트맵_${currentCross}')">📥 PNG</button></div><div style="overflow-x:auto"><table class="ht"><thead><tr><th>${currentCross}</th>`;
-    multi.forEach(d=>{h+=`<th title="${d.name}">${d.name.length>6?d.name.slice(0,6)+"…":d.name}</th>`;});h+=`</tr></thead><tbody>`;
-    allGroups.forEach(g=>{h+=`<tr><td>${g}</td>`;multi.forEach(d=>{const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;h+=`<td style="background:${v!==null?heatColor(v,hMin,hMax):'var(--bg-alt)'};color:${v!==null?heatText(v,hMin,hMax):'var(--text-muted)'}">${v!==null?v.toFixed(2):"-"}</td>`;});h+=`</tr>`;});
-    h+=`<tr class="total-row"><td>📊 종합</td>`;multi.forEach(d=>{const t=calcTotal(DATA,d.name);h+=`<td>${t.mean.toFixed(2)}</td>`;});h+=`</tr></tbody></table></div></div>`;el.innerHTML=h;
+    // 발산형 2색 히트맵: 3.5 기준 빨강↔흰↔초록
+    const allVals=multi.flatMap(d=>d.results.map(r=>r.mean));
+    const gMin=Math.min(...allVals),gMax=Math.max(...allVals);
+    const highCell=allVals.indexOf(gMax);const lowCell=allVals.indexOf(gMin);
+    const descTxt=`전체 평균 3.5점을 기준으로 초록(높음)↔흰색(보통)↔빨강(낮음)으로 표현합니다. 색이 진할수록 해당 집단·문항의 만족도 차이가 크게 나타납니다. 전체 범위: ${gMin.toFixed(2)}~${gMax.toFixed(2)}점.`;
+    let h=`<div class="card" id="heatCard">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div><div class="card-title">🔥 교차분석 히트맵 — 발산형</div>
+        <div class="card-sub">기준 3.5점 · 🟢 초록=높음 · ⬜ 흰색=보통 · 🔴 빨강=낮음</div></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:10px;color:var(--text-muted)">
+            <span style="display:inline-block;width:10px;height:10px;background:#b91c1c;border-radius:2px;vertical-align:middle"></span> 낮음
+            <span style="display:inline-block;width:10px;height:10px;background:#fff;border:1px solid #ccc;border-radius:2px;vertical-align:middle;margin-left:4px"></span> 보통
+            <span style="display:inline-block;width:10px;height:10px;background:#15803d;border-radius:2px;vertical-align:middle;margin-left:4px"></span> 높음
+          </span>
+          <button class="abtn abtn-copy" onclick="downloadElementPNG('#heatCard','히트맵_${currentCross}')">📥 PNG</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><table class="ht" style="font-size:14px"><thead><tr>
+        <th style="font-size:13px;min-width:70px">${currentCross}</th>`;
+    multi.forEach(d=>{h+=`<th style="font-size:12px;padding:8px 6px" title="${d.name}">${d.name.length>7?d.name.slice(0,7)+"…":d.name}</th>`;});
+    h+=`</tr></thead><tbody>`;
+    allGroups.forEach(g=>{
+      h+=`<tr><td style="font-weight:700;font-size:13px;padding:8px 6px">${g}</td>`;
+      multi.forEach(d=>{
+        const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;
+        const bg=v!==null?heatColor(v,gMin,gMax):"#f9f9f9";
+        const tc=v!==null?heatText(v,gMin,gMax):"#aaa";
+        const bold=v!==null&&(Math.abs(v-3.5)>0.5)?"font-weight:800":"font-weight:600";
+        h+=`<td style="background:${bg};color:${tc};${bold};font-size:14px;padding:9px 6px">${v!==null?v.toFixed(2):"-"}</td>`;
+      });h+=`</tr>`;
+    });
+    h+=`<tr class="total-row"><td style="font-weight:800;font-size:13px">📊 종합</td>`;
+    multi.forEach(d=>{const t=calcTotal(DATA,d.name);const bg=heatColor(t.mean,gMin,gMax);const tc=heatText(t.mean,gMin,gMax);h+=`<td style="background:${bg};color:${tc};font-weight:800;font-size:14px;padding:9px 6px">${t.mean.toFixed(2)}</td>`;});
+    h+=`</tr></tbody></table></div>
+      <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
+    </div>`;
+    el.innerHTML=h;
   }
   else if(currentTab==="radar"){
-    el.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between"><div><div class="card-title">🕸️ 레이더</div><div class="card-sub">종합 포함</div></div><button class="abtn abtn-copy" onclick="downloadChartPNG('radar','레이더_${currentCross}')">📥 PNG</button></div><div class="chart-wrap"><canvas id="radarChart"></canvas></div></div>`;
-    const labels=multi.map(d=>d.name.length>6?d.name.slice(0,6)+"…":d.name);const gWT=[...allGroups,"종합"];
-    const ds=gWT.map((g,i)=>{const isT=g==="종합";return{label:g,data:multi.map(d=>{if(isT){return+calcTotal(DATA,d.name).mean.toFixed(2);}const r=d.results.find(x=>x.group===g);return r?+r.mean.toFixed(2):0;}),borderColor:isT?"#006D3A":PALETTE[i%PALETTE.length],backgroundColor:(isT?"#006D3A":PALETTE[i%PALETTE.length])+"1a",borderWidth:isT?3:2,borderDash:isT?[6,3]:[],pointRadius:isT?4:3};});
-    const ctx=document.getElementById("radarChart").getContext("2d");charts.radar=new Chart(ctx,{type:"radar",data:{labels,datasets:ds},plugins:[ChartDataLabels],options:{responsive:true,scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:11}},pointLabels:{font:{size:13,weight:"600"}}}},plugins:{datalabels:{display:ctx=>ctx.datasetIndex===ds.length-1,font:{size:10,weight:"bold"},color:"#006D3A",formatter:v=>v.toFixed(2)},legend:{position:"bottom",labels:{font:{size:12}}}}}});
+    // 점 플롯 (Cleveland Dot Plot): 문항별 집단 점 비교
+    const labels=multi.map(d=>d.name.length>9?d.name.slice(0,9)+"…":d.name);
+    const gWT=[...allGroups,"종합"];
+    // 문항별 최고·최저 집단 분석
+    const topItems=multi.map(d=>{const tots=d.results.sort((a,b)=>b.mean-a.mean);return tots[0];});
+    const maxSpread=multi.map(d=>{const vs=d.results.map(r=>r.mean);return Math.max(...vs)-Math.min(...vs);});
+    const maxSpreadIdx=maxSpread.indexOf(Math.max(...maxSpread));
+    const descTxt=`문항별로 ${currentCross} 집단 간 평균을 점(●)으로 비교합니다. 같은 행의 점들이 멀리 퍼져 있을수록 집단 간 차이가 큽니다. '${multi[maxSpreadIdx]?.name||""}'의 집단 간 격차(${maxSpread[maxSpreadIdx]?.toFixed(2)||""}점)가 가장 크게 나타납니다.`;
+    el.innerHTML=`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <div><div class="card-title">🎯 문항별 집단 점 플롯 (Dot Plot)</div>
+        <div class="card-sub">● 각 집단 평균 · ◆ 전체 종합 평균 · 같은 행에서 점이 멀수록 집단 차이 큼</div></div>
+        <button class="abtn abtn-copy" onclick="downloadChartPNG('radar','점플롯_${currentCross}')">📥 PNG</button>
+      </div>
+      <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
+      <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
+    </div>`;
+    const ctx=document.getElementById("radarChart").getContext("2d");
+    const ds=gWT.map((g,i)=>{
+      const isT=g==="종합";
+      return{
+        label:g,type:"scatter",
+        data:multi.map((d,mi)=>{
+          if(isT){return{x:+calcTotal(DATA,d.name).mean.toFixed(2),y:mi};}
+          const r=d.results.find(x=>x.group===g);
+          return r?{x:+r.mean.toFixed(2),y:mi}:{x:null,y:mi};
+        }).filter(p=>p.x!==null),
+        backgroundColor:isT?"#006D3A":PALETTE[i%PALETTE.length],
+        borderColor:isT?"#006D3A":PALETTE[i%PALETTE.length],
+        pointRadius:isT?8:6,pointStyle:isT?"rectRot":"circle",
+        showLine:false,
+      };
+    });
+    charts.radar=new Chart(ctx,{
+      type:"scatter",data:{datasets:ds},
+      plugins:[ChartDataLabels],
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{position:"bottom",labels:{font:{size:13},padding:14}},
+          datalabels:{display:false},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.x.toFixed(2)}점`}}
+        },
+        scales:{
+          x:{min:1,max:5,ticks:{stepSize:0.5,font:{size:13}},
+             grid:{color:"#f0ede8"},title:{display:true,text:"평균 (5점 만점)",font:{size:13}}},
+          y:{type:"category",labels:labels.slice().reverse(),ticks:{font:{size:13,weight:"600"}},grid:{display:false},reverse:false}
+        }
+      }
+    });
   }
   else if(currentTab==="stats"){
     const alpha=cronbachAlpha(DATA,selectedScales);
@@ -2470,7 +2709,7 @@ function renderContent(){
       const eff=testName==="t-test"?`d=${result.d}`:`η²=${result.etaSq}`;
       const effVal=testName==="t-test"?Math.abs(result.d):result.etaSq;
       const effLabel=testName==="t-test"?(effVal>=0.8?"큰 효과":effVal>=0.5?"중간 효과":"작은 효과"):(effVal>=0.14?"큰 효과":effVal>=0.06?"중간 효과":"작은 효과");
-      if(result.p<0.05)sigItems.push({name:sv,p:result.p,sig,effLabel,testName});
+      if(result.p<0.05)sigItems.push({name:sv,p:result.p,sig,effLabel,testName,keys,arrs});
       else nonSigItems.push({name:sv});
       h+=`<tr><td>${sv}</td><td>${testName}</td><td>${stat}</td><td>${df}</td><td>${result.p}</td><td>${eff}</td><td style="color:${sigColor};font-weight:700">${sig}</td></tr>`;
     });
@@ -2489,6 +2728,22 @@ function renderContent(){
       const bigEffect=sigItems.filter(it=>it.effLabel==="큰 효과");
       if(bigEffect.length)h+=`특히 '${bigEffect.map(it=>it.name).join("', '")}' 문항은 효과 크기가 크므로 집단별 맞춤형 대응이 요구됩니다.`;
       h+=`</div>`;
+      // Tukey HSD 사후검정 (ANOVA 유의한 문항만)
+      const anovaItems=sigItems.filter(it=>it.testName==="ANOVA"&&it.keys&&it.keys.length>=3);
+      if(anovaItems.length){
+        h+=`<div class="analysis-section"><strong>🔎 Tukey HSD 사후검정 — 어느 집단 간 차이인가?</strong><br>`;
+        anovaItems.forEach(it=>{
+          const tukey=tukeyHSD(it.arrs,it.keys);
+          const sigPairs=tukey.filter(r=>r.sig!=="n.s.");
+          h+=`<div style="margin-top:8px;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--brand)">${it.name}</div>`;
+          if(!sigPairs.length){h+=`<div style="font-size:11px;color:var(--text-muted)">유의한 쌍별 차이 없음 (전체 ANOVA는 유의하나 쌍별 차이는 경계 수준)</div>`;return;}
+          h+=`<table class="dt" style="font-size:11px"><thead><tr><th>집단1</th><th>집단2</th><th>평균차(M1-M2)</th><th>q</th><th>유의성</th></tr></thead><tbody>`;
+          sigPairs.forEach(r=>{const dc=r.diff>0?"var(--success)":"var(--danger)";h+=`<tr><td style="font-weight:600">${r.g1}<br><span style="font-size:10px;color:var(--text-muted)">M=${r.m1}</span></td><td style="font-weight:600">${r.g2}<br><span style="font-size:10px;color:var(--text-muted)">M=${r.m2}</span></td><td style="font-weight:700;color:${dc}">${r.diff>0?"+":""}${r.diff}</td><td>${r.q}</td><td style="font-weight:700;color:var(--success)">${r.sig}</td></tr>`;});
+          h+=`</tbody></table>`;
+        });
+        h+=`<div style="margin-top:6px;font-size:10px;color:var(--text-muted)">q = Studentized range 통계량 · 보수적 근사값 사용</div>`;
+        h+=`</div>`;
+      }
     }
     if(nonSigItems.length){
       h+=`<div class="analysis-section"><strong>➖ 집단 간 유의한 차이가 없는 문항 (${nonSigItems.length}개)</strong><br>`;
