@@ -78,6 +78,11 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .cb-row input{accent-color:var(--accent2);width:14px;height:14px}
 /* 사이드바 네비게이션 (탭바 대체) */
 .sb-info{margin-top:8px;padding:8px 10px;background:var(--bg-alt);border-radius:6px;font-size:11px;color:var(--text-muted);line-height:1.8}
+.settings-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center}
+.settings-box{background:#fff;border-radius:14px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.settings-label{font-size:12px;font-weight:700;color:var(--text-sec);margin-bottom:4px;margin-top:14px;display:block}
+.settings-input{width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--border);border-radius:7px;font-family:inherit;outline:none;box-sizing:border-box}
+.settings-input:focus{border-color:var(--accent2)}
 
 .tabs{display:flex;gap:3px;margin-bottom:14px;flex-wrap:wrap;align-items:center;background:#fff;border-radius:10px;padding:7px 10px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.04)}
 /* ── 2단 계층 탭 ── */
@@ -99,6 +104,26 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .sub-btn:hover{background:#fff;color:var(--brand);border-color:var(--border)}
 .sub-btn.active{background:#fff;color:var(--brand);border-color:var(--brand);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{background:#fff!important;font-size:11pt}
+  .sidebar,.mode-bar,.sub-bar,.header-right,.exp-btn,.new-btn,.abtn,
+  .upload-screen,.history-page,.settings-modal,
+  button:not(.no-print-hide){display:none!important}
+  .header{box-shadow:none!important;border-bottom:2px solid #006D3A!important;padding:8px 16px!important;position:static!important}
+  .container{display:block!important;padding:0!important}
+  .main{padding:0!important;overflow:visible!important}
+  .card{break-inside:avoid;page-break-inside:avoid;border:1px solid #ddd!important;margin-bottom:12px!important;padding:12px 14px!important;box-shadow:none!important}
+  .chart-wrap{height:320px!important;max-height:320px!important;break-inside:avoid}
+  canvas{max-height:320px!important}
+  .analysis-box{break-inside:avoid;border:1px solid #c7d2fe!important;background:#fafbff!important}
+  table{font-size:10pt!important;break-inside:avoid}
+  th,td{padding:5px 7px!important}
+  .stat-row{break-inside:avoid}
+  .footer{display:block!important;text-align:center;font-size:9pt;color:#888;border-top:1px solid #ddd;padding-top:8px;margin-top:16px}
+  h2{page-break-before:auto;color:#006D3A!important}
+  @page{size:A4;margin:1.8cm 2cm}
+}
 
 .card{background:#fff;border-radius:10px;border:1px solid var(--border);padding:14px 18px;margin-bottom:16px;animation:fadeUp .3s ease}
 .card-title{font-size:14px;font-weight:700;margin-bottom:3px}
@@ -283,6 +308,21 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 <div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:12px">부천여성청소년재단 전략경영실 전략기획부</div>
 </div></div></div>
 
+<!-- 설정 모달 -->
+<div id="settingsModal" class="settings-modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="settings-box">
+    <div style="font-size:16px;font-weight:800;color:var(--brand);margin-bottom:6px">⚙️ 보고서 설정</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">DOCX·HWPX 보고서에 표시될 기관명과 제목을 설정합니다.</div>
+    <label class="settings-label">기관명 / 부서명</label>
+    <input id="settingsOrg" class="settings-input" placeholder="예: 부천여성청소년재단 전략기획부">
+    <label class="settings-label">보고서 제목</label>
+    <input id="settingsTitle" class="settings-input" placeholder="예: 2026 사업 만족도 분석 결과 보고서">
+    <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+      <button onclick="document.getElementById('settingsModal').style.display='none'" style="padding:8px 18px;font-size:13px;background:var(--bg-alt);color:var(--text-sec);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-family:inherit">취소</button>
+      <button onclick="saveSettings()" style="padding:8px 18px;font-size:13px;font-weight:700;background:var(--brand);color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:inherit">저장</button>
+    </div>
+  </div>
+</div>
 <!-- UPLOAD SCREEN -->
 <div id="uploadScreen" class="upload-screen">
   <div class="upload-box">
@@ -355,6 +395,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
       <button class="exp-btn exp-docx" onclick="exportDocx()" title="Word 문서 다운로드">📥 DOCX</button>
       <button class="exp-btn exp-hwpx" onclick="exportHwpx()" title="한글 문서 다운로드">📥 HWPX</button>
       <button class="exp-btn exp-gdoc" onclick="exportGoogleDocs()" title="리포트 복사">📋 리포트 복사</button>
+      <button onclick="document.getElementById('settingsOrg').value=ORG_NAME;document.getElementById('settingsTitle').value=REPORT_TITLE;document.getElementById('settingsModal').style.display='flex'" style="padding:5px 10px;font-size:12px;background:var(--bg-alt);color:var(--text-sec);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit">⚙️ 설정</button>
       <button class="new-btn" onclick="resetAll()">🔄 새 파일</button>
     </div>
   </div>
@@ -402,6 +443,18 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 
 <script>
 let DATA=[],CROSS=[],SCALE=[],TEXT=[],currentCross="",selectedScales=[],currentTab="simple",currentMode="simple",currentFileName="";
+let ORG_NAME=localStorage.getItem("orgName")||ORG_NAME;
+let REPORT_TITLE=localStorage.getItem("reportTitle")||"설문 분석 결과 보고서";
+function saveSettings(){
+  ORG_NAME=document.getElementById("settingsOrg").value.trim()||ORG_NAME;
+  REPORT_TITLE=document.getElementById("settingsTitle").value.trim()||"설문 분석 결과 보고서";
+  localStorage.setItem("orgName",ORG_NAME);localStorage.setItem("reportTitle",REPORT_TITLE);
+  document.getElementById("settingsModal").style.display="none";
+  // 대시보드 헤더·footer 갱신
+  const fi=document.getElementById("fileLabel");
+  if(fi&&DATA.length)renderContent();
+  toast("✅ 기관 정보가 저장되었습니다");
+}
 const PALETTE=["#0072B2","#D55E00","#009E73","#E69F00","#CC79A7","#56B4E9","#F0E442","#000000"];
 const PLIGHT=["#d0e8f7","#fce0d0","#c8f0e4","#fdf0c4","#f5dfe9","#d6eef9","#fdf8c4","#e0e0e0"];
 const TABS=[
@@ -980,9 +1033,9 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0}
 .footer{margin-top:30px;padding-top:10px;border-top:1px solid #d8d8d8;color:#8a857e;font-size:9pt;text-align:center}
 </style></head><body>`;
 
-  html+=`<h1>설문 분석 결과 보고서</h1>`;
+  html+=`<h1>${REPORT_TITLE}</h1>`;
   html+=`<p class="meta">분석일: ${dateStr} | 파일: ${currentFileName} | 응답자: ${DATA.length}명 | 교차변수: ${currentCross} | 분석 문항: ${selectedScales.length}개</p>`;
-  html+=`<p class="meta">부천여성청소년재단 전략경영실 전략기획부</p>`;
+  html+=`<p class="meta">${ORG_NAME}</p>`;
 
   // 분석 리포트 (plain text)
   html+=`<h2>1. 분석 요약</h2>`;
@@ -1032,7 +1085,7 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0}
     total.dist.forEach((d,i)=>{html+=`<td>${d} (${total.pct[i]}%)</td>`;});html+=`</tr></table>`;
   });
 
-  html+=`<div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.2 자동 생성</div>`;
+  html+=`<div class="footer">${ORG_NAME} · 설문 분석 결과 v4.2 자동 생성</div>`;
 
   // 5. 종합 평균 분석 (문항별 전체 평균)
   html+=`<h2>5. 문항별 전체 평균 (종합분석)</h2>`;
@@ -1041,7 +1094,7 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0}
   simpleItems.forEach((it,i)=>{const cls=it.mean>=3.5?"good":it.mean<3?"bad":"";html+=`<tr><td>${i+1}</td><td>${it.name}</td><td>${it.n}</td><td class="${cls}">${it.mean.toFixed(2)}</td><td>${it.std.toFixed(2)}</td></tr>`;});
   html+=`</table>`;
 
-  // 6. 심층분석 — 상관행렬
+  // 6. 심층분석 — 상관행렬 + 회귀분석
   if(selectedScales.length>=2){
     html+=`<h2>6. 심층분석 — 상관행렬 (Pearson r)</h2>`;
     const dvars=selectedScales;
@@ -1052,6 +1105,30 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0}
     // 강한 상관쌍 요약
     const strongPairs=[];dvars.forEach((va,i)=>dvars.forEach((vb,j)=>{if(i>=j)return;const{r,p}=corRows[i][j];if(r!==null&&Math.abs(r)>=0.4&&p<0.05)strongPairs.push({va,vb,r});}) );
     if(strongPairs.length)html+=`<p><strong>주목할 상관쌍:</strong> ${strongPairs.map(p=>`'${p.va}' ↔ '${p.vb}' (r=${p.r.toFixed(2)})`).join(", ")}</p>`;
+    // 회귀분석 — 종합만족도 문항이 있으면 자동 실행
+    const ovrScaleDoc=selectedScales.find(sv=>/전반적|전체.?만족|종합.?만족/.test(sv));
+    const regDV=ovrScaleDoc||selectedScales[selectedScales.length-1];
+    const regIVs=selectedScales.filter(v=>v!==regDV);
+    if(regIVs.length>=1){
+      const complete=DATA.filter(r=>!isNaN(Number(r[regDV]))&&regIVs.every(iv=>!isNaN(Number(r[iv]))));
+      if(complete.length>=regIVs.length+5){
+        const Y=complete.map(r=>Number(r[regDV]));
+        const Xs=regIVs.map(iv=>complete.map(r=>Number(r[iv])));
+        const res=olsRegression(Y,Xs);
+        if(res){
+          const{beta,pVals,R2,n}=res;const adj_R2=+(1-(1-R2)*(n-1)/(n-regIVs.length-1)).toFixed(4);
+          html+=`<h3>회귀분석 (종속변수: ${regDV})</h3>`;
+          html+=`<p>R² = <strong>${R2.toFixed(4)}</strong> · 수정 R² = <strong>${adj_R2}</strong> · N = ${n}</p>`;
+          html+=`<table><tr><th>독립변수</th><th>B</th><th>p-value</th><th>유의성</th></tr>`;
+          regIVs.forEach((iv,i)=>{
+            const sig=pVals[i+1]<0.001?"***":pVals[i+1]<0.01?"**":pVals[i+1]<0.05?"*":"n.s.";
+            const cls=pVals[i+1]<0.05?"good":"";
+            html+=`<tr><td>${iv}</td><td class="${cls}">${beta[i+1].toFixed(4)}</td><td>${pVals[i+1]}</td><td class="${cls};font-weight:700">${sig}</td></tr>`;
+          });
+          html+=`</table><p style="font-size:10pt;color:#5a5650">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 | B = 비표준화 회귀계수</p>`;
+        }
+      }
+    }
   }
 
   // 7. 주관식 분석 (자동 감지된 경우)
@@ -1132,9 +1209,9 @@ async function exportHwpx(){
   const COLPR=`<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/></hp:ctrl>`;
   const SEC_NS=`xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf/" xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0"`;
   let sec="";
-  sec+=`<hp:p id="0" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="0">${SECPR}${COLPR}</hp:run><hp:run charPrIDRef="7"><hp:t>${xe("설문 분석 결과 보고서")}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
+  sec+=`<hp:p id="0" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="0">${SECPR}${COLPR}</hp:run><hp:run charPrIDRef="7"><hp:t>${xe(REPORT_TITLE)}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
   sec+=mkP(`분석일: ${ds} | 파일: ${currentFileName} | 응답자: ${DATA.length}명 | 교차변수: ${currentCross} | 분석 문항: ${selectedScales.length}개`);
-  sec+=mkP("부천여성청소년재단 전략경영실 전략기획부");
+  sec+=mkP(ORG_NAME);
   sec+=mkP("");
   sec+=mkP("1. 분석 요약",8);
   const plain=genAnalysisPlain(multi,allGroups,gm);
@@ -1161,7 +1238,7 @@ async function exportHwpx(){
     sec+=mkTbl(dh,dr);
   });
   sec+=mkP("");
-  sec+=mkP("부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 대시보드 자동 생성");
+  sec+=mkP(ORG_NAME+" · "+REPORT_TITLE+" 자동 생성");
   const sectionXml=`<?xml version='1.0' encoding='UTF-8'?>\n<hs:sec ${SEC_NS}>${sec}</hs:sec>`;
   const TPL_CONTAINER=`<?xml version='1.0' encoding='UTF-8'?>
 <ocf:container xmlns:ocf="urn:oasis:names:tc:opendocument:xmlns:container" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf">
@@ -2110,7 +2187,7 @@ function exportGoogleDocs(){
   const now=new Date();const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
 
   let html=`<h1 style="color:#006D3A;border-bottom:2px solid #006D3A;padding-bottom:6px">설문 분석 결과 보고서</h1>`;
-  html+=`<p style="color:#5a5650;font-size:10pt">분석일: ${dateStr} | ${currentFileName} | ${DATA.length}명 | ${currentCross} 기준 | ${selectedScales.length}개 문항<br>부천여성청소년재단 전략경영실 전략기획부</p>`;
+  html+=`<p style="color:#5a5650;font-size:10pt">분석일: ${dateStr} | ${currentFileName} | ${DATA.length}명 | ${currentCross} 기준 | ${selectedScales.length}개 문항<br>${ORG_NAME}</p>`;
 
   html+=`<h2 style="color:#006D3A">1. 분석 요약</h2>`;
   html+=`<p>${genAnalysisPlain(multi,allGroups,gm).replace(/\n/g,"<br>")}</p>`;
@@ -2486,16 +2563,26 @@ function renderContent(){
     el.innerHTML=h;
   }
   else if(currentTab==="bar"){
-    const wt=[...single,singleTotal];
-    const grandMean=calcTotal(DATA,selectedScales[0]).mean;
-    const topG=single.reduce((a,b)=>a.mean>b.mean?a:b,single[0]);
-    const botG=single.reduce((a,b)=>a.mean<b.mean?a:b,single[0]);
+    // 현재 선택 문항 (드롭다운으로 전환 가능)
+    const barSV=window._barSV&&selectedScales.includes(window._barSV)?window._barSV:selectedScales[0];
+    const single2=analyze(DATA,currentCross,barSV);const singleTotal2=calcTotal(DATA,barSV);
+    const wt=[...single2,singleTotal2];
+    const grandMean=calcTotal(DATA,barSV).mean;
+    const topG=single2.reduce((a,b)=>a.mean>b.mean?a:b,single2[0]);
+    const botG=single2.reduce((a,b)=>a.mean<b.mean?a:b,single2[0]);
     const diff=+(topG.mean-botG.mean).toFixed(2);
-    const descTxt=`${currentCross}별로 '${selectedScales[0]}' 문항의 평균을 비교합니다. 전체 평균은 ${grandMean.toFixed(2)}점(점선)이며, '${topG.group}'(${topG.mean.toFixed(2)}점)이 가장 높고 '${botG.group}'(${botG.mean.toFixed(2)}점)이 가장 낮습니다. 집단 간 격차는 ${diff}점입니다.`;
+    const descTxt=`${currentCross}별로 '${barSV}' 문항의 평균을 비교합니다. 전체 평균은 ${grandMean.toFixed(2)}점(점선)이며, '${topG.group}'(${topG.mean.toFixed(2)}점)이 가장 높고 '${botG.group}'(${botG.mean.toFixed(2)}점)이 가장 낮습니다. 집단 간 격차는 ${diff}점입니다.`;
+    const svOpts=selectedScales.map(sv=>`<option value="${sv}"${sv===barSV?" selected":""}>${sv.length>20?sv.slice(0,20)+"…":sv}</option>`).join("");
     el.innerHTML=`<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-        <div><div class="card-title">📊 ${currentCross}별 집단 비교 — "${selectedScales[0]}"</div>
-        <div class="card-sub">수평 막대 · 점선=전체 평균(${grandMean.toFixed(2)}점) · 집단 수: ${single.length}개</div></div>
+        <div style="flex:1;min-width:0">
+          <div class="card-title">📊 ${currentCross}별 집단 비교</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--text-sec);white-space:nowrap">문항 선택</span>
+            <select onchange="window._barSV=this.value;renderContent()" class="sb-select" style="width:auto;max-width:240px;font-size:12px">${svOpts}</select>
+          </div>
+          <div class="card-sub" style="margin-top:4px">수평 막대 · 점선=전체 평균(${grandMean.toFixed(2)}점) · 집단 수: ${single2.length}개</div>
+        </div>
         <button class="abtn abtn-copy" onclick="downloadChartPNG('bar','집단비교_${currentCross}')">📥 PNG</button>
       </div>
       <div class="chart-wrap"><canvas id="barChart"></canvas></div>
@@ -2517,10 +2604,9 @@ function renderContent(){
       plugins:[ChartDataLabels,{
         id:"baselinePl",
         afterDraw(chart){
-          const {ctx:cx,scales:{x}}=chart;const yAx=chart.scales.y||chart.scales.x;
+          const {ctx:cx,scales:{x}}=chart;
           const meta=chart.getDatasetMeta(0);if(!meta.data.length)return;
           const bVal=grandMean;
-          // 수평 막대이므로 x축이 값축
           const xPos=chart.scales.x.getPixelForValue(bVal);
           const top=chart.chartArea.top,bot=chart.chartArea.bottom;
           cx.save();cx.beginPath();cx.moveTo(xPos,top);cx.lineTo(xPos,bot);
