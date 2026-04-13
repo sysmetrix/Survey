@@ -471,6 +471,49 @@ function calcTotal(data,sv){
 }
 
 /* ===== 종합분석 (교차 없는 단순 평균) ===== */
+/* ===== 종합분석 자동 리포트 ===== */
+function genSimpleReport(items, gm2, ovrScale){
+  const N=DATA.length;
+  const gmL=gm2>=4?"매우 긍정적":gm2>=3.5?"긍정적":gm2>=3?"보통 수준":"개선이 필요한 수준";
+  const top=items[0],bottom=items[items.length-1];
+  const gap=top&&bottom?+(top.mean-bottom.mean).toFixed(2):0;
+  const lowItems=items.filter(it=>it.mean<3);
+  const highItems=items.filter(it=>it.mean>=4);
+  let t=`<div class="analysis-section"><strong>📌 총괄 요약</strong><br>`;
+  t+=`본 조사는 총 <span class="analysis-highlight">${N}명</span>을 대상으로 <span class="analysis-highlight">${items.length}개 문항</span>의 전체 평균을 분석하였습니다. `;
+  t+=`전체 평균은 <strong>${gm2.toFixed(2)}점</strong>(5점 만점)으로 <strong>${gmL}</strong>입니다.</div>`;
+  if(ovrScale){
+    const ovVals=DATA.map(r=>Number(r[ovrScale])).filter(v=>!isNaN(v));
+    const om=avg(ovVals);const omL=om>=4?"매우 높은 수준":om>=3.5?"양호":om>=3?"보통":"개선 필요";
+    t+=`<div class="analysis-section"><strong>🎯 종합 만족도</strong><br>`;
+    t+=`'<span class="analysis-highlight">${ovrScale}</span>' 문항의 평균은 <strong class="${om>=3.5?"analysis-good":"analysis-bad"}">${om.toFixed(2)}점</strong>으로 ${omL}입니다. `;
+    t+=om>=gm2?`전체 평균(${gm2.toFixed(2)}점)보다 높아 응답자의 전반적 만족 수준이 양호합니다.`:`전체 평균(${gm2.toFixed(2)}점)보다 낮아 전반적 만족도 향상을 위한 추가 검토가 필요합니다.`;
+    t+=`</div>`;
+  }
+  if(top&&bottom){
+    t+=`<div class="analysis-section"><strong>📊 문항별 분석</strong><br>`;
+    t+=`최고 문항: '<span class="analysis-good">${top.name}</span>'(${top.mean.toFixed(2)}점), `;
+    t+=`최저 문항: '<span class="analysis-bad">${bottom.name}</span>'(${bottom.mean.toFixed(2)}점). `;
+    t+=`문항 간 격차 ${gap}점${gap>=1?" — 하위 문항 집중 개선 필요":gap>=0.5?" — 하위 문항 보완 권장":" — 전반적으로 균일"}.`;
+    t+=`</div>`;
+  }
+  if(highItems.length){
+    t+=`<div class="analysis-section"><strong>✅ 강점 문항 (평균 4.0 이상)</strong><br>`;
+    t+=highItems.map(it=>`'<span class="analysis-good">${it.name}</span>'(${it.mean.toFixed(2)}점)`).join(", ");
+    t+=`. 현 수준 유지·홍보 활용 권장.</div>`;
+  }
+  if(lowItems.length){
+    t+=`<div class="analysis-section"><strong>⚠️ 개선 필요 문항 (평균 3.0 미만)</strong><br>`;
+    t+=lowItems.map(it=>`'<span class="analysis-bad">${it.name}</span>'(${it.mean.toFixed(2)}점)`).join(", ");
+    t+=`. 원인 분석 및 구체적 개선 방안 수립이 요구됩니다.</div>`;
+  } else {
+    t+=`<div class="analysis-section"><strong>💡 종합 의견</strong><br>`;
+    t+=`전 문항 평균 3.0점 이상으로 기본 수준이 충족되었습니다. `;
+    t+=gm2>=3.5?"지속적인 품질 유지와 함께 최하위 문항에 대한 보완 계획 수립을 권장합니다.":"핵심 문항의 만족도 향상을 위해 세부 원인을 파악하고 우선순위를 설정하세요.";
+    t+=`</div>`;
+  }
+  return t;
+}
 function renderSimpleOverview(el){
   if(!selectedScales.length){el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><div style="font-size:32px">📏</div><div style="margin-top:10px;color:var(--text-muted)">척도변수를 하나 이상 선택하세요.</div></div>`;return;}
   const gm2=avg(selectedScales.flatMap(sv=>DATA.map(r=>Number(r[sv])).filter(v=>!isNaN(v))));
@@ -481,6 +524,10 @@ function renderSimpleOverview(el){
   h+=`<div class="stat-card stat-card-hero"><div class="stat-label">⭐ 종합 평균</div><div class="stat-val" style="color:${gm2>=3.5?'var(--success)':'var(--warning)'}">${gm2.toFixed(2)}점</div><div style="font-size:10px;opacity:.65;margin-top:3px">선택된 모든 문항의 평균값</div></div>`;
   if(ovrScale){const ov=DATA.map(r=>Number(r[ovrScale])).filter(v=>!isNaN(v));const om=avg(ov);h+=`<div class="stat-card stat-card-sat"><div class="stat-label">🎯 종합 만족도</div><div class="stat-val">${om.toFixed(2)}점</div><div style="font-size:10px;opacity:.75;margin-top:3px">${ovrScale}</div></div>`;}
   h+=`</div>`;
+  // 문항 데이터 먼저 계산
+  const items=selectedScales.map(sv=>{const vals=DATA.map(r=>Number(r[sv])).filter(v=>!isNaN(v));return{name:sv,mean:avg(vals),std:sdev(vals),n:vals.length,dist:[1,2,3,4,5].map(s=>vals.filter(v=>v===s).length),pct:[1,2,3,4,5].map(s=>+(vals.filter(v=>v===s).length/(vals.length||1)*100).toFixed(1))};}).sort((a,b)=>b.mean-a.mean);
+  // 자동 분석 리포트 (상단)
+  h+=`<div class="analysis-box"><h3>📝 자동 분석 리포트</h3>${genSimpleReport(items,gm2,ovrScale)}</div>`;
   // 응답자 분포 (교차변수별)
   if(CROSS.length){
     h+=`<div class="card"><div class="card-title">👥 응답자 개요</div><div class="card-sub">교차변수별 응답자 구성</div><div style="display:flex;gap:16px;flex-wrap:wrap">`;
@@ -488,7 +535,6 @@ function renderSimpleOverview(el){
   }
   // 문항별 평균 랭킹
   h+=`<div class="card"><div class="card-title">📊 문항별 평균 (전체 기준)</div><div class="card-sub">응답자 전체의 문항별 평균 · SD · 응답 분포</div>`;
-  const items=selectedScales.map(sv=>{const vals=DATA.map(r=>Number(r[sv])).filter(v=>!isNaN(v));return{name:sv,mean:avg(vals),std:sdev(vals),n:vals.length,dist:[1,2,3,4,5].map(s=>vals.filter(v=>v===s).length),pct:[1,2,3,4,5].map(s=>+(vals.filter(v=>v===s).length/(vals.length||1)*100).toFixed(1))};}).sort((a,b)=>b.mean-a.mean);
   h+=`<table class="dt"><thead><tr><th>순위</th><th>문항</th><th>N</th><th>평균(M)</th><th>SD</th><th>응답 분포 (1~5점)</th></tr></thead><tbody>`;
   items.forEach((it,i)=>{const mc=it.mean>=3.5?"var(--success)":it.mean<3?"var(--danger)":"#1a1a1a";const bar=it.pct.map((p,j)=>{const c=["#dc2626","#f97316","#6b7280","#22c55e","#16a34a"][j];return`<span title="${j+1}점 ${p}%" style="display:inline-block;height:10px;width:${p}%;background:${c};min-width:${p>0?2:0}px"></span>`;}).join("");h+=`<tr><td style="font-weight:800;color:${i<3?"var(--success)":i>=items.length-3?"var(--danger)":"var(--text-muted)"}">${i+1}</td><td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${it.name}">${it.name}</td><td>${it.n}</td><td style="font-weight:700;color:${mc}">${it.mean.toFixed(2)}</td><td style="color:var(--text-muted)">${it.std.toFixed(2)}</td><td style="min-width:100px"><div style="display:flex;height:10px;border-radius:2px;overflow:hidden">${bar}</div><div style="font-size:9px;color:var(--text-muted);margin-top:2px">${it.pct.map((p,j)=>`${j+1}:${p}%`).join(" ")}</div></td></tr>`;});
   h+=`</tbody></table></div>`;
@@ -569,6 +615,20 @@ function runChiSquare(cv1Id,cv2Id){
   rows.forEach(r=>{t+=`<tr><td style="font-weight:600">${r}</td>`;cols.forEach(c=>{const n=obs[r][c];const exp=(rowTotals[r]*colTotals[c]/N).toFixed(1);t+=`<td style="text-align:center">${n}<div style="font-size:9px;color:var(--text-muted)">(기대:${exp})</div></td>`;});t+=`<td style="font-weight:700;background:#f0ebf5">${rowTotals[r]}</td></tr>`;});
   t+=`<tr style="background:#f0ebf5;font-weight:700"><td>합계</td>`;cols.forEach(c=>{t+=`<td>${colTotals[c]}</td>`;});t+=`<td>${N}</td></tr>`;
   t+=`</tbody></table></div><div style="margin-top:8px;font-size:10px;color:var(--text-muted)">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 n.s.=유의않음 | 괄호=기대빈도 | V 효과크기(0.1약/0.3보통/0.5강)</div>`;
+  // 카이제곱 해설
+  t+=`<div class="analysis-box" style="margin-top:14px;margin-bottom:0"><h3>💡 교차분석 해설</h3>`;
+  t+=`<div class="analysis-section"><strong>🔍 검정 결과</strong><br>`;
+  if(p<0.05){
+    t+=`'<span class="analysis-highlight">${rv}</span>'과 '<span class="analysis-highlight">${cv}</span>'은 통계적으로 <span class="analysis-good">유의한 관련성</span>이 있습니다 (p=${p}, ${sig}). `;
+    t+=`효과 크기 Cramér's V = ${V}로 <strong>${vLabel}</strong> 수준입니다. `;
+    t+=V>=0.3?"두 변수 간 실질적으로 의미 있는 차이가 존재하므로, 집단별 특성을 고려한 맞춤형 정책 수립을 권장합니다.":"통계적 유의성은 있으나 효과 크기가 작아 실질적 의미는 제한적일 수 있습니다.";
+  } else {
+    t+=`'<span style="color:var(--text-sec)">${rv}</span>'과 '<span style="color:var(--text-sec)">${cv}</span>'은 통계적으로 유의한 관련성이 없습니다 (p=${p}, n.s.). `;
+    t+=`두 변수가 서로 독립적으로 분포하고 있음을 의미합니다.`;
+  }
+  t+=`</div>`;
+  if(lowExp>0)t+=`<div class="analysis-section"><strong>⚠️ 주의사항</strong><br>기대빈도 5 미만인 셀이 ${lowExp}개로 카이제곱 검정의 가정을 위반할 수 있습니다. 표본 수 확대 또는 범주 통합 후 재분석을 권장합니다.</div>`;
+  t+=`</div>`;
   document.getElementById("chiResult").innerHTML=t;
 }
 function renderDeepAnalysis(el){
@@ -579,9 +639,20 @@ function renderDeepAnalysis(el){
   let h=`<div class="card"><div class="card-title">🔗 상관분석 행렬 (Pearson r)</div><div class="card-sub">색상: 초록(+) · 빨강(-) · 진할수록 절대값 큼 · ** p&lt;.01, * p&lt;.05</div><div style="overflow-x:auto"><table class="dt" style="font-size:11px"><thead><tr><th></th>`;
   vars.forEach(v=>{h+=`<th title="${v}">${v.length>6?v.slice(0,6)+"…":v}</th>`;});
   h+=`</tr></thead><tbody>`;
+  // 강한 상관쌍 수집
+  const strongPos=[],strongNeg=[];
   vars.forEach((va,i)=>{h+=`<tr><td style="font-weight:600;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${va}">${va.length>8?va.slice(0,8)+"…":va}</td>`;
-    vars.forEach((vb,j)=>{const {r,p}=corMat[i][j];if(i===j){h+=`<td style="background:#f0ebf5;font-weight:800;text-align:center">1.00</td>`;}else{const sig=p!==null&&p<0.001?"***":p<0.01?"**":p<0.05?"*":"";h+=`<td style="background:${rColor(r)};text-align:center;font-weight:${Math.abs(r||0)>=0.5?700:400}">${r!==null?r.toFixed(2):"-"}${sig}</td>`;}});h+=`</tr>`;});
-  h+=`</tbody></table></div><div style="margin-top:8px;font-size:11px;color:var(--text-muted)">*** p&lt;.001 &nbsp;** p&lt;.01 &nbsp;* p&lt;.05</div></div>`;
+    vars.forEach((vb,j)=>{const {r,p}=corMat[i][j];if(i===j){h+=`<td style="background:#f0ebf5;font-weight:800;text-align:center">1.00</td>`;}else{const sig=p!==null&&p<0.001?"***":p<0.01?"**":p<0.05?"*":"";if(i<j&&r!==null){if(r>=0.5&&p<0.05)strongPos.push({va,vb,r});if(r<=-0.4&&p<0.05)strongNeg.push({va,vb,r});}h+=`<td style="background:${rColor(r)};text-align:center;font-weight:${Math.abs(r||0)>=0.5?700:400}">${r!==null?r.toFixed(2):"-"}${sig}</td>`;}});h+=`</tr>`;});
+  h+=`</tbody></table></div><div style="margin-top:8px;font-size:11px;color:var(--text-muted)">*** p&lt;.001 &nbsp;** p&lt;.01 &nbsp;* p&lt;.05</div>`;
+  // 상관분석 해설
+  h+=`<div class="analysis-box" style="margin-top:12px;margin-bottom:0"><h3>💡 상관분석 해설</h3>`;
+  if(strongPos.length||strongNeg.length){
+    if(strongPos.length){h+=`<div class="analysis-section"><strong>📈 주목할 양의 상관 (r ≥ 0.5)</strong><br>`;h+=strongPos.map(p=>`'<span class="analysis-good">${p.va}</span>' ↔ '<span class="analysis-good">${p.vb}</span>' (r=${p.r.toFixed(2)})`).join(", ");h+=`<br>→ 한 문항의 만족도가 높을 때 다른 문항도 높은 경향. 두 영역을 묶어 통합 개선 전략 수립이 효과적입니다.</div>`;}
+    if(strongNeg.length){h+=`<div class="analysis-section"><strong>📉 주목할 음의 상관 (r ≤ −0.4)</strong><br>`;h+=strongNeg.map(p=>`'<span class="analysis-bad">${p.va}</span>' ↔ '<span class="analysis-bad">${p.vb}</span>' (r=${p.r.toFixed(2)})`).join(", ");h+=`<br>→ 두 요소가 상충하는 경향이 있습니다. 균형 잡힌 접근이 필요합니다.</div>`;}
+  } else {
+    h+=`<div class="analysis-section">선택 문항 간 강한 상관관계(r ≥ 0.5 / r ≤ −0.4)가 관찰되지 않았습니다. 각 문항이 비교적 독립적으로 평가되고 있음을 의미합니다.<br><span style="font-size:11px;color:var(--text-muted)">해석 기준: r 0.1–0.3 약 / 0.3–0.5 중간 / 0.5 이상 강</span></div>`;
+  }
+  h+=`</div></div>`;
   const dvId="deepDV_sel";
   h+=`<div class="card"><div class="card-title">📈 다중 회귀분석</div><div class="card-sub">종속변수 선택 → 나머지 선택 척도변수를 독립변수로 OLS 추정</div>`;
   h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--text-sec)">종속변수</label><select id="${dvId}" class="sb-select" style="width:auto;max-width:220px">${vars.map(v=>`<option value="${v}">${v}</option>`).join("")}</select><button onclick="runRegression('${dvId}')" class="abtn abtn-copy" style="padding:6px 14px;font-size:12px">실행</button></div>`;
@@ -612,9 +683,27 @@ function runRegression(dvId){
   t+=`<span style="background:#e3f2fd;color:#0d47a1;padding:3px 10px;border-radius:6px;font-weight:700;margin-right:8px">수정 R² = ${adj_R2.toFixed(4)}</span>`;
   t+=`<span style="color:var(--text-muted);font-size:11px">N=${n} · 종속변수: <strong>${dv}</strong></span></div>`;
   t+=`<table class="dt"><thead><tr><th>변수</th><th>B (비표준화)</th><th>SE</th><th>t</th><th>p-value</th><th>유의성</th><th>영향력</th></tr></thead><tbody>`;
+  const sigIVs=[];
   names.forEach((nm,i)=>{const sig=pVals[i]<0.001?"***":pVals[i]<0.01?"**":pVals[i]<0.05?"*":"n.s.";const sc=pVals[i]<0.05?"var(--success)":"var(--text-muted)";const barW=Math.min(100,Math.abs(beta[i])*80);const barC=beta[i]>0?"#22c55e":"#ef4444";
+    if(i>0&&pVals[i]<0.05)sigIVs.push({name:nm,b:beta[i],sig});
     t+=`<tr><td style="font-weight:${i===0?400:600}">${nm}</td><td style="font-weight:700">${beta[i].toFixed(4)}</td><td style="color:var(--text-muted)">${se[i].toFixed(4)}</td><td>${tStat[i].toFixed(3)}</td><td>${pVals[i]}</td><td style="color:${sc};font-weight:700">${sig}</td><td>${i>0?`<div style="height:8px;width:${barW}px;background:${barC};border-radius:2px;min-width:2px"></div>`:"—"}</td></tr>`;});
   t+=`</tbody></table><div style="margin-top:8px;font-size:10px;color:var(--text-muted)">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 n.s.=유의하지않음 | B는 5점 척도 기준 비표준화 계수</div>`;
+  // 회귀분석 해설
+  const R2Pct=Math.round(R2*100);const adjPct=Math.round(adj_R2*100);
+  const R2Level=R2>=0.5?"높은":"R2>=0.3?"중간":"낮은";
+  t+=`<div class="analysis-box" style="margin-top:14px;margin-bottom:0"><h3>💡 회귀분석 해설</h3>`;
+  t+=`<div class="analysis-section"><strong>📐 설명력 (R²)</strong><br>`;
+  t+=`독립변수들이 '<span class="analysis-highlight">${dv}</span>'의 분산 중 <strong>${R2Pct}%</strong>를 설명합니다 (수정 R² = ${adjPct}%). `;
+  t+=R2>=0.5?"설명력이 높아 선택한 문항들이 종속변수를 잘 예측합니다.":R2>=0.3?"적절한 설명력이나, 추가 변수 검토로 모형을 개선할 수 있습니다.":"설명력이 낮습니다. 다른 척도변수 조합이나 비선형 관계를 검토하세요.";
+  t+=`</div>`;
+  if(sigIVs.length){
+    t+=`<div class="analysis-section"><strong>✅ 유의한 예측 변수</strong><br>`;
+    t+=sigIVs.map(iv=>`'<span class="${iv.b>0?"analysis-good":"analysis-bad"}">${iv.name}</span>' (B=${iv.b.toFixed(3)}, ${iv.sig})`).join(", ");
+    t+=`<br>→ B 계수가 <span class="analysis-good">양수(+)</span>이면 종속변수에 긍정적 영향, <span class="analysis-bad">음수(−)</span>이면 부정적 영향을 미칩니다.</div>`;
+  } else {
+    t+=`<div class="analysis-section">유의한 예측 변수가 없습니다. 다른 종속변수를 선택하거나 척도변수 구성을 검토하세요.</div>`;
+  }
+  t+=`</div>`;
   document.getElementById("regResult").innerHTML=t;
 }
 
@@ -2312,6 +2401,7 @@ function renderContent(){
     if(alpha!==null){const ac=alpha>=0.8?"var(--success)":alpha>=0.6?"var(--warning)":"var(--danger)";const al=alpha>=0.9?"매우 우수":alpha>=0.8?"양호":alpha>=0.7?"수용 가능":alpha>=0.6?"의심":"불량";
       h+=`<div style="background:#f0ebf5;border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px"><strong>📏 신뢰도 Cronbach's α</strong> = <span style="color:${ac};font-weight:800;font-size:14px">${alpha}</span> <span style="color:var(--text-muted)">(${al})</span> · ${selectedScales.length}개 문항</div>`;}
     h+=`<table class="dt"><thead><tr><th>문항</th><th>검정</th><th>통계량</th><th>자유도</th><th>p-value</th><th>효과크기</th><th>유의성</th></tr></thead><tbody>`;
+    const sigItems=[],nonSigItems=[];
     selectedScales.forEach(sv=>{
       const groups={};DATA.forEach(r=>{const k=String(r[currentCross]||"").trim();const v=Number(r[sv]);if(isNaN(v)||!k)return;if(!groups[k])groups[k]=[];groups[k].push(v);});
       const keys=Object.keys(groups);const arrs=keys.map(k=>groups[k]);let result=null,testName="";
@@ -2323,6 +2413,10 @@ function renderContent(){
       const stat=testName==="t-test"?`t=${result.t}`:`F=${result.F}`;
       const df=testName==="t-test"?result.df:`${result.df1},${result.df2}`;
       const eff=testName==="t-test"?`d=${result.d}`:`η²=${result.etaSq}`;
+      const effVal=testName==="t-test"?Math.abs(result.d):result.etaSq;
+      const effLabel=testName==="t-test"?(effVal>=0.8?"큰 효과":effVal>=0.5?"중간 효과":"작은 효과"):(effVal>=0.14?"큰 효과":effVal>=0.06?"중간 효과":"작은 효과");
+      if(result.p<0.05)sigItems.push({name:sv,p:result.p,sig,effLabel,testName});
+      else nonSigItems.push({name:sv});
       h+=`<tr><td>${sv}</td><td>${testName}</td><td>${stat}</td><td>${df}</td><td>${result.p}</td><td>${eff}</td><td style="color:${sigColor};font-weight:700">${sig}</td></tr>`;
     });
     h+=`</tbody></table><div style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.7">* p&lt;0.05, ** p&lt;0.01, *** p&lt;0.001, n.s. = 유의하지 않음<br>효과크기 해석: Cohen's d (0.2 작음 / 0.5 중간 / 0.8 큼), η² (0.01 작음 / 0.06 중간 / 0.14 큼)</div></div>`;
@@ -2331,6 +2425,27 @@ function renderContent(){
     miss.forEach(m=>{const qc=m.missingPct<5?"var(--success)":m.missingPct<15?"var(--warning)":"var(--danger)";const ql=m.missingPct<5?"우수":m.missingPct<15?"보통":"주의";
       h+=`<tr><td>${m.name}</td><td>${m.total}</td><td>${m.valid}</td><td>${m.missing}</td><td style="font-weight:700;color:${qc}">${m.missingPct}%</td><td style="color:${qc};font-weight:600">${ql}</td></tr>`;});
     h+=`</tbody></table></div>`;
+    // 분석 설명 카드
+    h+=`<div class="analysis-box"><h3>🔍 통계검정 결과 해설</h3>`;
+    if(sigItems.length){
+      h+=`<div class="analysis-section"><strong>✅ 집단 간 유의한 차이가 확인된 문항 (${sigItems.length}개)</strong><br>`;
+      h+=sigItems.map(it=>`'<span class="analysis-good">${it.name}</span>'(${it.sig}, ${it.effLabel})`).join(", ");
+      h+=`<br>→ <span class="analysis-highlight">${currentCross}</span>에 따라 이 문항들의 평균이 통계적으로 유의하게 다릅니다. `;
+      const bigEffect=sigItems.filter(it=>it.effLabel==="큰 효과");
+      if(bigEffect.length)h+=`특히 '${bigEffect.map(it=>it.name).join("', '")}' 문항은 효과 크기가 크므로 집단별 맞춤형 대응이 요구됩니다.`;
+      h+=`</div>`;
+    }
+    if(nonSigItems.length){
+      h+=`<div class="analysis-section"><strong>➖ 집단 간 유의한 차이가 없는 문항 (${nonSigItems.length}개)</strong><br>`;
+      h+=nonSigItems.map(it=>`'<span style="color:var(--text-sec)">${it.name}</span>'`).join(", ");
+      h+=`<br>→ 이 문항들은 ${currentCross}에 관계없이 전반적으로 비슷한 수준으로 평가되고 있습니다.</div>`;
+    }
+    if(alpha!==null){
+      const alphaDesc=alpha>=0.9?"측정 도구의 신뢰도가 매우 높아 결과를 신뢰할 수 있습니다.":alpha>=0.8?"신뢰도가 양호하여 측정 결과의 일관성이 확인됩니다.":alpha>=0.7?"신뢰도가 수용 가능한 수준이나, 문항 구성 검토를 권장합니다.":"신뢰도가 낮아 측정 도구의 타당성을 재검토해야 합니다.";
+      h+=`<div class="analysis-section"><strong>📏 척도 신뢰도</strong><br>Cronbach's α = <strong>${alpha}</strong> — ${alphaDesc}</div>`;
+    }
+    if(!sigItems.length&&!nonSigItems.length)h+=`<div class="analysis-section">집단 수가 부족하여 통계 검정을 수행할 수 없었습니다. 교차변수를 재확인해 주세요.</div>`;
+    h+=`</div>`;
     el.innerHTML=h;
   }
   else if(currentTab==="raw"){
