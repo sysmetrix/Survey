@@ -80,14 +80,24 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .sb-info{margin-top:8px;padding:8px 10px;background:var(--bg-alt);border-radius:6px;font-size:11px;color:var(--text-muted);line-height:1.8}
 
 .tabs{display:flex;gap:3px;margin-bottom:14px;flex-wrap:wrap;align-items:center;background:#fff;border-radius:10px;padding:7px 10px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.04)}
-.tab-btn{padding:5px 11px;font-size:12px;font-weight:500;background:transparent;color:var(--text-sec);border:1px solid transparent;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
-.tab-btn:hover{background:var(--bg-alt);color:var(--brand)}
-.tab-btn.active{background:var(--brand);color:#fff;font-weight:700;border-color:var(--brand)}
-.tab-btn-simple{border:1px solid var(--ci-gold)!important;color:#92400e!important}
-.tab-btn-simple.active{background:linear-gradient(135deg,#FDB913,#f59e0b)!important;color:#1a1a1a!important;border-color:#FDB913!important}
-.tab-btn-deep{border:1px solid var(--accent-light)!important}
-.tab-btn-deep.active{background:var(--accent)!important;border-color:var(--accent)!important}
-.tab-sep{width:1px;height:20px;background:var(--border);margin:0 4px;flex-shrink:0;align-self:center}
+/* ── 2단 계층 탭 ── */
+.mode-bar{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--border);border-radius:12px;padding:6px 8px;margin-bottom:6px;box-shadow:0 1px 4px rgba(0,0,0,.04);gap:6px}
+.mode-bar-left{display:flex;gap:4px;align-items:center}
+.mode-bar-right{display:flex;gap:4px;align-items:center}
+.mode-btn{display:flex;align-items:center;gap:5px;padding:7px 16px;font-size:13px;font-weight:600;background:transparent;color:var(--text-sec);border:2px solid transparent;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .18s;white-space:nowrap}
+.mode-btn:hover{background:var(--bg-alt);color:var(--brand)}
+.mode-btn.active-simple{background:linear-gradient(135deg,#fffbeb,#fef3c7);color:#92400e;border-color:var(--ci-gold);font-weight:700}
+.mode-btn.active-cross{background:var(--brand);color:#fff;border-color:var(--brand)}
+.mode-btn.active-deep{background:var(--accent);color:#fff;border-color:var(--accent)}
+.mode-indicator{font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;white-space:nowrap}
+.util-btn{padding:5px 10px;font-size:11px;font-weight:600;background:var(--bg-alt);color:var(--text-sec);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.util-btn:hover{background:var(--accent-light);color:var(--accent2)}
+.util-btn.active{background:var(--accent-light);color:var(--accent);border-color:var(--accent2);font-weight:700}
+.sub-bar{display:flex;gap:3px;align-items:center;background:#faf9f7;border:1px solid var(--border);border-radius:8px;padding:4px 6px;margin-bottom:14px;flex-wrap:wrap;min-height:36px}
+.sub-bar.hidden{display:none}
+.sub-btn{padding:4px 11px;font-size:12px;font-weight:500;background:transparent;color:var(--text-sec);border:1px solid transparent;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.sub-btn:hover{background:#fff;color:var(--brand);border-color:var(--border)}
+.sub-btn.active{background:#fff;color:var(--brand);border-color:var(--brand);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 .card{background:#fff;border-radius:10px;border:1px solid var(--border);padding:14px 18px;margin-bottom:16px;animation:fadeUp .3s ease}
@@ -364,7 +374,8 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
       <div class="sb-info" id="sbInfo"></div>
     </div>
     <div class="main" id="mainArea">
-      <div class="tabs" id="tabBar"></div>
+      <div id="modeBar"></div>
+      <div class="sub-bar" id="subBar"></div>
       <div id="tabContent"></div>
       <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.1</div>
     </div>
@@ -372,7 +383,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 </div>
 
 <script>
-let DATA=[],CROSS=[],SCALE=[],TEXT=[],currentCross="",selectedScales=[],currentTab="simple",currentFileName="";
+let DATA=[],CROSS=[],SCALE=[],TEXT=[],currentCross="",selectedScales=[],currentTab="simple",currentMode="simple",currentFileName="";
 const PALETTE=["#0072B2","#D55E00","#009E73","#E69F00","#CC79A7","#56B4E9","#F0E442","#000000"];
 const PLIGHT=["#d0e8f7","#fce0d0","#c8f0e4","#fdf0c4","#f5dfe9","#d6eef9","#fdf8c4","#e0e0e0"];
 const TABS=[
@@ -2229,7 +2240,7 @@ function loadDemo(){
 
 function initDashboard(data,name){
   DATA=data;currentFileName=name;const t=detect(data);CROSS=t.cross;SCALE=t.scale;TEXT=t.text||[];
-  currentCross=CROSS[0]||"";selectedScales=[...SCALE.slice(0,8)];currentTab="simple";
+  currentCross=CROSS[0]||"";selectedScales=[...SCALE.slice(0,8)];currentTab="simple";currentMode="simple";
   document.getElementById("uploadScreen").classList.add("hidden");
   document.getElementById("historyPage").classList.add("hidden");
   document.getElementById("dashboard").classList.remove("hidden");
@@ -2261,42 +2272,85 @@ function renderScaleList(){
 function moveToCross(name){SCALE=SCALE.filter(x=>x!==name);if(!CROSS.includes(name))CROSS.push(name);selectedScales=selectedScales.filter(x=>x!==name);renderCrossList();renderScaleList();renderContent();toast("🔀 '"+name+"' → 교차변수");}
 function moveToScale(name){CROSS=CROSS.filter(x=>x!==name);if(!SCALE.includes(name))SCALE.push(name);if(currentCross===name)currentCross=CROSS[0]||"";renderCrossList();renderScaleList();renderContent();toast("📏 '"+name+"' → 척도변수");}
 function renderCrossList(){const el=document.getElementById("crossList");if(!el)return;el.innerHTML=CROSS.map(v=>`<div class="cross-item${v===currentCross?" active":""}" onclick="selectCross('${v.replace(/'/g,"\\'")}')">🔀 ${v.length>15?v.slice(0,15)+"…":v}</div>`).join("");}
+/* ── 모드 & 탭 그룹 정의 ── */
+const MODE_GROUPS={
+  simple:{label:"📊 종합분석",cls:"active-simple",tabs:[],defaultTab:"simple"},
+  cross:{label:"🔀 교차분석",cls:"active-cross",tabs:[
+    {id:"overview",label:"📋 총괄"},{id:"bar",label:"📊 집단비교"},
+    {id:"dist",label:"📈 응답분포"},{id:"heat",label:"🔥 히트맵"},
+    {id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"},
+  ],defaultTab:"overview"},
+  deep:{label:"🧮 심층분석",cls:"active-deep",tabs:[
+    {id:"stats",label:"🔬 통계검정"},{id:"deep",label:"🧮 심층분석"},
+  ],defaultTab:"stats"},
+};
+const UTIL_TABS=[{id:"text",label:"💬 주관식"},{id:"raw",label:"📄 원본데이터"}];
+// 탭 ID → 모드 역방향 맵
+function tabToMode(id){
+  if(id==="simple")return"simple";
+  if(["overview","bar","dist","heat","radar","table"].includes(id))return"cross";
+  if(["stats","deep"].includes(id))return"deep";
+  return null; // 유틸
+}
+function renderTabs(){
+  // ── 모드 바 ──
+  const mb=document.getElementById("modeBar");
+  if(!mb)return;
+  const isUtil=["text","raw"].includes(currentTab);
+  let mh=`<div class="mode-bar"><div class="mode-bar-left">`;
+  Object.entries(MODE_GROUPS).forEach(([mode,g])=>{
+    const isCur=currentMode===mode&&!isUtil;
+    mh+=`<button class="mode-btn${isCur?" "+g.cls:""}" onclick="switchMode('${mode}')">${g.label}</button>`;
+  });
+  mh+=`</div><div class="mode-bar-right">`;
+  UTIL_TABS.forEach(t=>{
+    mh+=`<button class="util-btn${currentTab===t.id?" active":""}" onclick="switchTab('${t.id}')">${t.label}</button>`;
+  });
+  mh+=`</div></div>`;
+  mb.innerHTML=mh;
+  // ── 서브 탭 바 ──
+  const sb=document.getElementById("subBar");
+  if(!sb)return;
+  const group=MODE_GROUPS[currentMode];
+  if(!group||!group.tabs.length||isUtil){sb.classList.add("hidden");sb.innerHTML="";return;}
+  sb.classList.remove("hidden");
+  sb.innerHTML=group.tabs.map(t=>
+    `<button class="sub-btn${currentTab===t.id?" active":""}" onclick="switchTab('${t.id}')">${t.label}</button>`
+  ).join("");
+  // ── 종합분석 버튼 색 동기화 ──
+  const btn=document.getElementById("simpleModeBtn");
+  if(btn){
+    if(currentMode==="simple"&&!isUtil){btn.style.background="linear-gradient(135deg,#FDB913,#f59e0b)";btn.style.color="#1a1a1a";}
+    else{btn.style.background="linear-gradient(135deg,var(--brand),var(--ci-purple))";btn.style.color="#fff";}
+  }
+}
+function switchMode(mode){
+  currentMode=mode;
+  if(mode==="simple"){currentTab="simple";}
+  else{
+    const g=MODE_GROUPS[mode];
+    // 이미 해당 모드의 탭에 있으면 유지, 아니면 default로
+    const inMode=g.tabs.some(t=>t.id===currentTab);
+    if(!inMode)currentTab=g.defaultTab;
+  }
+  renderTabs();renderContent();
+}
+function switchTab(id){
+  const m=tabToMode(id);
+  if(m)currentMode=m;
+  currentTab=id;
+  renderTabs();renderContent();
+}
 function selectCross(name){
-  const wasSimple=currentTab==="simple";
   currentCross=name;
-  if(wasSimple)currentTab="overview";  // 종합분석 화면에서 교차변수 클릭 → 자동 교차분석 총괄로 전환
+  // 항상 교차분석 총괄로 전환
+  currentMode="cross";currentTab="overview";
   renderCrossList();renderTabs();renderContent();
 }
 function onCrossChange(){currentCross=document.getElementById("crossSelect")?.value||currentCross;renderContent();}
 function toggleScale(sv){if(selectedScales.includes(sv))selectedScales=selectedScales.filter(x=>x!==sv);else selectedScales.push(sv);renderScaleList();renderContent();}
 function selectAllScales(){selectedScales=[...SCALE];renderScaleList();renderContent();}
 function clearScales(){selectedScales=[];renderScaleList();renderContent();}
-function renderTabs(){
-  const el=document.getElementById("tabBar");if(!el)return;
-  const g1=[{id:"simple",label:"📊 종합분석",cls:"tab-btn-simple"}];
-  const g2=[
-    {id:"overview",label:"📋 총괄"},{id:"bar",label:"📊 집단비교"},
-    {id:"dist",label:"📈 응답분포"},{id:"heat",label:"🔥 히트맵"},
-    {id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"},
-  ];
-  const g3=[
-    {id:"stats",label:"🔬 통계검정"},{id:"deep",label:"🧮 심층분석",cls:"tab-btn-deep"},
-    {id:"text",label:"💬 주관식"},{id:"raw",label:"📄 원본데이터"},
-  ];
-  const mkBtn=({id,label,cls=""})=>`<button class="tab-btn ${cls}${currentTab===id?" active":""}" onclick="switchTab('${id}')">${label}</button>`;
-  el.innerHTML=
-    g1.map(mkBtn).join("")+
-    `<span class="tab-sep"></span><span style="font-size:10px;color:var(--text-muted);font-weight:600;padding:0 2px;white-space:nowrap">교차분석</span>`+
-    g2.map(mkBtn).join("")+
-    `<span class="tab-sep"></span>`+
-    g3.map(mkBtn).join("");
-  const btn=document.getElementById("simpleModeBtn");
-  if(btn){
-    if(currentTab==="simple"){btn.style.background="linear-gradient(135deg,#FDB913,#f59e0b)";btn.style.color="#1a1a1a";}
-    else{btn.style.background="linear-gradient(135deg,var(--brand),var(--ci-purple))";btn.style.color="#fff";}
-  }
-}
-function switchTab(id){currentTab=id;renderTabs();renderContent();}
 function heatColor(v,mn,mx){const r=mx===mn?.5:(v-mn)/(mx-mn);return`rgb(${Math.round(240-r*200)},${Math.round(253-r*80)},${Math.round(244-r*190)})`;}
 function heatText(v,mn,mx){return(mx===mn?.5:(v-mn)/(mx-mn))>.55?"#fff":"#1a1a1a";}
 
@@ -2328,7 +2382,8 @@ function loadHistoryEntry(id){
     currentCross=entry.crossVar&&CROSS.includes(entry.crossVar)?entry.crossVar:(CROSS[0]||"");
     selectedScales=(entry.scales||[]).filter(s=>SCALE.includes(s));
     if(!selectedScales.length)selectedScales=SCALE.slice(0,8);
-    currentTab=entry.lastTab&&["overview","simple","bar","dist","heat","radar","table","stats","deep","text","raw"].includes(entry.lastTab)?entry.lastTab:"overview";
+    currentTab=entry.lastTab&&["overview","simple","bar","dist","heat","radar","table","stats","deep","text","raw"].includes(entry.lastTab)?entry.lastTab:"simple";
+    currentMode=(()=>{const t=currentTab;if(t==="simple")return"simple";if(["overview","bar","dist","heat","radar","table"].includes(t))return"cross";return"deep";})();
     document.getElementById("historyPage").classList.add("hidden");
     document.getElementById("uploadScreen").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
