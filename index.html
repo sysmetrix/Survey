@@ -77,17 +77,17 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .cb-row.active{background:var(--accent-light);border-color:#d4bde8}
 .cb-row input{accent-color:var(--accent2);width:14px;height:14px}
 /* 사이드바 네비게이션 (탭바 대체) */
-.sb-nav-wrap{background:#faf9f7;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
-.sb-nav-group-label{font-size:10px;font-weight:700;color:var(--text-muted);padding:6px 8px 3px;letter-spacing:.04em;text-transform:uppercase}
-.sb-nav-item{display:flex;align-items:center;gap:7px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-sec);transition:all .12s;border:none;background:transparent;width:100%;text-align:left;font-family:inherit;border-radius:6px;margin:1px 4px;width:calc(100% - 8px)}
-.sb-nav-item:hover{background:var(--accent-light);color:var(--brand)}
-.sb-nav-item.active{background:var(--brand);color:#fff;font-weight:700}
-.sb-nav-divider{height:1px;background:var(--border);margin:4px 6px}
 .sb-info{margin-top:8px;padding:8px 10px;background:var(--bg-alt);border-radius:6px;font-size:11px;color:var(--text-muted);line-height:1.8}
 
-.tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
-.tab-btn{padding:6px 12px;font-size:12px;font-weight:500;background:transparent;color:var(--text-sec);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s}
-.tab-btn.active{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700}
+.tabs{display:flex;gap:3px;margin-bottom:14px;flex-wrap:wrap;align-items:center;background:#fff;border-radius:10px;padding:7px 10px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.tab-btn{padding:5px 11px;font-size:12px;font-weight:500;background:transparent;color:var(--text-sec);border:1px solid transparent;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.tab-btn:hover{background:var(--bg-alt);color:var(--brand)}
+.tab-btn.active{background:var(--brand);color:#fff;font-weight:700;border-color:var(--brand)}
+.tab-btn-simple{border:1px solid var(--ci-gold)!important;color:#92400e!important}
+.tab-btn-simple.active{background:linear-gradient(135deg,#FDB913,#f59e0b)!important;color:#1a1a1a!important;border-color:#FDB913!important}
+.tab-btn-deep{border:1px solid var(--accent-light)!important}
+.tab-btn-deep.active{background:var(--accent)!important;border-color:var(--accent)!important}
+.tab-sep{width:1px;height:20px;background:var(--border);margin:0 4px;flex-shrink:0;align-self:center}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 .card{background:#fff;border-radius:10px;border:1px solid var(--border);padding:14px 18px;margin-bottom:16px;animation:fadeUp .3s ease}
@@ -361,13 +361,10 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
           <div id="scaleList"></div>
         </div>
       </div>
-      <!-- 분석 화면 네비게이션 (탭바 대체) -->
-      <div class="sb-nav-wrap">
-        <div id="sideNav"></div>
-      </div>
       <div class="sb-info" id="sbInfo"></div>
     </div>
     <div class="main" id="mainArea">
+      <div class="tabs" id="tabBar"></div>
       <div id="tabContent"></div>
       <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.1</div>
     </div>
@@ -2175,30 +2172,35 @@ function renderScaleList(){
 function moveToCross(name){SCALE=SCALE.filter(x=>x!==name);if(!CROSS.includes(name))CROSS.push(name);selectedScales=selectedScales.filter(x=>x!==name);renderCrossList();renderScaleList();renderContent();toast("🔀 '"+name+"' → 교차변수");}
 function moveToScale(name){CROSS=CROSS.filter(x=>x!==name);if(!SCALE.includes(name))SCALE.push(name);if(currentCross===name)currentCross=CROSS[0]||"";renderCrossList();renderScaleList();renderContent();toast("📏 '"+name+"' → 척도변수");}
 function renderCrossList(){const el=document.getElementById("crossList");if(!el)return;el.innerHTML=CROSS.map(v=>`<div class="cross-item${v===currentCross?" active":""}" onclick="selectCross('${v.replace(/'/g,"\\'")}')">🔀 ${v.length>15?v.slice(0,15)+"…":v}</div>`).join("");}
-function selectCross(name){currentCross=name;renderCrossList();renderContent();}
+function selectCross(name){
+  const wasSimple=currentTab==="simple";
+  currentCross=name;
+  if(wasSimple)currentTab="overview";  // 종합분석 화면에서 교차변수 클릭 → 자동 교차분석 총괄로 전환
+  renderCrossList();renderTabs();renderContent();
+}
 function onCrossChange(){currentCross=document.getElementById("crossSelect")?.value||currentCross;renderContent();}
 function toggleScale(sv){if(selectedScales.includes(sv))selectedScales=selectedScales.filter(x=>x!==sv);else selectedScales.push(sv);renderScaleList();renderContent();}
 function selectAllScales(){selectedScales=[...SCALE];renderScaleList();renderContent();}
 function clearScales(){selectedScales=[];renderScaleList();renderContent();}
 function renderTabs(){
-  const el=document.getElementById("sideNav");if(!el)return;
-  const groups=[
-    {label:"교차분석 결과",tabs:["overview","bar","dist","heat","radar","table"]},
-    {label:"심층분석",tabs:["stats","deep"]},
-    {label:"텍스트 · 데이터",tabs:["text","raw"]},
+  const el=document.getElementById("tabBar");if(!el)return;
+  const g1=[{id:"simple",label:"📊 종합분석",cls:"tab-btn-simple"}];
+  const g2=[
+    {id:"overview",label:"📋 총괄"},{id:"bar",label:"📊 집단비교"},
+    {id:"dist",label:"📈 응답분포"},{id:"heat",label:"🔥 히트맵"},
+    {id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"},
   ];
-  const tabMap=Object.fromEntries(TABS.map(t=>[t.id,t.label]));
-  let h=`<div style="padding:6px 4px 4px">`;
-  groups.forEach((g,gi)=>{
-    if(gi>0)h+=`<div class="sb-nav-divider"></div>`;
-    h+=`<div class="sb-nav-group-label">${g.label}</div>`;
-    g.tabs.forEach(id=>{
-      if(!tabMap[id])return;
-      h+=`<button class="sb-nav-item${currentTab===id?" active":""}" onclick="switchTab('${id}')">${tabMap[id]}</button>`;
-    });
-  });
-  h+=`</div>`;
-  el.innerHTML=h;
+  const g3=[
+    {id:"stats",label:"🔬 통계검정"},{id:"deep",label:"🧮 심층분석",cls:"tab-btn-deep"},
+    {id:"text",label:"💬 주관식"},{id:"raw",label:"📄 원본데이터"},
+  ];
+  const mkBtn=({id,label,cls=""})=>`<button class="tab-btn ${cls}${currentTab===id?" active":""}" onclick="switchTab('${id}')">${label}</button>`;
+  el.innerHTML=
+    g1.map(mkBtn).join("")+
+    `<span class="tab-sep"></span><span style="font-size:10px;color:var(--text-muted);font-weight:600;padding:0 2px;white-space:nowrap">교차분석</span>`+
+    g2.map(mkBtn).join("")+
+    `<span class="tab-sep"></span>`+
+    g3.map(mkBtn).join("");
   const btn=document.getElementById("simpleModeBtn");
   if(btn){
     if(currentTab==="simple"){btn.style.background="linear-gradient(135deg,#FDB913,#f59e0b)";btn.style.color="#1a1a1a";}
