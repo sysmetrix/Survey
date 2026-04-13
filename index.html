@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>설문 분석 대시보드 | 부천여성청소년재단</title>
+<title>설문 분석 결과 | 부천여성청소년재단</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -190,6 +190,16 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 <button onclick="document.getElementById('releaseModal').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)">✕</button>
 </div>
 <div style="font-size:13px;color:var(--text-sec);line-height:1.9">
+<div style="margin-bottom:16px">
+<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v4.1 — 2026.04.13</div>
+<div style="padding-left:12px;border-left:3px solid var(--accent-light)">
+• 헤더 "설문 분석 결과"로 텍스트 통일 (title 태그 포함)<br>
+• 사이드바 종합분석 버튼 탭 active 연동 (선택 시 골드 강조)<br>
+• 분석 이력에 마지막 탭 상태 저장·복원<br>
+• 🧮 심층분석에 <strong>카이제곱 검정</strong> 추가 (분할표 · Cramér's V · 기대빈도)<br>
+• 💬 주관식 집단비교 탭에서 교차변수 선택 드롭다운 추가<br>
+• DOCX 보고서에 종합분석(문항 순위) · 주관식(키워드·감성) 섹션 추가
+</div></div>
 <div style="margin-bottom:16px">
 <div style="font-weight:700;color:var(--brand);margin-bottom:4px">v4.0 — 2026.04.13</div>
 <div style="padding-left:12px;border-left:3px solid var(--accent-light)">
@@ -490,23 +500,69 @@ function olsRegression(Y,Xs){
   const pVals=tStat.map(t=>{const df2=dfR;const x2=df2/(df2+t*t);return +betaInc(df2/2,0.5,x2).toFixed(4);});
   return{beta,se,tStat:tStat.map(t=>+t.toFixed(3)),pVals,R2:+R2.toFixed(4),n,k};
 }
+/* ===== 카이제곱 검정 (교차분석) ===== */
+function lgamma(n){const c2=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];let y=n,tmp=n+5.5,ser=1.000000000190015;c2.forEach((v,i)=>{ser+=v/(y+i+1);});return Math.log(2.5066282746310005*ser/y)+(n+0.5)*Math.log(tmp)-tmp;}
+function gammaInc(s,x){if(x<=0)return 0;let sum=1/s,term=1/s;for(let i=1;i<200;i++){term*=x/(s+i);sum+=term;if(term<1e-10)break;}return Math.min(1,sum*Math.exp(-x+s*Math.log(x)-lgamma(s+1)));}
+function chiSquareTest(data,rowVar,colVar){
+  const rows=[...new Set(data.map(r=>String(r[rowVar]||"").trim()).filter(Boolean))].sort();
+  const cols=[...new Set(data.map(r=>String(r[colVar]||"").trim()).filter(Boolean))].sort();
+  if(rows.length<2||cols.length<2)return null;
+  const obs={};rows.forEach(r=>{obs[r]={};cols.forEach(c=>{obs[r][c]=0;});});
+  data.forEach(row=>{const r=String(row[rowVar]||"").trim();const c=String(row[colVar]||"").trim();if(r&&c&&obs[r])obs[r][c]=(obs[r][c]||0)+1;});
+  const rowTotals=Object.fromEntries(rows.map(r=>[r,cols.reduce((s,c)=>s+obs[r][c],0)]));
+  const colTotals=Object.fromEntries(cols.map(c=>[c,rows.reduce((s,r)=>s+obs[r][c],0)]));
+  const N=rows.reduce((s,r)=>s+rowTotals[r],0);
+  let chi2=0;let lowExp=0;
+  rows.forEach(r=>cols.forEach(c=>{const exp=rowTotals[r]*colTotals[c]/N;if(exp<5)lowExp++;const d=obs[r][c]-exp;chi2+=d*d/Math.max(exp,1e-10);}));
+  const df=(rows.length-1)*(cols.length-1);
+  const p=1-gammaInc(df/2,chi2/2);
+  const minDim=Math.min(rows.length,cols.length);const v=Math.sqrt(chi2/(N*Math.max(minDim-1,1)));
+  return{chi2:+chi2.toFixed(3),df,p:+p.toFixed(4),V:+v.toFixed(3),N,rows,cols,obs,rowTotals,colTotals,lowExp};
+}
+function runChiSquare(cv1Id,cv2Id){
+  const rv=document.getElementById(cv1Id).value;const cv=document.getElementById(cv2Id).value;
+  if(rv===cv){document.getElementById("chiResult").innerHTML=`<span style="color:var(--danger)">행·열 변수가 같습니다.</span>`;return;}
+  const res=chiSquareTest(DATA,rv,cv);
+  if(!res){document.getElementById("chiResult").innerHTML=`<span style="color:var(--danger)">유효 데이터 부족.</span>`;return;}
+  const {chi2,df,p,V,N,rows,cols,obs,rowTotals,colTotals,lowExp}=res;
+  const sig=p<0.001?"***":p<0.01?"**":p<0.05?"*":"n.s.";const sigC=p<0.05?"var(--success)":"var(--text-muted)";
+  const vLabel=V>=0.5?"강함":V>=0.3?"보통":V>=0.1?"약함":"미미";
+  let t=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">`;
+  t+=`<span style="background:#e8f5e9;color:#1b5e20;padding:4px 12px;border-radius:6px;font-weight:700">χ²(${df}) = ${chi2}</span>`;
+  t+=`<span style="background:#e3f2fd;color:#0d47a1;padding:4px 12px;border-radius:6px;font-weight:700">p = ${p} <b style="color:${sigC}">${sig}</b></span>`;
+  t+=`<span style="background:#f3e8ff;color:#5C2D91;padding:4px 12px;border-radius:6px;font-weight:700">Cramér's V = ${V} (${vLabel})</span>`;
+  t+=`<span style="color:var(--text-muted);font-size:11px;align-self:center">N=${N}</span></div>`;
+  if(lowExp>0)t+=`<div style="font-size:11px;color:var(--warning);margin-bottom:8px">⚠️ 기대빈도 5 미만 셀 ${lowExp}개 — 해석 주의</div>`;
+  t+=`<div style="overflow-x:auto"><table class="dt" style="font-size:11px"><thead><tr><th>${rv} \ ${cv}</th>`;
+  cols.forEach(c=>{t+=`<th>${c}</th>`;});t+=`<th style="background:#f0ebf5">합계</th></tr></thead><tbody>`;
+  rows.forEach(r=>{t+=`<tr><td style="font-weight:600">${r}</td>`;cols.forEach(c=>{const n=obs[r][c];const exp=(rowTotals[r]*colTotals[c]/N).toFixed(1);t+=`<td style="text-align:center">${n}<div style="font-size:9px;color:var(--text-muted)">(기대:${exp})</div></td>`;});t+=`<td style="font-weight:700;background:#f0ebf5">${rowTotals[r]}</td></tr>`;});
+  t+=`<tr style="background:#f0ebf5;font-weight:700"><td>합계</td>`;cols.forEach(c=>{t+=`<td>${colTotals[c]}</td>`;});t+=`<td>${N}</td></tr>`;
+  t+=`</tbody></table></div><div style="margin-top:8px;font-size:10px;color:var(--text-muted)">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 n.s.=유의않음 | 괄호=기대빈도 | V 효과크기(0.1약/0.3보통/0.5강)</div>`;
+  document.getElementById("chiResult").innerHTML=t;
+}
 function renderDeepAnalysis(el){
   if(selectedScales.length<2){el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><div style="font-size:32px">🧮</div><div style="margin-top:10px;color:var(--text-muted)">척도변수를 2개 이상 선택하세요.</div></div>`;return;}
   const vars=selectedScales;
-  // 상관행렬
-  const corMat=vars.map(va=>vars.map(vb=>{const a=DATA.map(r=>Number(r[va])).filter((_,i)=>!isNaN(Number(DATA[i][va]))&&!isNaN(Number(DATA[i][vb])));const b=DATA.map(r=>Number(r[vb])).filter((_,i)=>!isNaN(Number(DATA[i][va]))&&!isNaN(Number(DATA[i][vb])));const pa=DATA.filter(r=>!isNaN(Number(r[va]))&&!isNaN(Number(r[vb])));return pearsonR(pa.map(r=>Number(r[va])),pa.map(r=>Number(r[vb])));}));
-  const rColor=r=>{if(r===null)return"#f0ede8";const v=Math.abs(r);const g=r>0;const h=Math.round(v*200);return r>0?`rgb(${255-h},${255},${255-h})`:`rgb(${255},${255-h},${255-h})`;}; 
+  const corMat=vars.map(va=>vars.map(vb=>{const pa=DATA.filter(r=>!isNaN(Number(r[va]))&&!isNaN(Number(r[vb])));return pearsonR(pa.map(r=>Number(r[va])),pa.map(r=>Number(r[vb])));}));
+  const rColor=r=>{if(r===null)return"#f0ede8";const v=Math.abs(r);const h=Math.round(v*200);return r>0?`rgb(${255-h},${255},${255-h})`:`rgb(${255},${255-h},${255-h})`;};
   let h=`<div class="card"><div class="card-title">🔗 상관분석 행렬 (Pearson r)</div><div class="card-sub">색상: 초록(+) · 빨강(-) · 진할수록 절대값 큼 · ** p&lt;.01, * p&lt;.05</div><div style="overflow-x:auto"><table class="dt" style="font-size:11px"><thead><tr><th></th>`;
-  vars.forEach(v=>{const s=v.length>6?v.slice(0,6)+"…":v;h+=`<th title="${v}">${s}</th>`;});
+  vars.forEach(v=>{h+=`<th title="${v}">${v.length>6?v.slice(0,6)+"…":v}</th>`;});
   h+=`</tr></thead><tbody>`;
   vars.forEach((va,i)=>{h+=`<tr><td style="font-weight:600;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${va}">${va.length>8?va.slice(0,8)+"…":va}</td>`;
     vars.forEach((vb,j)=>{const {r,p}=corMat[i][j];if(i===j){h+=`<td style="background:#f0ebf5;font-weight:800;text-align:center">1.00</td>`;}else{const sig=p!==null&&p<0.001?"***":p<0.01?"**":p<0.05?"*":"";h+=`<td style="background:${rColor(r)};text-align:center;font-weight:${Math.abs(r||0)>=0.5?700:400}">${r!==null?r.toFixed(2):"-"}${sig}</td>`;}});h+=`</tr>`;});
   h+=`</tbody></table></div><div style="margin-top:8px;font-size:11px;color:var(--text-muted)">*** p&lt;.001 &nbsp;** p&lt;.01 &nbsp;* p&lt;.05</div></div>`;
-  // 회귀분석 UI
-  const dvId="deepDV_"+Date.now();
+  const dvId="deepDV_sel";
   h+=`<div class="card"><div class="card-title">📈 다중 회귀분석</div><div class="card-sub">종속변수 선택 → 나머지 선택 척도변수를 독립변수로 OLS 추정</div>`;
   h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--text-sec)">종속변수</label><select id="${dvId}" class="sb-select" style="width:auto;max-width:220px">${vars.map(v=>`<option value="${v}">${v}</option>`).join("")}</select><button onclick="runRegression('${dvId}')" class="abtn abtn-copy" style="padding:6px 14px;font-size:12px">실행</button></div>`;
   h+=`<div id="regResult" style="font-size:12px;color:var(--text-muted)">종속변수를 선택한 후 실행 버튼을 누르세요.</div></div>`;
+  if(CROSS.length>=2){
+    const cv1Id="deepCv1_sel";const cv2Id="deepCv2_sel";
+    h+=`<div class="card"><div class="card-title">📊 교차분석 (카이제곱 검정)</div><div class="card-sub">교차변수 두 개 선택 → 범주형 집단 간 독립성 검정 — χ² · Cramér's V</div>`;
+    h+=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--text-sec)">행 변수</label><select id="${cv1Id}" class="sb-select" style="width:auto;max-width:160px">${CROSS.map(c=>`<option value="${c}">${c}</option>`).join("")}</select><label style="font-size:12px;font-weight:600;color:var(--text-sec)">열 변수</label><select id="${cv2Id}" class="sb-select" style="width:auto;max-width:160px">${CROSS.map((c,i)=>`<option value="${c}"${i===1?" selected":""}>${c}</option>`).join("")}</select><button onclick="runChiSquare('${cv1Id}','${cv2Id}')" class="abtn abtn-copy" style="padding:6px 14px;font-size:12px">검정 실행</button></div>`;
+    h+=`<div id="chiResult" style="font-size:12px;color:var(--text-muted)">변수를 선택한 후 실행 버튼을 누르세요.</div></div>`;
+  } else {
+    h+=`<div class="card"><div class="card-title">📊 교차분석 (카이제곱 검정)</div><div class="card-sub" style="color:var(--warning)">⚠️ 교차변수가 2개 이상 필요합니다. 현재 ${CROSS.length}개.</div></div>`;
+  }
   el.innerHTML=h;
 }
 function runRegression(dvId){
@@ -646,7 +702,9 @@ function renderTextTab(tab,pgId){
   else if(tab==="crossComp"){
     if(!CROSS.length){h+=`<div style="color:var(--text-muted);padding:20px;text-align:center;font-size:12px">교차변수가 없어 집단 비교를 할 수 없습니다.</div>`;}
     else{
-      const cv=currentCross||CROSS[0];
+      const selCvId="textCv_sel";
+      const cv=document.getElementById(selCvId)?.value||(currentCross||CROSS[0]);
+      h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><label style="font-size:11px;font-weight:700;color:var(--text-sec)">🔀 비교 기준</label><select id="${selCvId}" class="sb-select" style="width:auto;max-width:200px" onchange="renderTextTab('crossComp','${pgId}')">${CROSS.map(c=>`<option value="${c}"${c===cv?" selected":""}>${c}</option>`).join("")}</select></div>`;
       const gmap={};DATA.forEach(r=>{const k=String(r[cv]||"무응답").trim();const v=String(r[col]||"").trim();if(v.length>1)(gmap[k]=gmap[k]||[]).push(v);});
       h+=`<div style="font-size:11px;font-weight:700;color:var(--text-sec);margin-bottom:8px">🔀 ${cv} 집단별 주요 키워드 Top 8 비교</div>`;
       h+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">`;
@@ -805,7 +863,37 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0}
     total.dist.forEach((d,i)=>{html+=`<td>${d} (${total.pct[i]}%)</td>`;});html+=`</tr></table>`;
   });
 
-  html+=`<div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 대시보드 v4.0 자동 생성</div>`;
+  html+=`<div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.1 자동 생성</div>`;
+
+  // 5. 종합 평균 분석 (문항별 전체 평균)
+  html+=`<h2>5. 문항별 전체 평균 (종합분석)</h2>`;
+  const simpleItems=selectedScales.map(sv=>{const vals=DATA.map(r=>Number(r[sv])).filter(v=>!isNaN(v));return{name:sv,mean:avg(vals),std:sdev(vals),n:vals.length};}).sort((a,b)=>b.mean-a.mean);
+  html+=`<table><tr><th>순위</th><th>문항</th><th>N</th><th>평균(M)</th><th>SD</th></tr>`;
+  simpleItems.forEach((it,i)=>{const cls=it.mean>=3.5?"good":it.mean<3?"bad":"";html+=`<tr><td>${i+1}</td><td>${it.name}</td><td>${it.n}</td><td class="${cls}">${it.mean.toFixed(2)}</td><td>${it.std.toFixed(2)}</td></tr>`;});
+  html+=`</table>`;
+
+  // 6. 주관식 분석 (자동 감지된 경우)
+  const allTextCols=[...TEXT,...CROSS.filter(co=>DATA.some(r=>String(r[co]||"").length>10))];
+  if(allTextCols.length){
+    html+=`<h2>6. 주관식 응답 분석</h2>`;
+    allTextCols.forEach(col=>{
+      const vals=DATA.map(r=>String(r[col]||"").trim()).filter(v=>v.length>1);
+      if(!vals.length)return;
+      const freq={};vals.forEach(v=>tokenize(v).forEach(w=>{freq[w]=(freq[w]||0)+1;}));
+      const topW=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,15);
+      const sentMap={positive:0,neutral:0,negative:0};vals.forEach(v=>{sentMap[sentimentOf(v)]++;});
+      html+=`<h3>${col} (N=${vals.length}건)</h3>`;
+      html+=`<table><tr><th>구분</th><th>값</th></tr>`;
+      html+=`<tr><td>총 응답</td><td>${vals.length}건</td></tr>`;
+      html+=`<tr><td>평균 길이</td><td>${Math.round(vals.reduce((s,v)=>s+v.length,0)/vals.length)}자</td></tr>`;
+      html+=`<tr><td>감성 분포</td><td>긍정 ${sentMap.positive}건 · 중립 ${sentMap.neutral}건 · 부정 ${sentMap.negative}건</td></tr>`;
+      html+=`</table>`;
+      if(topW.length){
+        html+=`<p><strong>주요 키워드 Top ${topW.length}:</strong> ${topW.map(([w,n])=>`${w}(${n})`).join(", ")}</p>`;
+      }
+    });
+  }
+
   html+=`</body></html>`;
 
   const blob=new Blob(["\ufeff"+html],{type:"application/msword;charset=utf-8"});
@@ -1910,7 +1998,7 @@ function addToHistory(){
     id:Date.now(),date:new Date().toISOString(),fileName:currentFileName,
     n:DATA.length,crossVar:currentCross,scaleCount:selectedScales.length,
     groupCount:allGroups.length,grandMean:+gm.toFixed(2),
-    scales:selectedScales.slice(),rawData:DATA,
+    scales:selectedScales.slice(),rawData:DATA,lastTab:currentTab,
     summary:genAnalysisPlain(multi,allGroups,gm).slice(0,500)
   };
   const hist=getHistory();hist.unshift(entry);
@@ -2059,7 +2147,14 @@ function toggleScale(sv){if(selectedScales.includes(sv))selectedScales=selectedS
 function selectAllScales(){selectedScales=[...SCALE];renderScaleList();renderContent();}
 function clearScales(){selectedScales=[];renderScaleList();renderContent();}
 function renderTabs(){document.getElementById("tabBar").innerHTML=TABS.map(t=>`<button class="tab-btn${currentTab===t.id?" active":""}" onclick="switchTab('${t.id}')">${t.label}</button>`).join("");}
-function switchTab(id){currentTab=id;renderTabs();renderContent();}
+function switchTab(id){
+  currentTab=id;renderTabs();renderContent();
+  const btn=document.getElementById("simpleModeBtn");
+  if(btn){
+    if(id==="simple"){btn.style.background="linear-gradient(135deg,#FDB913,#f59e0b)";btn.style.color="#1a1a1a";}
+    else{btn.style.background="linear-gradient(135deg,var(--brand),var(--ci-purple))";btn.style.color="#fff";}
+  }
+}
 function heatColor(v,mn,mx){const r=mx===mn?.5:(v-mn)/(mx-mn);return`rgb(${Math.round(240-r*200)},${Math.round(253-r*80)},${Math.round(244-r*190)})`;}
 function heatText(v,mn,mx){return(mx===mn?.5:(v-mn)/(mx-mn))>.55?"#fff":"#1a1a1a";}
 
@@ -2091,7 +2186,7 @@ function loadHistoryEntry(id){
     currentCross=entry.crossVar&&CROSS.includes(entry.crossVar)?entry.crossVar:(CROSS[0]||"");
     selectedScales=(entry.scales||[]).filter(s=>SCALE.includes(s));
     if(!selectedScales.length)selectedScales=SCALE.slice(0,8);
-    currentTab="overview";
+    currentTab=entry.lastTab&&["overview","simple","bar","dist","heat","radar","table","stats","deep","text","raw"].includes(entry.lastTab)?entry.lastTab:"overview";
     document.getElementById("historyPage").classList.add("hidden");
     document.getElementById("uploadScreen").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
