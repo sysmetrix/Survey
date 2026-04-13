@@ -84,6 +84,9 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 .stat-card-hero{background:linear-gradient(135deg,var(--brand),var(--ci-purple));border:none;color:#fff;flex:1.3;min-width:130px}
 .stat-card-hero .stat-label{color:rgba(255,255,255,.8)}
 .stat-card-hero .stat-val{font-size:28px;color:#fff}
+.stat-card-sat{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid var(--ci-gold);flex:1.1;min-width:120px}
+.stat-card-sat .stat-label{color:#92400e;font-weight:700}
+.stat-card-sat .stat-val{font-size:24px;font-weight:900}
 .stat-label{font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px}
 .stat-val{font-size:21px;font-weight:800}
 
@@ -188,6 +191,17 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 </div>
 <div style="font-size:13px;color:var(--text-sec);line-height:1.9">
 <div style="margin-bottom:16px">
+<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v4.0 — 2026.04.13</div>
+<div style="padding-left:12px;border-left:3px solid var(--accent-light)">
+• 재단 로고·명칭 업로드 화면에서 제거<br>
+• 타이틀 "사업 설문 데이터 분석 대시보드" 간소화<br>
+• 종합 만족도 카드 별도 골드 강조 스타일 적용<br>
+• 교차변수 없이 전체 평균 분석하는 <strong>📊 종합분석</strong> 탭 추가 (응답자 개요 포함)<br>
+• <strong>💬 주관식</strong> 탭 추가 — 자유응답 자동 감지, 키워드 빈도·원문 검색<br>
+• <strong>🧮 심층분석</strong> 탭 추가 — Pearson 상관행렬, 다중 회귀분석(OLS) 결과 시각화<br>
+• 교차변수 시각적 리스트 선택 UI 유지
+</div></div>
+<div style="margin-bottom:16px">
 <div style="font-weight:700;color:var(--brand);margin-bottom:4px">v3.1 — 2026.04.12</div>
 <div style="padding-left:12px;border-left:3px solid var(--accent-light)">
 • 차트 수치 라벨 표시 (chartjs-plugin-datalabels)<br>
@@ -224,12 +238,12 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 <!-- UPLOAD SCREEN -->
 <div id="uploadScreen" class="upload-screen">
   <div class="upload-box">
-    <div class="brand-bar">
+    <div class="brand-bar" style="display:none">
       <div class="brand-icon" style="background:transparent"><img src="data:image/png;base64,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" style="width:38px;height:38px;object-fit:contain"></div>
       <div class="brand-text"><div class="brand-name">부천여성청소년재단</div><div class="brand-dept">전략경영실 전략기획부</div></div>
     </div>
-    <div style="text-align:center"><span class="upload-badge">SURVEY CROSS-ANALYSIS</span></div>
-    <h1 class="upload-h1">사업 설문 데이터<br>교차분석 대시보드</h1>
+    <div style="text-align:center"><span class="upload-badge">SURVEY ANALYSIS</span></div>
+    <h1 class="upload-h1">사업 설문 데이터<br>분석 대시보드</h1>
     <p class="upload-h2">부천여성청소년재단 사업 만족도 조사,<br>정책 수요 조사 등 설문 데이터의 교차집단 분석 도구</p>
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="icon">📂</div>
@@ -308,19 +322,20 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
     <div class="main" id="mainArea">
       <div class="tabs" id="tabBar"></div>
       <div id="tabContent"></div>
-      <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 교차분석 대시보드 v3.0</div>
+      <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 대시보드 v4.0</div>
     </div>
   </div>
 </div>
 
 <script>
-let DATA=[],CROSS=[],SCALE=[],currentCross="",selectedScales=[],currentTab="overview",currentFileName="";
+let DATA=[],CROSS=[],SCALE=[],TEXT=[],currentCross="",selectedScales=[],currentTab="overview",currentFileName="";
 const PALETTE=["#0072B2","#D55E00","#009E73","#E69F00","#CC79A7","#56B4E9","#F0E442","#000000"];
 const PLIGHT=["#d0e8f7","#fce0d0","#c8f0e4","#fdf0c4","#f5dfe9","#d6eef9","#fdf8c4","#e0e0e0"];
 const TABS=[
-  {id:"overview",label:"📋 총괄"},{id:"bar",label:"📊 집단비교"},{id:"dist",label:"📈 응답분포"},
-  {id:"heat",label:"🔥 히트맵"},{id:"radar",label:"🕸️ 레이더"},{id:"table",label:"📑 상세표"},
-  {id:"raw",label:"📄 원본데이터"},{id:"stats",label:"🔬 통계검정"}
+  {id:"overview",label:"📋 총괄"},{id:"simple",label:"📊 종합분석"},{id:"bar",label:"📊 집단비교"},
+  {id:"dist",label:"📈 응답분포"},{id:"heat",label:"🔥 히트맵"},{id:"radar",label:"🕸️ 레이더"},
+  {id:"table",label:"📑 상세표"},{id:"stats",label:"🔬 통계검정"},{id:"deep",label:"🧮 심층분석"},
+  {id:"text",label:"💬 주관식"},{id:"raw",label:"📄 원본데이터"}
 ];
 let charts={};
 const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
@@ -392,11 +407,14 @@ function missingInfo(data,col){
 }
 
 function detect(data){
-  const hdrs=Object.keys(data[0]);const cross=[],scale=[];
+  const hdrs=Object.keys(data[0]);const cross=[],scale=[],text=[];
   hdrs.forEach(h=>{const vals=data.map(r=>r[h]);const nums=vals.filter(v=>!isNaN(v)&&v!==""&&v!==null).map(Number);const uq=[...new Set(nums)];
     if(nums.length>5&&uq.every(n=>n>=1&&n<=5&&Number.isInteger(n))&&uq.length<=5){scale.push(h);}
-    else{const ne=vals.filter(v=>v!==""&&v!==null&&v!==undefined);const u=[...new Set(ne)];if(u.length>=2&&u.length<=20&&u.length<ne.length*0.5)cross.push(h);}});
-  return{cross,scale};
+    else{const ne=vals.filter(v=>v!==""&&v!==null&&v!==undefined);const u=[...new Set(ne)];
+      if(u.length>=2&&u.length<=20&&u.length<ne.length*0.5){cross.push(h);}
+      else if(ne.length>0&&u.length>20&&typeof ne[0]==="string"&&avg(ne.map(s=>String(s).length))>5){text.push(h);}
+    }});
+  return{cross,scale,text};
 }
 function analyze(data,cv,sv){
   const g={};data.forEach(r=>{const k=String(r[cv]||"무응답").trim()||"무응답";const v=Number(r[sv]);if(isNaN(v))return;if(!g[k])g[k]=[];g[k].push(v);});
@@ -406,6 +424,143 @@ function analyze(data,cv,sv){
 function calcTotal(data,sv){
   const v=data.map(r=>Number(r[sv])).filter(x=>!isNaN(x));
   return{group:"종합",mean:avg(v),std:sdev(v),n:v.length,dist:[1,2,3,4,5].map(s=>v.filter(x=>x===s).length),pct:[1,2,3,4,5].map(s=>+(v.filter(x=>x===s).length/v.length*100).toFixed(1))};
+}
+
+/* ===== 종합분석 (교차 없는 단순 평균) ===== */
+function renderSimpleOverview(el){
+  if(!selectedScales.length){el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><div style="font-size:32px">📏</div><div style="margin-top:10px;color:var(--text-muted)">척도변수를 하나 이상 선택하세요.</div></div>`;return;}
+  const gm2=avg(selectedScales.flatMap(sv=>DATA.map(r=>Number(r[sv])).filter(v=>!isNaN(v))));
+  const ovrScale=selectedScales.find(sv=>/전반적|전체.?만족|종합.?만족/.test(sv));
+  let h=`<div class="stat-row">`;
+  h+=`<div class="stat-card"><div class="stat-label">👥 응답자</div><div class="stat-val">${DATA.length}명</div></div>`;
+  h+=`<div class="stat-card"><div class="stat-label">📏 분석 문항</div><div class="stat-val">${selectedScales.length}개</div></div>`;
+  h+=`<div class="stat-card stat-card-hero"><div class="stat-label">⭐ 종합 평균</div><div class="stat-val">${gm2.toFixed(2)}점</div><div style="font-size:10px;opacity:.65;margin-top:3px">선택된 모든 문항의 평균값</div></div>`;
+  if(ovrScale){const ov=DATA.map(r=>Number(r[ovrScale])).filter(v=>!isNaN(v));const om=avg(ov);const oc=om>=3.5?"var(--success)":"var(--warning)";h+=`<div class="stat-card stat-card-sat"><div class="stat-label">🎯 종합 만족도</div><div class="stat-val" style="color:${oc}">${om.toFixed(2)}점</div><div style="font-size:10px;color:#92400e;margin-top:3px">${ovrScale}</div></div>`;}
+  h+=`</div>`;
+  // 응답자 분포 (교차변수별)
+  if(CROSS.length){
+    h+=`<div class="card"><div class="card-title">👥 응답자 개요</div><div class="card-sub">교차변수별 응답자 구성</div><div style="display:flex;gap:16px;flex-wrap:wrap">`;
+    CROSS.forEach(cv=>{const gmap={};DATA.forEach(r=>{const k=String(r[cv]||"무응답").trim();gmap[k]=(gmap[k]||0)+1;});const total=DATA.length;const entries=Object.entries(gmap).sort((a,b)=>b[1]-a[1]);h+=`<div style="flex:1;min-width:160px"><div style="font-size:11px;font-weight:700;color:var(--text-sec);margin-bottom:6px">🔀 ${cv}</div>`;entries.forEach(([k,n])=>{const pct=(n/total*100).toFixed(1);h+=`<div style="margin-bottom:4px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>${k}</span><span style="color:var(--text-muted)">${n}명 (${pct}%)</span></div><div style="height:6px;background:#f0ede8;border-radius:99px"><div style="height:6px;background:var(--accent2);border-radius:99px;width:${pct}%"></div></div>`;});h+=`</div>`;});h+=`</div></div>`;
+  }
+  // 문항별 평균 랭킹
+  h+=`<div class="card"><div class="card-title">📊 문항별 평균 (전체 기준)</div><div class="card-sub">응답자 전체의 문항별 평균 · SD · 응답 분포</div>`;
+  const items=selectedScales.map(sv=>{const vals=DATA.map(r=>Number(r[sv])).filter(v=>!isNaN(v));return{name:sv,mean:avg(vals),std:sdev(vals),n:vals.length,dist:[1,2,3,4,5].map(s=>vals.filter(v=>v===s).length),pct:[1,2,3,4,5].map(s=>+(vals.filter(v=>v===s).length/(vals.length||1)*100).toFixed(1))};}).sort((a,b)=>b.mean-a.mean);
+  h+=`<table class="dt"><thead><tr><th>순위</th><th>문항</th><th>N</th><th>평균(M)</th><th>SD</th><th>응답 분포 (1~5점)</th></tr></thead><tbody>`;
+  items.forEach((it,i)=>{const mc=it.mean>=3.5?"var(--success)":it.mean<3?"var(--danger)":"#1a1a1a";const bar=it.pct.map((p,j)=>{const c=["#dc2626","#f97316","#6b7280","#22c55e","#16a34a"][j];return`<span title="${j+1}점 ${p}%" style="display:inline-block;height:10px;width:${p}%;background:${c};min-width:${p>0?2:0}px"></span>`;}).join("");h+=`<tr><td style="font-weight:800;color:${i<3?"var(--success)":i>=items.length-3?"var(--danger)":"var(--text-muted)"}">${i+1}</td><td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${it.name}">${it.name}</td><td>${it.n}</td><td style="font-weight:700;color:${mc}">${it.mean.toFixed(2)}</td><td style="color:var(--text-muted)">${it.std.toFixed(2)}</td><td style="min-width:100px"><div style="display:flex;height:10px;border-radius:2px;overflow:hidden">${bar}</div><div style="font-size:9px;color:var(--text-muted);margin-top:2px">${it.pct.map((p,j)=>`${j+1}:${p}%`).join(" ")}</div></td></tr>`;});
+  h+=`</tbody></table></div>`;
+  el.innerHTML=h;
+}
+
+/* ===== 심층분석 ===== */
+function pearsonR(a,b){
+  const pairs=a.map((v,i)=>([v,b[i]])).filter(([x,y])=>!isNaN(x)&&!isNaN(y));
+  if(pairs.length<3)return{r:null,p:null,n:0};
+  const xs=pairs.map(p=>p[0]),ys=pairs.map(p=>p[1]);
+  const mx=avg(xs),my=avg(ys);
+  const num=xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+  const dx=Math.sqrt(xs.reduce((s,x)=>s+(x-mx)**2,0));
+  const dy=Math.sqrt(ys.reduce((s,y)=>s+(y-my)**2,0));
+  if(dx===0||dy===0)return{r:0,p:1,n:pairs.length};
+  const r=Math.max(-1,Math.min(1,num/(dx*dy)));
+  const t=r*Math.sqrt((pairs.length-2)/(1-r*r+1e-10));
+  const df=pairs.length-2;const x2=df/(df+t*t);const p=betaInc(df/2,0.5,x2);
+  return{r:+r.toFixed(3),p:+p.toFixed(4),n:pairs.length};
+}
+function olsRegression(Y,Xs){
+  // 단순 OLS — X에 상수항 포함
+  const n=Y.length,k=Xs.length+1;
+  const X=Y.map((_,i)=>[1,...Xs.map(xs=>xs[i])]);
+  // XtX, XtY
+  const XtX=Array.from({length:k},(_,i)=>Array.from({length:k},(_,j)=>X.reduce((s,row)=>s+row[i]*row[j],0)));
+  const XtY=Array.from({length:k},(_,i)=>X.reduce((s,row,ri)=>s+row[i]*Y[ri],0));
+  // Gauss-Jordan 역행렬
+  const mat=XtX.map((row,i)=>[...row,...Array.from({length:k},(_,j)=>i===j?1:0)]);
+  for(let col=0;col<k;col++){let pivot=col;for(let row=col+1;row<k;row++)if(Math.abs(mat[row][col])>Math.abs(mat[pivot][col]))pivot=row;[mat[col],mat[pivot]]=[mat[pivot],mat[col]];const d=mat[col][col];if(Math.abs(d)<1e-12)return null;for(let j=0;j<2*k;j++)mat[col][j]/=d;for(let row=0;row<k;row++){if(row===col)continue;const f=mat[row][col];for(let j=0;j<2*k;j++)mat[row][j]-=f*mat[col][j];}}
+  const inv=mat.map(row=>row.slice(k));
+  const beta=Array.from({length:k},(_,i)=>inv[i].reduce((s,v,j)=>s+v*XtY[j],0));
+  const yHat=Y.map((_,i)=>beta.reduce((s,b,j)=>s+b*(j===0?1:Xs[j-1][i]),0));
+  const SS_res=Y.reduce((s,y,i)=>s+(y-yHat[i])**2,0);
+  const yBar=avg(Y);const SS_tot=Y.reduce((s,y)=>s+(y-yBar)**2,0);
+  const R2=1-SS_res/SS_tot;const dfR=n-k;const MSE=SS_res/dfR;
+  const se=Array.from({length:k},(_,i)=>Math.sqrt(Math.abs(inv[i][i])*MSE));
+  const tStat=beta.map((b,i)=>se[i]>0?b/se[i]:0);
+  const pVals=tStat.map(t=>{const df2=dfR;const x2=df2/(df2+t*t);return +betaInc(df2/2,0.5,x2).toFixed(4);});
+  return{beta,se,tStat:tStat.map(t=>+t.toFixed(3)),pVals,R2:+R2.toFixed(4),n,k};
+}
+function renderDeepAnalysis(el){
+  if(selectedScales.length<2){el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><div style="font-size:32px">🧮</div><div style="margin-top:10px;color:var(--text-muted)">척도변수를 2개 이상 선택하세요.</div></div>`;return;}
+  const vars=selectedScales;
+  // 상관행렬
+  const corMat=vars.map(va=>vars.map(vb=>{const a=DATA.map(r=>Number(r[va])).filter((_,i)=>!isNaN(Number(DATA[i][va]))&&!isNaN(Number(DATA[i][vb])));const b=DATA.map(r=>Number(r[vb])).filter((_,i)=>!isNaN(Number(DATA[i][va]))&&!isNaN(Number(DATA[i][vb])));const pa=DATA.filter(r=>!isNaN(Number(r[va]))&&!isNaN(Number(r[vb])));return pearsonR(pa.map(r=>Number(r[va])),pa.map(r=>Number(r[vb])));}));
+  const rColor=r=>{if(r===null)return"#f0ede8";const v=Math.abs(r);const g=r>0;const h=Math.round(v*200);return r>0?`rgb(${255-h},${255},${255-h})`:`rgb(${255},${255-h},${255-h})`;}; 
+  let h=`<div class="card"><div class="card-title">🔗 상관분석 행렬 (Pearson r)</div><div class="card-sub">색상: 초록(+) · 빨강(-) · 진할수록 절대값 큼 · ** p&lt;.01, * p&lt;.05</div><div style="overflow-x:auto"><table class="dt" style="font-size:11px"><thead><tr><th></th>`;
+  vars.forEach(v=>{const s=v.length>6?v.slice(0,6)+"…":v;h+=`<th title="${v}">${s}</th>`;});
+  h+=`</tr></thead><tbody>`;
+  vars.forEach((va,i)=>{h+=`<tr><td style="font-weight:600;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${va}">${va.length>8?va.slice(0,8)+"…":va}</td>`;
+    vars.forEach((vb,j)=>{const {r,p}=corMat[i][j];if(i===j){h+=`<td style="background:#f0ebf5;font-weight:800;text-align:center">1.00</td>`;}else{const sig=p!==null&&p<0.001?"***":p<0.01?"**":p<0.05?"*":"";h+=`<td style="background:${rColor(r)};text-align:center;font-weight:${Math.abs(r||0)>=0.5?700:400}">${r!==null?r.toFixed(2):"-"}${sig}</td>`;}});h+=`</tr>`;});
+  h+=`</tbody></table></div><div style="margin-top:8px;font-size:11px;color:var(--text-muted)">*** p&lt;.001 &nbsp;** p&lt;.01 &nbsp;* p&lt;.05</div></div>`;
+  // 회귀분석 UI
+  const dvId="deepDV_"+Date.now();
+  h+=`<div class="card"><div class="card-title">📈 다중 회귀분석</div><div class="card-sub">종속변수 선택 → 나머지 선택 척도변수를 독립변수로 OLS 추정</div>`;
+  h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--text-sec)">종속변수</label><select id="${dvId}" class="sb-select" style="width:auto;max-width:220px">${vars.map(v=>`<option value="${v}">${v}</option>`).join("")}</select><button onclick="runRegression('${dvId}')" class="abtn abtn-copy" style="padding:6px 14px;font-size:12px">실행</button></div>`;
+  h+=`<div id="regResult" style="font-size:12px;color:var(--text-muted)">종속변수를 선택한 후 실행 버튼을 누르세요.</div></div>`;
+  el.innerHTML=h;
+}
+function runRegression(dvId){
+  const dv=document.getElementById(dvId).value;
+  const ivs=selectedScales.filter(v=>v!==dv);
+  if(ivs.length===0){document.getElementById("regResult").innerHTML=`<span style="color:var(--danger)">독립변수가 없습니다. 척도변수를 더 선택하세요.</span>`;return;}
+  const complete=DATA.filter(r=>!isNaN(Number(r[dv]))&&ivs.every(iv=>!isNaN(Number(r[iv]))));
+  if(complete.length<ivs.length+5){document.getElementById("regResult").innerHTML=`<span style="color:var(--danger)">유효 응답 수(${complete.length})가 너무 적습니다.</span>`;return;}
+  const Y=complete.map(r=>Number(r[dv]));const Xs=ivs.map(iv=>complete.map(r=>Number(r[iv])));
+  const res=olsRegression(Y,Xs);
+  if(!res){document.getElementById("regResult").innerHTML=`<span style="color:var(--danger)">행렬 역산 실패 (다중공선성 가능성). 독립변수를 줄여보세요.</span>`;return;}
+  const {beta,se,tStat,pVals,R2,n}=res;
+  const names=["(상수)",...ivs];const adj_R2=1-(1-R2)*(n-1)/(n-ivs.length-1);
+  let t=`<div style="margin-bottom:8px">`;
+  t+=`<span style="background:#e8f5e9;color:#1b5e20;padding:3px 10px;border-radius:6px;font-weight:700;margin-right:8px">R² = ${R2.toFixed(4)}</span>`;
+  t+=`<span style="background:#e3f2fd;color:#0d47a1;padding:3px 10px;border-radius:6px;font-weight:700;margin-right:8px">수정 R² = ${adj_R2.toFixed(4)}</span>`;
+  t+=`<span style="color:var(--text-muted);font-size:11px">N=${n} · 종속변수: <strong>${dv}</strong></span></div>`;
+  t+=`<table class="dt"><thead><tr><th>변수</th><th>B (비표준화)</th><th>SE</th><th>t</th><th>p-value</th><th>유의성</th><th>영향력</th></tr></thead><tbody>`;
+  names.forEach((nm,i)=>{const sig=pVals[i]<0.001?"***":pVals[i]<0.01?"**":pVals[i]<0.05?"*":"n.s.";const sc=pVals[i]<0.05?"var(--success)":"var(--text-muted)";const barW=Math.min(100,Math.abs(beta[i])*80);const barC=beta[i]>0?"#22c55e":"#ef4444";
+    t+=`<tr><td style="font-weight:${i===0?400:600}">${nm}</td><td style="font-weight:700">${beta[i].toFixed(4)}</td><td style="color:var(--text-muted)">${se[i].toFixed(4)}</td><td>${tStat[i].toFixed(3)}</td><td>${pVals[i]}</td><td style="color:${sc};font-weight:700">${sig}</td><td>${i>0?`<div style="height:8px;width:${barW}px;background:${barC};border-radius:2px;min-width:2px"></div>`:"—"}</td></tr>`;});
+  t+=`</tbody></table><div style="margin-top:8px;font-size:10px;color:var(--text-muted)">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 n.s.=유의하지않음 | B는 5점 척도 기준 비표준화 계수</div>`;
+  document.getElementById("regResult").innerHTML=t;
+}
+
+/* ===== 주관식 응답 분석 ===== */
+const KO_STOP=new Set(["이","그","저","것","수","있","하","되","되다","이다","있다","하다","은","는","이","가","을","를","에","의","와","과","도","로","으로","에서","에게","한","했","할","않","안","더","도","만","위","후","전","중","때","다","등","및","또","그리고","하지만","그러나","따라서","또한","즉","그래서","여기","저기","모든","많은","이런","저런","그런","어떤","무엇","어디","어떻게","왜","언제","누가","어느","부터","까지","이와","같이","통해","위해","대해","통한","위한"]);
+function tokenize(text){return String(text).replace(/[^\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318Fa-zA-Z0-9\s]/g," ").split(/\s+/).map(w=>w.trim().toLowerCase()).filter(w=>w.length>=2&&!KO_STOP.has(w));}
+function renderTextAnalysis(el){
+  const allText=[...TEXT,...CROSS.filter(c=>DATA.some(r=>String(r[c]||"").length>10))];
+  if(!allText.length){el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><div style="font-size:32px">💬</div><div style="margin-top:10px;color:var(--text-muted)">주관식(자유응답) 컬럼이 감지되지 않았습니다.<br><span style="font-size:11px">자유응답 컬럼은 긴 텍스트 응답이 20개 이상일 때 자동 감지됩니다.</span></div></div>`;return;}
+  const selId="textCol_"+Date.now();const pgId="textPg_"+Date.now();const srId="textSr_"+Date.now();
+  let h=`<div class="card"><div class="card-title">💬 주관식 응답 분석</div><div class="card-sub">자유응답 컬럼 선택 후 빈도·원문 확인</div>`;
+  h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><select id="${selId}" class="sb-select" style="width:auto;max-width:260px">${allText.map(c=>`<option value="${c}">${c}</option>`).join("")}</select><input id="${srId}" type="text" placeholder="🔍 응답 검색..." class="sb-select" style="width:auto;flex:1;max-width:200px"><button onclick="renderTextCol('${selId}','${srId}','${pgId}')" class="abtn abtn-copy" style="padding:6px 14px;font-size:12px">분석</button></div>`;
+  h+=`<div id="${pgId}"><div style="color:var(--text-muted);font-size:12px">컬럼을 선택하고 분석 버튼을 누르세요.</div></div></div>`;
+  el.innerHTML=h;
+}
+function renderTextCol(selId,srId,pgId){
+  const col=document.getElementById(selId).value;const search=(document.getElementById(srId).value||"").toLowerCase();
+  const vals=DATA.map(r=>String(r[col]||"").trim()).filter(v=>v.length>0);
+  const filtered=search?vals.filter(v=>v.toLowerCase().includes(search)):vals;
+  // 단어빈도
+  const freq={};vals.forEach(v=>tokenize(v).forEach(w=>{freq[w]=(freq[w]||0)+1;}));
+  const topW=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const maxFreq=topW[0]?topW[0][1]:1;
+  let t=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">`;
+  t+=`<div style="background:var(--bg-alt);border-radius:8px;padding:10px"><div style="font-size:11px;font-weight:700;color:var(--text-sec);margin-bottom:8px">📊 주요 키워드 Top 20</div>`;
+  topW.forEach(([w,n])=>{const pct=Math.round(n/maxFreq*100);t+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:11px;min-width:80px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${w}</span><div style="flex:1;height:7px;background:#e8e5df;border-radius:99px"><div style="height:7px;width:${pct}%;background:var(--accent2);border-radius:99px"></div></div><span style="font-size:10px;color:var(--text-muted);min-width:24px;text-align:right">${n}</span></div>`;});
+  t+=`</div>`;
+  t+=`<div style="background:var(--bg-alt);border-radius:8px;padding:10px"><div style="font-size:11px;font-weight:700;color:var(--text-sec);margin-bottom:8px">📈 응답 통계</div>`;
+  t+=`<div style="font-size:12px;line-height:2">총 응답: <b>${vals.length}건</b><br>무응답: <b>${DATA.length-vals.length}건</b><br>평균 길이: <b>${Math.round(avg(vals.map(v=>v.length)))}자</b><br>최장 응답: <b>${Math.max(...vals.map(v=>v.length))}자</b><br>고유 응답: <b>${new Set(vals).size}건</b></div></div></div>`;
+  // 원문 목록
+  const maxShow=100;const disp=filtered.slice(0,maxShow);
+  t+=`<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${filtered.length}건 (${disp.length}건 표시${filtered.length>maxShow?`, 최대 ${maxShow}건`:""})</div>`;
+  t+=`<div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">`;
+  disp.forEach((v,i)=>{const hi=search?v.replace(new RegExp(search,"gi"),m=>`<mark style="background:#fef08a">${m}</mark>`):v;t+=`<div style="padding:7px 12px;border-bottom:1px solid #f0ede8;font-size:12px;line-height:1.6"><span style="color:var(--text-muted);margin-right:6px">${i+1}</span>${hi}</div>`;});
+  t+=`</div>`;
+  document.getElementById(pgId).innerHTML=t;
 }
 
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2000);}
@@ -1754,7 +1909,7 @@ function loadDemo(){
 }
 
 function initDashboard(data,name){
-  DATA=data;currentFileName=name;const t=detect(data);CROSS=t.cross;SCALE=t.scale;
+  DATA=data;currentFileName=name;const t=detect(data);CROSS=t.cross;SCALE=t.scale;TEXT=t.text||[];
   currentCross=CROSS[0]||"";selectedScales=[...SCALE.slice(0,8)];currentTab="overview";
   document.getElementById("uploadScreen").classList.add("hidden");
   document.getElementById("historyPage").classList.add("hidden");
@@ -1821,7 +1976,7 @@ function loadHistoryEntry(id){
   }
   try{
     DATA=entry.rawData;currentFileName=entry.fileName||"이력 데이터";
-    const t=detect(DATA);CROSS=t.cross;SCALE=t.scale;
+    const t=detect(DATA);CROSS=t.cross;SCALE=t.scale;TEXT=t.text||[];
     currentCross=entry.crossVar&&CROSS.includes(entry.crossVar)?entry.crossVar:(CROSS[0]||"");
     selectedScales=(entry.scales||[]).filter(s=>SCALE.includes(s));
     if(!selectedScales.length)selectedScales=SCALE.slice(0,8);
@@ -1856,7 +2011,7 @@ function renderContent(){
     [{i:"👥",l:"전체 응답",v:DATA.length+"명"},{i:"📏",l:"분석 문항",v:selectedScales.length+"개"},{i:"🔀",l:"교차집단",v:allGroups.length+"개"},{i:"⭐",l:"종합 평균",v:gm.toFixed(2)+"점",c:gm>=3.5?"var(--success)":"var(--warning)"}
     ].forEach(s=>{const hero=s.l==="종합 평균"?" stat-card-hero":"";h+=`<div class="stat-card${hero}"><div class="stat-label">${s.i} ${s.l}</div><div class="stat-val" ${!hero?`style="color:${s.c||'#1a1a1a'}"`:``}>${s.v}</div>${s.l==="종합 평균"?`<div style="font-size:10px;opacity:.65;margin-top:3px">선택된 모든 문항의 평균값</div>`:""}` +`</div>`;});
     const ovrScale=selectedScales.find(sv=>/전반적|전체.?만족|종합.?만족/.test(sv));
-    if(ovrScale){const ovrVals=DATA.map(r=>Number(r[ovrScale])).filter(v=>!isNaN(v));const ovrM=ovrVals.length?avg(ovrVals):null;if(ovrM!==null){const oc=ovrM>=3.5?"var(--success)":"var(--warning)";h+=`<div class="stat-card" style="border-left:3px solid ${oc}"><div class="stat-label">🎯 종합 만족도</div><div class="stat-val" style="color:${oc}">${ovrM.toFixed(2)}점</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px">${ovrScale}</div></div>`;}}
+    if(ovrScale){const ovrVals=DATA.map(r=>Number(r[ovrScale])).filter(v=>!isNaN(v));const ovrM=ovrVals.length?avg(ovrVals):null;if(ovrM!==null){const oc=ovrM>=3.5?"var(--success)":"var(--warning)";h+=`<div class="stat-card stat-card-sat"><div class="stat-label">🎯 종합 만족도</div><div class="stat-val" style="color:${oc}">${ovrM.toFixed(2)}점</div><div style="font-size:10px;color:#92400e;margin-top:3px">${ovrScale}</div></div>`;}}
     h+=`</div>`;
     h+=`<div class="analysis-box"><h3>📝 자동 분석 리포트</h3><div id="analysisText">${genAnalysisHtml(multi,allGroups,gm)}</div>
     <div class="abtn-row"><button class="abtn abtn-docx" onclick="exportDocx()">📥 DOCX 다운로드</button><button class="abtn" style="background:var(--accent-light);color:var(--accent);border-color:#d4bde8" onclick="exportHwpx()">📥 HWPX 다운로드</button><button class="abtn abtn-gdoc" onclick="exportGoogleDocs()">📋 리포트 복사</button></div></div>`;
@@ -1946,6 +2101,9 @@ function renderContent(){
       h+=`<tr class="total-row"><td>📊 종합</td><td>${total.n}</td><td style="font-weight:800">${total.mean.toFixed(2)}</td><td>${total.std.toFixed(2)}</td>`;total.dist.forEach((d,i)=>{h+=`<td>${d}(${total.pct[i]}%)</td>`;});h+=`</tr></tbody></table>`;});
     h+=`</div>`;el.innerHTML=h;
   }
+  else if(currentTab==="simple"){renderSimpleOverview(el);}
+  else if(currentTab==="deep"){renderDeepAnalysis(el);}
+  else if(currentTab==="text"){renderTextAnalysis(el);}
 }
 
 // Init history count
