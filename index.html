@@ -396,7 +396,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
     <div class="header-right">
       <button class="exp-btn exp-pdf" onclick="exportPDF()" title="PDF 파일 다운로드">📄 PDF</button>
       <button class="exp-btn exp-docx" onclick="exportDocx()" title="Word 문서 다운로드">📥 DOCX</button>
-      <button class="exp-btn exp-hwpx" onclick="exportHwpx()" title="한글 문서 다운로드">📥 HWPX</button>
+      <button class="exp-btn exp-hwpx" onclick="exportHwpx()" title="한글 문서 다운로드 (개발 중 — 일부 환경에서 열리지 않을 수 있음)">📥 HWPX <span style="font-size:9px;opacity:.7">(개발중)</span></button>
       <button class="exp-btn exp-gdoc" onclick="exportGoogleDocs()" title="리포트 복사">📋 리포트 복사</button>
       <button onclick="document.getElementById('settingsOrg').value=ORG_NAME;document.getElementById('settingsTitle').value=REPORT_TITLE;document.getElementById('settingsModal').style.display='flex'" style="padding:5px 10px;font-size:12px;background:var(--bg-alt);color:var(--text-sec);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit">⚙️ 설정</button>
       <button class="new-btn" onclick="resetAll()">🔄 새 파일</button>
@@ -635,8 +635,8 @@ function renderSimpleOverview(el){
   h+=`<div class="analysis-box"><h3>📝 자동 분석 리포트</h3>${genSimpleReport(items,gm2,ovrScale)}</div>`;
   // 응답자 분포 (교차변수별)
   if(CROSS.length){
-    h+=`<div class="card"><div class="card-title">👥 응답자 개요</div><div class="card-sub">교차변수별 응답자 구성</div><div style="display:flex;gap:16px;flex-wrap:wrap">`;
-    CROSS.forEach(cv=>{const gmap={};DATA.forEach(r=>{const k=String(r[cv]||"무응답").trim();gmap[k]=(gmap[k]||0)+1;});const total=DATA.length;const entries=Object.entries(gmap).sort((a,b)=>b[1]-a[1]);h+=`<div style="flex:1;min-width:160px"><div style="font-size:11px;font-weight:700;color:var(--text-sec);margin-bottom:6px">🔀 ${cv}</div>`;entries.forEach(([k,n])=>{const pct=(n/total*100).toFixed(1);h+=`<div style="margin-bottom:4px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>${k}</span><span style="color:var(--text-muted)">${n}명 (${pct}%)</span></div><div style="height:6px;background:#f0ede8;border-radius:99px"><div style="height:6px;background:var(--accent2);border-radius:99px;width:${pct}%"></div></div>`;});h+=`</div>`;});h+=`</div></div>`;
+    h+=`<div class="card"><div class="card-title">👥 응답자 개요</div><div class="card-sub">교차변수별 응답자 구성</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">`;
+    CROSS.forEach(cv=>{const gmap={};DATA.forEach(r=>{const k=String(r[cv]||"무응답").trim();gmap[k]=(gmap[k]||0)+1;});const total=DATA.length;const entries=Object.entries(gmap).sort((a,b)=>b[1]-a[1]);h+=`<div style="background:#faf9f7;border:1px solid var(--border);border-radius:8px;padding:12px 14px"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--accent-light)">🔀 ${cv}</div>`;entries.forEach(([k,n])=>{const pct=(n/total*100).toFixed(1);h+=`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:500">${k}</span><span style="color:var(--text-muted);font-size:11px">${n}명 (${pct}%)</span></div><div style="height:7px;background:#e8e5df;border-radius:99px"><div style="height:7px;background:var(--accent2);border-radius:99px;width:${pct}%;transition:width .4s"></div></div>`;});h+=`</div>`;});h+=`</div></div>`;
   }
   // 문항별 평균 랭킹
   h+=`<div class="card"><div class="card-title">📊 문항별 평균 (전체 기준)</div><div class="card-sub">응답자 전체의 문항별 평균 · SD · 응답 분포</div>`;
@@ -2315,47 +2315,118 @@ function exportGoogleDocs(){
   const grandAll=[];selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
   const gm=avg(grandAll);
   const now=new Date();const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
+  const S=(s,c)=>`<span style="color:${c||"inherit"};font-weight:700">${s}</span>`;
+  const H2=(t)=>`<h2 style="color:#006D3A;border-left:5px solid #5C2D91;padding-left:10px;margin-top:24px">${t}</h2>`;
+  const H3=(t)=>`<h3 style="color:#5C2D91;margin-top:14px">${t}</h3>`;
+  const TD=(v,bold,bg,color)=>`<td style="border:1px solid #ccc;padding:4px 7px;text-align:center;${bold?"font-weight:700;":""}${bg?`background:${bg};`:""}${color?`color:${color};`:""}">${v}</td>`;
+  const TH=(v)=>`<th style="background:#f0ebf5;border:1px solid #ccc;padding:4px 7px;color:#006D3A">${v}</th>`;
 
-  let html=`<h1 style="color:#006D3A;border-bottom:2px solid #006D3A;padding-bottom:6px">설문 분석 결과 보고서</h1>`;
-  html+=`<p style="color:#5a5650;font-size:10pt">분석일: ${dateStr} | ${currentFileName} | ${DATA.length}명 | ${currentCross} 기준 | ${selectedScales.length}개 문항<br>${ORG_NAME}</p>`;
+  let html=`<h1 style="color:#006D3A;border-bottom:3px solid #006D3A;padding-bottom:8px">${REPORT_TITLE}</h1>`;
+  html+=`<p style="color:#5a5650;font-size:10pt">분석일: ${dateStr} | 파일: ${currentFileName} | 응답자: ${DATA.length}명 | 교차변수: ${currentCross} | 분석 문항: ${selectedScales.length}개<br>${ORG_NAME}</p>`;
 
-  html+=`<h2 style="color:#006D3A">1. 분석 요약</h2>`;
-  html+=`<p>${genAnalysisPlain(multi,allGroups,gm).replace(/\n/g,"<br>")}</p>`;
+  // ── 1. 종합분석 ──────────────────────────────────────
+  html+=H2("1. 종합분석 (전체 평균)");
+  const gm2=avg(selectedScales.flatMap(sv=>DATA.map(r=>Number(r[sv])).filter(v=>!isNaN(v))));
+  const simItems=selectedScales.map(sv=>{const vals=DATA.map(r=>Number(r[sv])).filter(v=>!isNaN(v));return{name:sv,mean:avg(vals),std:sdev(vals),n:vals.length};}).sort((a,b)=>b.mean-a.mean);
+  html+=`<p>전체 종합 평균: ${S(gm2.toFixed(2)+"점","#006D3A")} (5점 만점, N=${DATA.length}명)</p>`;
+  html+=`<table style="border-collapse:collapse;width:100%"><tr>${TH("순위")}${TH("문항")}${TH("N")}${TH("평균(M)")}${TH("SD")}</tr>`;
+  simItems.forEach((it,i)=>{const mc=it.mean>=3.5?"#16a34a":it.mean<3?"#dc2626":"#1a1a1a";
+    html+=`<tr>${TD(i+1)}${TD(it.name,false,"","")}${TD(it.n)}${TD(it.mean.toFixed(2),true,"",mc)}${TD(it.std.toFixed(2))}</tr>`;});
+  html+=`</table>`;
+  // 종합분석 리포트
+  const ovrScale=selectedScales.find(sv=>/전반적|전체.?만족|종합.?만족/.test(sv));
+  html+=`<blockquote style="border-left:4px solid #006D3A;margin:12px 0;padding:8px 14px;background:#f0fdf4;color:#1a1a1a">${genSimpleReport(simItems,gm2,ovrScale).replace(/<[^>]+>/g," ").replace(/\s+/g," ")}</blockquote>`;
 
-  // Add charts if available
-  ["bar","dist","radar"].forEach(k=>{const b64=getChartBase64(k);if(b64){const ttl={bar:"집단 비교",dist:"응답 분포",radar:"레이더 차트"}[k];html+=`<h3 style="color:#5C2D91">📊 ${ttl}</h3><img src="${b64}" style="max-width:100%;border:1px solid #e8e5df">`;}});
-
-  html+=`<h2 style="color:#006D3A">2. ${currentCross}별 문항 평균</h2>`;
-  html+=`<table style="border-collapse:collapse;width:100%"><tr><th style="background:#f0ebf5;border:1px solid #ccc;padding:4px 6px">${currentCross}</th>`;
-  multi.forEach(d=>{html+=`<th style="background:#f0ebf5;border:1px solid #ccc;padding:4px 6px">${d.name}</th>`;});html+=`</tr>`;
-  allGroups.forEach(g=>{html+=`<tr><td style="border:1px solid #ccc;padding:4px 6px;font-weight:700">${g}</td>`;
-    multi.forEach(d=>{const r=d.results.find(x=>x.group===g);html+=`<td style="border:1px solid #ccc;padding:4px 6px;text-align:center">${r?r.mean.toFixed(2):"-"}</td>`;});html+=`</tr>`;});
-  html+=`<tr><td style="border:1px solid #ccc;padding:4px 6px;font-weight:700;background:#f0ebf5">종합</td>`;
-  multi.forEach(d=>{const t=calcTotal(DATA,d.name);html+=`<td style="border:1px solid #ccc;padding:4px 6px;text-align:center;background:#f0ebf5;font-weight:700">${t.mean.toFixed(2)}</td>`;});
-  html+=`</tr></table>`;
-
-  html+=`<h2 style="color:#006D3A">3. 문항별 상세</h2>`;
+  // ── 2. 교차분석 ──────────────────────────────────────
+  html+=H2("2. 교차분석 결과");
+  html+=`<p>교차변수: ${S(currentCross,"#5C2D91")} | 집단 수: ${allGroups.length}개 | 전체 평균: ${S(gm.toFixed(2)+"점","#006D3A")}</p>`;
+  html+=H3("2-1. 자동 분석 리포트");
+  html+=`<blockquote style="border-left:4px solid #5C2D91;margin:12px 0;padding:8px 14px;background:#f8f4ff;color:#1a1a1a">${genAnalysisPlain(multi,allGroups,gm).replace(/\n/g,"<br>")}</blockquote>`;
+  html+=H3("2-2. 집단별 문항 평균");
+  html+=`<table style="border-collapse:collapse;width:100%"><tr>${TH(currentCross)}`;
+  multi.forEach(d=>{html+=TH(d.name.length>10?d.name.slice(0,10)+"…":d.name);});html+=`</tr>`;
+  allGroups.forEach(g=>{html+=`<tr>${TD(g,true)}`;
+    multi.forEach(d=>{const r=d.results.find(x=>x.group===g);const v=r?r.mean:null;const mc=v!==null?(v>=3.5?"#16a34a":v<3?"#dc2626":""):"";html+=TD(v!==null?v.toFixed(2):"-",true,"",mc);});html+=`</tr>`;});
+  html+=`<tr>${TD("📊 종합",true,"#f0ebf5","#006D3A")}`;
+  multi.forEach(d=>{const t=calcTotal(DATA,d.name);html+=TD(t.mean.toFixed(2),true,"#f0ebf5","#006D3A");});html+=`</tr></table>`;
+  html+=H3("2-3. 문항별 상세");
   multi.forEach(item=>{
     const total=calcTotal(DATA,item.name);
-    html+=`<h3 style="color:#5C2D91">${item.name}</h3>`;
-    html+=`<table style="border-collapse:collapse;width:100%"><tr>`;
-    [currentCross,"N","M","SD","1점","2점","3점","4점","5점"].forEach(h=>{html+=`<th style="background:#f0ebf5;border:1px solid #ccc;padding:3px 5px;font-size:9pt">${h}</th>`;});
-    html+=`</tr>`;
-    item.results.forEach(r=>{html+=`<tr><td style="border:1px solid #ccc;padding:3px 5px;font-weight:600">${r.group}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center">${r.n}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-weight:700;color:${r.mean>=3.5?"#16a34a":r.mean<3?"#dc2626":"#1a1a1a"}">${r.mean.toFixed(2)}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center">${r.std.toFixed(2)}</td>`;
-      r.dist.forEach((d,i)=>{html+=`<td style="border:1px solid #ccc;padding:3px 5px;text-align:center;font-size:9pt">${d}(${r.pct[i]}%)</td>`;});html+=`</tr>`;});
-    html+=`<tr><td style="border:1px solid #ccc;padding:3px 5px;background:#f0ebf5;font-weight:700">종합</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center;background:#f0ebf5">${total.n}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center;background:#f0ebf5;font-weight:700">${total.mean.toFixed(2)}</td><td style="border:1px solid #ccc;padding:3px 5px;text-align:center;background:#f0ebf5">${total.std.toFixed(2)}</td>`;
-    total.dist.forEach((d,i)=>{html+=`<td style="border:1px solid #ccc;padding:3px 5px;text-align:center;background:#f0ebf5">${d}(${total.pct[i]}%)</td>`;});html+=`</tr></table>`;
+    html+=`<p style="font-weight:700;margin-top:10px;color:#5C2D91">${item.name}</p>`;
+    html+=`<table style="border-collapse:collapse;width:100%"><tr>${[currentCross,"N","M","SD","1점","2점","3점","4점","5점"].map(TH).join("")}</tr>`;
+    item.results.forEach(r=>{const mc=r.mean>=3.5?"#16a34a":r.mean<3?"#dc2626":"";
+      html+=`<tr>${TD(r.group,true)}${TD(r.n)}${TD(r.mean.toFixed(2),true,"",mc)}${TD(r.std.toFixed(2))}`;
+      r.dist.forEach((d,i)=>{html+=TD(`${d}(${r.pct[i]}%)`);});html+=`</tr>`;});
+    html+=`<tr>${TD("종합",true,"#f0ebf5")}${TD(total.n,false,"#f0ebf5")}${TD(total.mean.toFixed(2),true,"#f0ebf5","#006D3A")}${TD(total.std.toFixed(2),false,"#f0ebf5")}`;
+    total.dist.forEach((d,i)=>{html+=TD(`${d}(${total.pct[i]}%)`,false,"#f0ebf5");});html+=`</tr></table>`;
   });
 
-  // Copy as rich text
+  // ── 3. 심층분석 ──────────────────────────────────────
+  if(selectedScales.length>=2){
+    html+=H2("3. 심층분석");
+
+    // 3-1. 상관행렬
+    html+=H3("3-1. 상관분석 행렬 (Pearson r)");
+    const vars=selectedScales;
+    const corMat=vars.map(va=>vars.map(vb=>{const pa=DATA.filter(r=>!isNaN(Number(r[va]))&&!isNaN(Number(r[vb])));return pearsonR(pa.map(r=>Number(r[va])),pa.map(r=>Number(r[vb])));}) );
+    html+=`<table style="border-collapse:collapse;width:100%"><tr>${TH("")}`;
+    vars.forEach(v=>html+=TH(v.length>8?v.slice(0,8)+"…":v));html+=`</tr>`;
+    vars.forEach((va,i)=>{html+=`<tr>${TD(va.length>10?va.slice(0,10)+"…":va,true)}`;
+      vars.forEach((vb,j)=>{const{r,p}=corMat[i][j];if(i===j){html+=TD("1.00",true,"#f0ebf5","#5C2D91");}
+        else{const sig=p<0.001?"***":p<0.01?"**":p<0.05?"*":"";const bg=r!==null&&Math.abs(r)>=0.5?(r>0?"#d1fae5":"#fee2e2"):"";html+=TD(r!==null?r.toFixed(2)+sig:"-",Math.abs(r||0)>=0.5,bg,Math.abs(r||0)>=0.5?(r>0?"#166534":"#991b1b"):"");}});html+=`</tr>`;});
+    html+=`</table><p style="font-size:9pt;color:#888">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 | 강조: |r|≥0.5</p>`;
+    // 강한 상관 요약
+    const strong=[];vars.forEach((va,i)=>vars.forEach((vb,j)=>{if(i>=j)return;const{r,p}=corMat[i][j];if(r!==null&&Math.abs(r)>=0.4&&p<0.05)strong.push({va,vb,r});}));
+    if(strong.length)html+=`<p>${S("주목할 상관쌍:","#5C2D91")} ${strong.map(x=>`'${x.va}' ↔ '${x.vb}' (r=${x.r.toFixed(2)})`).join(", ")}</p>`;
+
+    // 3-2. 회귀분석
+    const regDV=selectedScales.find(sv=>/전반적|전체.?만족|종합.?만족/.test(sv))||selectedScales[selectedScales.length-1];
+    const regIVs=selectedScales.filter(v=>v!==regDV);
+    if(regIVs.length>=1){
+      html+=H3(`3-2. 다중 회귀분석 (종속변수: ${regDV})`);
+      const complete=DATA.filter(r=>!isNaN(Number(r[regDV]))&&regIVs.every(iv=>!isNaN(Number(r[iv]))));
+      if(complete.length>=regIVs.length+5){
+        const Y=complete.map(r=>Number(r[regDV]));
+        const Xs=regIVs.map(iv=>complete.map(r=>Number(r[iv])));
+        const res=olsRegression(Y,Xs);
+        if(res){
+          const{beta,pVals,R2,n}=res;const adj_R2=+(1-(1-R2)*(n-1)/(n-regIVs.length-1)).toFixed(4);
+          html+=`<p>R² = ${S(R2.toFixed(4),"#166534")} | 수정 R² = ${S(adj_R2,"#166534")} | N = ${n}</p>`;
+          html+=`<table style="border-collapse:collapse;width:100%"><tr>${TH("독립변수")}${TH("B(비표준화)")}${TH("p-value")}${TH("유의성")}</tr>`;
+          regIVs.forEach((iv,i)=>{const sig=pVals[i+1]<0.001?"***":pVals[i+1]<0.01?"**":pVals[i+1]<0.05?"*":"n.s.";const isSig=pVals[i+1]<0.05;
+            html+=`<tr>${TD(iv,isSig)}${TD(beta[i+1].toFixed(4),isSig,"",isSig?(beta[i+1]>0?"#166534":"#991b1b"):"")}${TD(pVals[i+1])}${TD(sig,isSig,"",isSig?"#166534":"#888")}</tr>`;});
+          html+=`</table><p style="font-size:9pt;color:#888">*** p&lt;.001 ** p&lt;.01 * p&lt;.05 n.s.=유의않음</p>`;
+        }
+      } else html+=`<p style="color:#888">유효 응답 수 부족으로 회귀분석 불가</p>`;
+    }
+
+    // 3-3. 통계검정 요약
+    html+=H3("3-3. 통계검정 결과 요약");
+    html+=`<table style="border-collapse:collapse;width:100%"><tr>${TH("문항")}${TH("검정")}${TH("통계량")}${TH("p-value")}${TH("효과크기")}${TH("유의성")}</tr>`;
+    selectedScales.forEach(sv=>{
+      const groups={};DATA.forEach(r=>{const k=String(r[currentCross]||"").trim();const v=Number(r[sv]);if(isNaN(v)||!k)return;if(!groups[k])groups[k]=[];groups[k].push(v);});
+      const keys=Object.keys(groups);const arrs=keys.map(k=>groups[k]);
+      let result=null,testName="",stat="",eff="";
+      if(keys.length===2){result=tTest(arrs[0],arrs[1]);testName="t-test";if(result){stat=`t=${result.t}`;eff=`d=${result.d}`;}}
+      else if(keys.length>=3){result=anova(arrs);testName="ANOVA";if(result){stat=`F=${result.F}`;eff=`η²=${result.etaSq}`;}}
+      if(!result){html+=`<tr>${TD(sv)}${TD(testName||"-")}${TD("-")}${TD("-")}${TD("-")}${TD("검정불가","","#fff9c4")}</tr>`;return;}
+      const sig=result.p<0.001?"***":result.p<0.01?"**":result.p<0.05?"*":"n.s.";
+      const isSig=result.p<0.05;
+      html+=`<tr>${TD(sv,isSig)}${TD(testName)}${TD(stat)}${TD(result.p)}${TD(eff)}${TD(sig,true,"",isSig?"#166534":"#888")}</tr>`;
+    });
+    html+=`</table><p style="font-size:9pt;color:#888">* p&lt;.05 ** p&lt;.01 *** p&lt;.001 | Cohen's d: 0.2소/0.5중/0.8대 | η²: 0.01소/0.06중/0.14대</p>`;
+  }
+
+  html+=`<p style="margin-top:20px;border-top:1px solid #ddd;padding-top:8px;font-size:9pt;color:#888">${ORG_NAME} · ${REPORT_TITLE} · ${dateStr} 자동 생성</p>`;
+
+  // 클립보드 복사
   const blob=new Blob([html],{type:"text/html"});
-  const item=new ClipboardItem({"text/html":blob,"text/plain":new Blob([genAnalysisPlain(multi,allGroups,gm)],{type:"text/plain"})});
+  const item=new ClipboardItem({"text/html":blob,"text/plain":new Blob([`${REPORT_TITLE}\n${ORG_NAME}\n분석일: ${dateStr}\n\n${genAnalysisPlain(multi,allGroups,gm)}`],{type:"text/plain"})});
   navigator.clipboard.write([item]).then(()=>{
-    toast("📋 클립보드 복사 완료! Google Docs에 Ctrl+V로 붙여넣기하세요.");
+    toast("📋 클립보드 복사 완료! Google Docs / Word에 Ctrl+V로 붙여넣기하세요.");
   }).catch(()=>{
-    // Fallback: plain text copy
     navigator.clipboard.writeText(genAnalysisPlain(multi,allGroups,gm)).then(()=>{
-      toast("📋 텍스트로 복사됨. Google Docs에 붙여넣기하세요.");
+      toast("📋 텍스트로 복사됨 (서식 없음). Google Docs에 붙여넣기하세요.");
     });
   });
 }
