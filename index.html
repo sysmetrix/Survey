@@ -2560,8 +2560,16 @@ function getHistory(){try{const h=JSON.parse(localStorage.getItem("surveyHistory
 /* HTML element to PNG (transparent bg) */
 function downloadElementPNG(selector,filename){
   const el=document.querySelector(selector);if(!el){toast("⚠️ 요소를 찾을 수 없습니다");return;}
-  html2canvas(el,{backgroundColor:null,scale:2}).then(canvas=>{
+  html2canvas(el,{backgroundColor:"#fff",scale:2}).then(canvas=>{
     canvas.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename+".png";a.click();URL.revokeObjectURL(a.href);toast("📥 PNG 다운로드 완료!");});
+  });
+}
+function copyElementPNG(selector){
+  const el=document.querySelector(selector);if(!el){toast("⚠️ 요소를 찾을 수 없습니다");return;}
+  html2canvas(el,{backgroundColor:"#fff",scale:2}).then(canvas=>{
+    canvas.toBlob(b=>{
+      navigator.clipboard.write([new ClipboardItem({"image/png":b})]).then(()=>toast("📋 이미지 클립보드 복사 완료!")).catch(()=>toast("⚠️ 복사 실패 — PNG 다운로드를 이용하세요"));
+    },"image/png");
   });
 }
 /* Get element as base64 for docx embedding */
@@ -2940,8 +2948,17 @@ function downloadChartPNG(chartKey,filename){
   const c=charts[chartKey];if(!c)return;
   const canvas=c.canvas;const tmp=document.createElement("canvas");
   tmp.width=canvas.width;tmp.height=canvas.height;
-  const ctx=tmp.getContext("2d");ctx.drawImage(canvas,0,0);
+  const ctx=tmp.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,tmp.width,tmp.height);ctx.drawImage(canvas,0,0);
   tmp.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename+".png";a.click();URL.revokeObjectURL(a.href);toast("📥 PNG 다운로드 완료!");});
+}
+function copyChartPNG(chartKey){
+  const c=charts[chartKey];if(!c){toast("⚠️ 차트가 없습니다");return;}
+  const canvas=c.canvas;const tmp=document.createElement("canvas");
+  tmp.width=canvas.width;tmp.height=canvas.height;
+  const ctx=tmp.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,tmp.width,tmp.height);ctx.drawImage(canvas,0,0);
+  tmp.toBlob(b=>{
+    navigator.clipboard.write([new ClipboardItem({"image/png":b})]).then(()=>toast("📋 차트 이미지 클립보드 복사 완료!")).catch(()=>toast("⚠️ 복사 실패 — PNG 다운로드를 이용하세요"));
+  },"image/png");
 }
 /* Get chart as base64 for embedding */
 function getChartBase64(chartKey){const c=charts[chartKey];if(!c)return null;const src=c.canvas;const maxW=1280;if(src.width<=maxW)return src.toDataURL("image/jpeg",0.85);const cv=document.createElement("canvas");cv.width=maxW;cv.height=Math.round(src.height*(maxW/src.width));cv.getContext("2d").drawImage(src,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",0.85);}
@@ -3027,7 +3044,7 @@ function renderContent(){
           </div>
           <div class="card-sub" style="margin-top:4px">수평 막대 · 점선=전체 평균(${grandMean.toFixed(2)}점) · 집단 수: ${single2.length}개</div>
         </div>
-        <button class="abtn abtn-copy" onclick="downloadChartPNG('bar','집단비교_${currentCross}')">📥 PNG</button>
+        <div style="display:flex;gap:4px"><button class="abtn abtn-copy" onclick="copyChartPNG('bar')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadChartPNG('bar','집단비교_${currentCross}')" title="PNG 저장">📥 PNG</button></div>
       </div>
       <div class="chart-wrap"><canvas id="barChart"></canvas></div>
       <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
@@ -3063,11 +3080,13 @@ function renderContent(){
         indexAxis:"y",responsive:true,maintainAspectRatio:false,
         plugins:{
           legend:{display:false},
-          datalabels:{anchor:"end",align:"end",font:{size:14,weight:"bold"},
+          datalabels:{anchor:"end",align:"end",clip:false,font:{size:13,weight:"bold"},
+            padding:{left:4},
             color:ctx=>ctx.dataIndex===wt.length-1?"#006D3A":"#1a1a1a",
             formatter:v=>v.toFixed(2)+"점"},
           tooltip:{callbacks:{label:c=>"평균 "+c.parsed.x.toFixed(2)+"점"}}
         },
+        layout:{padding:{right:60}},
         scales:{
           x:{min:0,max:5,ticks:{stepSize:1,font:{size:13}},grid:{color:"#f0ede8"},
              title:{display:true,text:"평균 (5점 만점)",font:{size:13},color:"#5a5650"}},
@@ -3089,7 +3108,7 @@ function renderContent(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
         <div><div class="card-title">📈 응답 분포 (발산형) — "${selectedScales[0]}"</div>
         <div class="card-sub">← 부정(1~2점) · 중립(3점) · 긍정(4~5점) → · 집단별 비율(%)</div></div>
-        <button class="abtn abtn-copy" onclick="downloadChartPNG('dist','응답분포_${currentCross}')">📥 PNG</button>
+        <div style="display:flex;gap:4px"><button class="abtn abtn-copy" onclick="copyChartPNG('dist')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadChartPNG('dist','응답분포_${currentCross}')" title="PNG 저장">📥 PNG</button></div>
       </div>
       <div class="chart-wrap"><canvas id="distChart"></canvas></div>
       <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
@@ -3111,6 +3130,7 @@ function renderContent(){
       }],
       options:{
         indexAxis:"y",responsive:true,maintainAspectRatio:false,
+        layout:{padding:{left:60,right:60}},
         plugins:{
           legend:{position:"bottom",labels:{font:{size:12},padding:12}},
           datalabels:{display:ctx=>Math.abs(ctx.dataset.data[ctx.dataIndex])>=7,
@@ -3142,7 +3162,7 @@ function renderContent(){
             <span style="display:inline-block;width:10px;height:10px;background:#fff;border:1px solid #ccc;border-radius:2px;vertical-align:middle;margin-left:4px"></span> 보통
             <span style="display:inline-block;width:10px;height:10px;background:#15803d;border-radius:2px;vertical-align:middle;margin-left:4px"></span> 높음
           </span>
-          <button class="abtn abtn-copy" onclick="downloadElementPNG('#heatCard','히트맵_${currentCross}')">📥 PNG</button>
+          <div style="display:flex;gap:4px"><button class="abtn abtn-copy" onclick="copyElementPNG('#heatCard')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadElementPNG('#heatCard','히트맵_${currentCross}')" title="PNG 저장">📥 PNG</button></div>
         </div>
       </div>
       <div style="overflow-x:auto"><table class="ht" style="font-size:14px"><thead><tr>
@@ -3179,7 +3199,7 @@ function renderContent(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
         <div><div class="card-title">🎯 문항별 집단 점 플롯 (Dot Plot)</div>
         <div class="card-sub">● 각 집단 평균 · ◆ 전체 종합 평균 · 같은 행에서 점이 멀수록 집단 차이 큼</div></div>
-        <button class="abtn abtn-copy" onclick="downloadChartPNG('radar','점플롯_${currentCross}')">📥 PNG</button>
+        <div style="display:flex;gap:4px"><button class="abtn abtn-copy" onclick="copyChartPNG('radar')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadChartPNG('radar','점플롯_${currentCross}')" title="PNG 저장">📥 PNG</button></div>
       </div>
       <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
       <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
@@ -3308,7 +3328,7 @@ function renderContent(){
     el.innerHTML=h;
   }
   else if(currentTab==="table"){
-    let h=`<div class="card" id="tableCard"><div style="display:flex;justify-content:space-between"><div><div class="card-title">📑 상세표</div><div class="card-sub">종합 포함</div></div><button class="abtn abtn-copy" onclick="downloadElementPNG('#tableCard','상세표_${currentCross}')">📥 PNG</button></div>`;
+    let h=`<div class="card" id="tableCard"><div style="display:flex;justify-content:space-between"><div><div class="card-title">📑 상세표</div><div class="card-sub">종합 포함</div></div><div style="display:flex;gap:4px"><button class="abtn abtn-copy" onclick="copyElementPNG('#tableCard')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadElementPNG('#tableCard','상세표_${currentCross}')" title="PNG 저장">📥 PNG</button></div></div>`;
     multi.forEach(item=>{const total=calcTotal(DATA,item.name);h+=`<div class="dt-label">${item.name}</div><table class="dt"><thead><tr>`;
       [currentCross,"N","M","SD","1점","2점","3점","4점","5점"].forEach(x=>{h+=`<th>${x}</th>`;});h+=`</tr></thead><tbody>`;
       item.results.forEach(r=>{const mc=r.mean>=3.5?"var(--success)":r.mean<3?"var(--danger)":"#1a1a1a";h+=`<tr><td>${r.group}</td><td>${r.n}</td><td style="font-weight:700;color:${mc}">${r.mean.toFixed(2)}</td><td style="color:var(--text-muted)">${r.std.toFixed(2)}</td>`;r.dist.forEach((d,i)=>{h+=`<td style="color:var(--text-muted)">${d}(${r.pct[i]}%)</td>`;});h+=`</tr>`;});
