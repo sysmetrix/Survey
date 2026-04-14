@@ -1254,7 +1254,7 @@ async function exportDocx(){
   toast("📥 DOCX 생성 중... (차트 렌더링)");
   /* 1) overview 먼저 — 히트맵 캡처 */
   currentTab="overview";renderTabs();renderContent();await new Promise(r=>setTimeout(r,600));
-  const heatB64=await getElementBase64("#heatCard").catch(()=>null);
+  const heatB64=await getElementBase64("#heatCaptureArea").catch(()=>null);
   /* 2) 차트 탭 순회 캡처 (scale 축소) */
   const chartImgs={};
   for(const t of ["bar","dist","radar"]){currentTab=t;renderTabs();renderContent();await new Promise(r=>setTimeout(r,600));const b64=getChartBase64(t);if(b64)chartImgs[t]=b64;}
@@ -1282,7 +1282,7 @@ th:first-child,td:first-child{text-align:left}
 .total td{background:#f0ebf5;color:#006D3A;font-weight:700;border-top:2px solid #5C2D91}
 .good{color:#16a34a;font-weight:700}.bad{color:#dc2626;font-weight:700}
 .meta{color:#5a5650;font-size:11pt;margin-bottom:18px}
-img{display:block;margin:10px auto;border:1px solid #e0e0e0}
+img{display:block;margin:10px auto;border:1px solid #e0e0e0;max-width:100%}
 .footer{margin-top:30px;padding-top:10px;border-top:1px solid #d8d8d8;color:#8a857e;font-size:9pt;text-align:center}
 </style></head><body>`;
 
@@ -1297,10 +1297,10 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0}
 
   // 차트 이미지 삽입
   html+=`<h2>📊 시각화 자료</h2>`;
-  if(chartImgs.bar)html+=`<h3>집단 비교 차트</h3><img src="${chartImgs.bar}" width="560"><br>`;
-  if(chartImgs.dist)html+=`<h3>응답 분포 차트</h3><img src="${chartImgs.dist}" width="560"><br>`;
-  if(chartImgs.radar)html+=`<h3>레이더 차트</h3><img src="${chartImgs.radar}" width="560"><br>`;
-  if(heatB64)html+=`<h3>히트맵</h3><img src="${heatB64}" width="560"><br>`;
+  if(chartImgs.bar)html+=`<h3>집단 비교 차트</h3><img src="${chartImgs.bar}" width="520" style="max-width:100%"><br>`;
+  if(chartImgs.dist)html+=`<h3>응답 분포 차트</h3><img src="${chartImgs.dist}" width="520" style="max-width:100%"><br>`;
+  if(chartImgs.radar)html+=`<h3>레이더 차트</h3><img src="${chartImgs.radar}" width="520" style="max-width:100%"><br>`;
+  if(heatB64)html+=`<h3>히트맵</h3><img src="${heatB64}" width="520" style="max-width:100%"><br>`;
 
   // 총괄 통계
   html+=`<h2>2. 총괄 통계</h2>`;
@@ -2574,8 +2574,12 @@ function copyElementPNG(selector){
 }
 /* Get element as base64 for docx embedding */
 function getElementBase64(selector){
-  return new Promise(res=>{const el=document.querySelector(selector);if(!el){res(null);return;}
-    html2canvas(el,{backgroundColor:"#ffffff",scale:1.5}).then(c=>{const maxW=1280;if(c.width<=maxW)return res(c.toDataURL("image/jpeg",0.85));const cv=document.createElement("canvas");cv.width=maxW;cv.height=Math.round(c.height*(maxW/c.width));cv.getContext("2d").drawImage(c,0,0,cv.width,cv.height);res(cv.toDataURL("image/jpeg",0.85));}).catch(()=>res(null));
+  return new Promise(res=>{
+    const el=document.querySelector(selector);if(!el){res(null);return;}
+    html2canvas(el,{backgroundColor:"#ffffff",scale:2.5,logging:false}).then(canvas=>{
+      // PNG로 고화질 유지
+      res(canvas.toDataURL("image/png",1.0));
+    }).catch(()=>res(null));
   });
 }
 function saveHistory(){localStorage.setItem("surveyHistory",JSON.stringify(getHistory()));}
@@ -2961,7 +2965,19 @@ function copyChartPNG(chartKey){
   },"image/png");
 }
 /* Get chart as base64 for embedding */
-function getChartBase64(chartKey){const c=charts[chartKey];if(!c)return null;const src=c.canvas;const maxW=1280;if(src.width<=maxW)return src.toDataURL("image/jpeg",0.85);const cv=document.createElement("canvas");cv.width=maxW;cv.height=Math.round(src.height*(maxW/src.width));cv.getContext("2d").drawImage(src,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",0.85);}
+function getChartBase64(chartKey){
+  const ch=charts[chartKey];if(!ch)return null;
+  const src=ch.canvas;
+  // 2x 고해상도로 리렌더 — 텍스트 선명도 확보
+  const SCALE=2;const targetW=1120;const targetH=Math.round(src.height*(targetW/src.width));
+  const cv=document.createElement("canvas");
+  cv.width=targetW*SCALE;cv.height=targetH*SCALE;
+  const ctx=cv.getContext("2d");
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.scale(SCALE,SCALE);
+  ctx.drawImage(src,0,0,targetW,targetH);
+  return cv.toDataURL("image/png",1.0);
+}
 
 /* ===== LOAD HISTORY ENTRY ===== */
 function loadHistoryEntry(id){
@@ -3112,7 +3128,7 @@ function renderContent(){
       </div>
       <div class="chart-wrap"><canvas id="distChart"></canvas></div>
       <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
-    </div>`;
+      </div></div>`;
     const ctx=document.getElementById("distChart").getContext("2d");
     // 데이터셋: 부정(1점·2점 음수), 중립(3점), 긍정(4점·5점)
     const ds=[
@@ -3162,10 +3178,10 @@ function renderContent(){
             <span style="display:inline-block;width:10px;height:10px;background:#fff;border:1px solid #ccc;border-radius:2px;vertical-align:middle;margin-left:4px"></span> 보통
             <span style="display:inline-block;width:10px;height:10px;background:#15803d;border-radius:2px;vertical-align:middle;margin-left:4px"></span> 높음
           </span>
-          <div style="display:flex;gap:4px"><button class="abtn abtn-copy" onclick="copyElementPNG('#heatCard')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadElementPNG('#heatCard','히트맵_${currentCross}')" title="PNG 저장">📥 PNG</button></div>
+          <div style="display:flex;gap:4px"><button class="abtn abtn-copy" onclick="copyElementPNG('#heatCaptureArea')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadElementPNG('#heatCaptureArea','히트맵_${currentCross}')" title="PNG 저장">📥 PNG</button></div>
         </div>
       </div>
-      <div style="overflow-x:auto"><table class="ht" style="font-size:14px"><thead><tr>
+      <div id="heatCaptureArea" style="background:#fff;padding:8px 0 4px"><div style="overflow-x:auto"><table class="ht" style="font-size:14px"><thead><tr>
         <th style="font-size:13px;min-width:70px">${currentCross}</th>`;
     multi.forEach(d=>{h+=`<th style="font-size:12px;padding:8px 6px" title="${d.name}">${d.name.length>7?d.name.slice(0,7)+"…":d.name}</th>`;});
     h+=`</tr></thead><tbody>`;
@@ -3183,7 +3199,7 @@ function renderContent(){
     multi.forEach(d=>{const t=calcTotal(DATA,d.name);const bg=heatColor(t.mean,gMin,gMax);const tc=heatText(t.mean,gMin,gMax);h+=`<td style="background:${bg};color:${tc};font-weight:800;font-size:14px;padding:9px 6px">${t.mean.toFixed(2)}</td>`;});
     h+=`</tr></tbody></table></div>
       <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
-    </div>`;
+      </div></div>`;
     el.innerHTML=h;
   }
   else if(currentTab==="radar"){
@@ -3203,7 +3219,7 @@ function renderContent(){
       </div>
       <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
       <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
-    </div>`;
+      </div></div>`;
     const ctx=document.getElementById("radarChart").getContext("2d");
     const ds=gWT.map((g,i)=>{
       const isT=g==="종합";
@@ -3225,13 +3241,14 @@ function renderContent(){
       plugins:[ChartDataLabels],
       options:{
         responsive:true,maintainAspectRatio:false,
+        layout:{padding:{right:20,left:10}},
         plugins:{
           legend:{position:"bottom",labels:{font:{size:13},padding:14}},
           datalabels:{display:false},
           tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.x.toFixed(2)}점`}}
         },
         scales:{
-          x:{min:1,max:5,ticks:{stepSize:0.5,font:{size:13}},
+          x:{min:1,max:5.15,ticks:{stepSize:0.5,font:{size:13}},
              grid:{color:"#f0ede8"},title:{display:true,text:"평균 (5점 만점)",font:{size:13}}},
           y:{type:"category",labels:labels.slice().reverse(),ticks:{font:{size:13,weight:"600"}},grid:{display:false},reverse:false}
         }
