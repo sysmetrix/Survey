@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -180,6 +181,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 /* Export buttons in header */
 .exp-btn{padding:5px 10px;font-size:11px;font-weight:600;border-radius:5px;cursor:pointer;font-family:inherit;border:1px solid;transition:all .15s}
 .exp-docx{background:#f0fdf4;color:var(--success);border-color:#bbf7d0}
+.exp-pdf{background:#fff1f2;color:#be123c;border-color:#fecdd3}
 .exp-gdoc{background:#fef3c7;color:#92400e;border-color:#fde68a}
 .exp-hwpx{background:var(--accent-light);color:var(--accent);border-color:#d4bde8}
 .exp-btn:hover{opacity:.8}
@@ -392,6 +394,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
       <span class="header-sub" id="fileLabel"></span>
     </div>
     <div class="header-right">
+      <button class="exp-btn exp-pdf" onclick="exportPDF()" title="PDF 파일 다운로드">📄 PDF</button>
       <button class="exp-btn exp-docx" onclick="exportDocx()" title="Word 문서 다운로드">📥 DOCX</button>
       <button class="exp-btn exp-hwpx" onclick="exportHwpx()" title="한글 문서 다운로드">📥 HWPX</button>
       <button class="exp-btn exp-gdoc" onclick="exportGoogleDocs()" title="리포트 복사">📋 리포트 복사</button>
@@ -995,6 +998,131 @@ function genAnalysisHtml(multi,allGroups,gm){
   t+=`</div>`;return t;
 }
 
+/* ===== PDF EXPORT ===== */
+async function exportPDF(){
+  if(!DATA.length)return;
+  const {jsPDF}=window.jspdf;
+  if(!jsPDF){toast("⚠️ PDF 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.");return;}
+  toast("📄 PDF 생성 중... 잠시 기다려 주세요");
+  const now=new Date();
+  const dateStr=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
+  const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  const A4W=210,A4H=297,MARGIN=14,CONTENT_W=A4W-MARGIN*2;
+  let curY=MARGIN;
+
+  // ── 헬퍼 ──
+  function addPageIfNeeded(needH){if(curY+needH>A4H-MARGIN){pdf.addPage();curY=MARGIN;}}
+  function addTitle(text,size=14,color=[0,109,58]){
+    addPageIfNeeded(size*0.5+6);
+    pdf.setFontSize(size);pdf.setTextColor(...color);pdf.setFont("helvetica","bold");
+    pdf.text(text,MARGIN,curY);curY+=size*0.4+4;
+    pdf.setTextColor(0,0,0);pdf.setFont("helvetica","normal");
+  }
+  function addText(text,size=10,color=[26,26,26]){
+    const lines=pdf.splitTextToSize(text,CONTENT_W);
+    addPageIfNeeded(lines.length*(size*0.5)+2);
+    pdf.setFontSize(size);pdf.setTextColor(...color);
+    pdf.text(lines,MARGIN,curY);curY+=lines.length*(size*0.5)+3;
+    pdf.setTextColor(0,0,0);
+  }
+  function addHRule(){pdf.setDrawColor(200,200,200);pdf.setLineWidth(0.2);pdf.line(MARGIN,curY,A4W-MARGIN,curY);curY+=4;}
+  async function addCanvasElement(elId){
+    const el=document.getElementById(elId);if(!el)return;
+    try{
+      const canvas=await html2canvas(el,{backgroundColor:"#ffffff",scale:1.5,logging:false,useCORS:true});
+      const imgData=canvas.toDataURL("image/jpeg",0.85);
+      const imgW=CONTENT_W;const imgH=canvas.height*(imgW/canvas.width);
+      addPageIfNeeded(imgH+4);
+      pdf.addImage(imgData,"JPEG",MARGIN,curY,imgW,imgH);curY+=imgH+6;
+    }catch(e){addText("(차트 이미지 캡처 실패)",9,[150,150,150]);}
+  }
+  async function addCurrentTabContent(){
+    const el=document.getElementById("tabContent");if(!el)return;
+    try{
+      const canvas=await html2canvas(el,{backgroundColor:"#f8f7f4",scale:1.2,logging:false,useCORS:true,windowWidth:el.scrollWidth,windowHeight:el.scrollHeight});
+      const imgData=canvas.toDataURL("image/jpeg",0.88);
+      const imgW=CONTENT_W;const imgH=Math.min(canvas.height*(imgW/canvas.width),A4H-MARGIN*2-curY);
+      if(imgH<10){pdf.addPage();curY=MARGIN;}
+      const finalH=canvas.height*(imgW/canvas.width);
+      // 긴 콘텐츠는 여러 페이지로 분할
+      const totalPages=Math.ceil(finalH/(A4H-MARGIN*2));
+      for(let p=0;p<totalPages;p++){
+        if(p>0){pdf.addPage();curY=MARGIN;}
+        const sliceH=A4H-MARGIN*2;
+        const srcY=p*(canvas.height/totalPages);
+        const srcH=canvas.height/totalPages;
+        const sliceCanvas=document.createElement("canvas");
+        sliceCanvas.width=canvas.width;sliceCanvas.height=srcH;
+        sliceCanvas.getContext("2d").drawImage(canvas,0,srcY,canvas.width,srcH,0,0,canvas.width,srcH);
+        const sliceData=sliceCanvas.toDataURL("image/jpeg",0.88);
+        pdf.addImage(sliceData,"JPEG",MARGIN,curY,imgW,sliceH);
+        curY+=sliceH;
+      }
+    }catch(e){addText("(콘텐츠 캡처 실패: "+e.message+")",9,[150,150,150]);}
+  }
+
+  // ── 표지 ──
+  pdf.setFillColor(0,109,58);pdf.rect(0,0,A4W,32,"F");
+  pdf.setFontSize(18);pdf.setTextColor(255,255,255);pdf.setFont("helvetica","bold");
+  pdf.text(REPORT_TITLE,A4W/2,14,{align:"center"});
+  pdf.setFontSize(10);pdf.setFont("helvetica","normal");
+  pdf.text(ORG_NAME,A4W/2,22,{align:"center"});
+  curY=40;
+
+  // 분석 개요
+  pdf.setFontSize(10);pdf.setTextColor(80,80,80);
+  pdf.text(`분석일: ${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}   파일: ${currentFileName}   응답자: ${DATA.length}명   교차변수: ${currentCross}`,MARGIN,curY);
+  curY+=8;addHRule();
+
+  // ── 종합분석 ──
+  addTitle("1. 종합분석",13);
+  const savedTab=currentTab,savedMode=currentMode;
+  currentTab="simple";currentMode="simple";renderTabs();renderContent();
+  await new Promise(r=>setTimeout(r,500));
+  await addCurrentTabContent();
+  addHRule();
+
+  // ── 교차분석 (총괄·히트맵) ──
+  addTitle("2. 교차분석",13);
+  for(const t of ["overview","heat"]){
+    currentTab=t;currentMode="cross";renderTabs();renderContent();
+    await new Promise(r=>setTimeout(r,600));
+    addText(`[${TABS.find(x=>x.id===t)?.label||t}]`,10,[80,80,80]);
+    await addCurrentTabContent();
+  }
+  addHRule();
+
+  // ── 시각화 차트 ──
+  addTitle("3. 집단 비교 시각화",13);
+  for(const t of ["bar","dist"]){
+    currentTab=t;currentMode="cross";renderTabs();renderContent();
+    await new Promise(r=>setTimeout(r,600));
+    addText(`[${TABS.find(x=>x.id===t)?.label||t}]`,10,[80,80,80]);
+    await addCurrentTabContent();
+  }
+  addHRule();
+
+  // ── 심층분석 ──
+  addTitle("4. 심층분석",13);
+  currentTab="stats";currentMode="deep";renderTabs();renderContent();
+  await new Promise(r=>setTimeout(r,600));
+  await addCurrentTabContent();
+  addHRule();
+
+  // ── 풋터 ──
+  const pageCount=pdf.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    pdf.setPage(i);
+    pdf.setFontSize(8);pdf.setTextColor(150,150,150);
+    pdf.text(`${ORG_NAME} · ${REPORT_TITLE} · ${pageCount}페이지 중 ${i}페이지`,A4W/2,A4H-6,{align:"center"});
+  }
+
+  // 현재 탭 복원
+  currentTab=savedTab;currentMode=savedMode;renderTabs();renderContent();
+
+  pdf.save(`분석결과_${dateStr}_${currentFileName.replace(/\.[^.]+$/,"")}.pdf`);
+  toast("✅ PDF 다운로드 완료!");
+}
 /* ===== DOCX EXPORT ===== */
 async function exportDocx(){
   if(!DATA.length)return;
@@ -2425,10 +2553,9 @@ function renderTabs(){
   // ── 모드 바 ──
   const mb=document.getElementById("modeBar");
   if(!mb)return;
-  const isUtil=["text","raw"].includes(currentTab);
   let mh=`<div class="mode-bar"><div class="mode-bar-left">`;
   Object.entries(MODE_GROUPS).forEach(([mode,g])=>{
-    const isCur=currentMode===mode&&!isUtil;
+    const isCur=currentMode===mode;
     mh+=`<button class="mode-btn${isCur?" "+g.cls:""}" onclick="switchMode('${mode}')">${g.label}</button>`;
   });
   mh+=`</div><div class="mode-bar-right">`;
@@ -2441,7 +2568,7 @@ function renderTabs(){
   const sb=document.getElementById("subBar");
   if(!sb)return;
   const group=MODE_GROUPS[currentMode];
-  if(!group||!group.tabs.length||isUtil){sb.classList.add("hidden");sb.innerHTML="";return;}
+  if(!group||!group.tabs.length){sb.classList.add("hidden");sb.innerHTML="";return;}
   sb.classList.remove("hidden");
   sb.innerHTML=group.tabs.map(t=>
     `<button class="sub-btn${currentTab===t.id?" active":""}" onclick="switchTab('${t.id}')">${t.label}</button>`
@@ -2449,7 +2576,7 @@ function renderTabs(){
   // ── 종합분석 버튼 색 동기화 ──
   const btn=document.getElementById("simpleModeBtn");
   if(btn){
-    if(currentMode==="simple"&&!isUtil){btn.style.background="linear-gradient(135deg,#FDB913,#f59e0b)";btn.style.color="#1a1a1a";}
+    if(currentMode==="simple"){btn.style.background="linear-gradient(135deg,#FDB913,#f59e0b)";btn.style.color="#1a1a1a";}
     else{btn.style.background="linear-gradient(135deg,var(--brand),var(--ci-purple))";btn.style.color="#fff";}
   }
 }
