@@ -1003,126 +1003,128 @@ async function exportPDF(){
   if(!DATA.length)return;
   const {jsPDF}=window.jspdf;
   if(!jsPDF){toast("⚠️ PDF 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.");return;}
-  toast("📄 PDF 생성 중... 잠시 기다려 주세요");
-  const now=new Date();
-  const dateStr=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
+
+  toast("📄 PDF 생성 중... 잠시 기다려 주세요 (약 10~20초)");
+  await new Promise(r=>setTimeout(r,100));
+
   const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
-  const A4W=210,A4H=297,MARGIN=14,CONTENT_W=A4W-MARGIN*2;
-  let curY=MARGIN;
+  const A4W=210,A4H=297,MARGIN=10;
+  const imgW=A4W-MARGIN*2;  // 190mm
+  let isFirstPage=true;
 
-  // ── 헬퍼 ──
-  function addPageIfNeeded(needH){if(curY+needH>A4H-MARGIN){pdf.addPage();curY=MARGIN;}}
-  function addTitle(text,size=14,color=[0,109,58]){
-    addPageIfNeeded(size*0.5+6);
-    pdf.setFontSize(size);pdf.setTextColor(...color);pdf.setFont("helvetica","bold");
-    pdf.text(text,MARGIN,curY);curY+=size*0.4+4;
-    pdf.setTextColor(0,0,0);pdf.setFont("helvetica","normal");
-  }
-  function addText(text,size=10,color=[26,26,26]){
-    const lines=pdf.splitTextToSize(text,CONTENT_W);
-    addPageIfNeeded(lines.length*(size*0.5)+2);
-    pdf.setFontSize(size);pdf.setTextColor(...color);
-    pdf.text(lines,MARGIN,curY);curY+=lines.length*(size*0.5)+3;
-    pdf.setTextColor(0,0,0);
-  }
-  function addHRule(){pdf.setDrawColor(200,200,200);pdf.setLineWidth(0.2);pdf.line(MARGIN,curY,A4W-MARGIN,curY);curY+=4;}
-  async function addCanvasElement(elId){
-    const el=document.getElementById(elId);if(!el)return;
+  // ── 이미지 → PDF 페이지 추가 (긴 콘텐츠 자동 페이지 분할) ──
+  async function addElementToPDF(el,label){
+    if(!el)return;
     try{
-      const canvas=await html2canvas(el,{backgroundColor:"#ffffff",scale:1.5,logging:false,useCORS:true});
-      const imgData=canvas.toDataURL("image/jpeg",0.85);
-      const imgW=CONTENT_W;const imgH=canvas.height*(imgW/canvas.width);
-      addPageIfNeeded(imgH+4);
-      pdf.addImage(imgData,"JPEG",MARGIN,curY,imgW,imgH);curY+=imgH+6;
-    }catch(e){addText("(차트 이미지 캡처 실패)",9,[150,150,150]);}
-  }
-  async function addCurrentTabContent(){
-    const el=document.getElementById("tabContent");if(!el)return;
-    try{
-      const canvas=await html2canvas(el,{backgroundColor:"#f8f7f4",scale:1.2,logging:false,useCORS:true,windowWidth:el.scrollWidth,windowHeight:el.scrollHeight});
-      const imgData=canvas.toDataURL("image/jpeg",0.88);
-      const imgW=CONTENT_W;const imgH=Math.min(canvas.height*(imgW/canvas.width),A4H-MARGIN*2-curY);
-      if(imgH<10){pdf.addPage();curY=MARGIN;}
-      const finalH=canvas.height*(imgW/canvas.width);
-      // 긴 콘텐츠는 여러 페이지로 분할
-      const totalPages=Math.ceil(finalH/(A4H-MARGIN*2));
+      // 스크롤 높이 전체 캡처
+      const canvas=await html2canvas(el,{
+        backgroundColor:"#f8f7f4",scale:1.8,logging:false,useCORS:true,
+        width:el.scrollWidth,height:el.scrollHeight,
+        windowWidth:el.scrollWidth,windowHeight:el.scrollHeight,
+        scrollX:0,scrollY:0
+      });
+      const totalImgH=canvas.height*(imgW/canvas.width);  // mm 환산
+      const pageH=A4H-MARGIN*2;
+      const totalPages=Math.ceil(totalImgH/pageH);
+      const sliceH=Math.floor(canvas.height/totalPages);
+
       for(let p=0;p<totalPages;p++){
-        if(p>0){pdf.addPage();curY=MARGIN;}
-        const sliceH=A4H-MARGIN*2;
-        const srcY=p*(canvas.height/totalPages);
-        const srcH=canvas.height/totalPages;
+        if(!isFirstPage)pdf.addPage();
+        isFirstPage=false;
+
+        // 섹션 레이블 (첫 쪽만)
+        if(p===0&&label){
+          // 레이블은 html2canvas로 직접 그리지 않고 작은 컬러 바로 표시
+          pdf.setFillColor(0,109,58);
+          pdf.rect(MARGIN,MARGIN,imgW,5,"F");
+        }
+
+        const srcY=p*sliceH;
+        const srcH=p===totalPages-1?canvas.height-srcY:sliceH;
         const sliceCanvas=document.createElement("canvas");
-        sliceCanvas.width=canvas.width;sliceCanvas.height=srcH;
-        sliceCanvas.getContext("2d").drawImage(canvas,0,srcY,canvas.width,srcH,0,0,canvas.width,srcH);
-        const sliceData=sliceCanvas.toDataURL("image/jpeg",0.88);
-        pdf.addImage(sliceData,"JPEG",MARGIN,curY,imgW,sliceH);
-        curY+=sliceH;
+        sliceCanvas.width=canvas.width;
+        sliceCanvas.height=srcH;
+        const ctx2=sliceCanvas.getContext("2d");
+        ctx2.drawImage(canvas,0,srcY,canvas.width,srcH,0,0,canvas.width,srcH);
+
+        const sliceImgH=srcH*(imgW/canvas.width);
+        const topY=p===0&&label?MARGIN+6:MARGIN;
+        pdf.addImage(sliceCanvas.toDataURL("image/jpeg",0.90),"JPEG",MARGIN,topY,imgW,sliceImgH);
       }
-    }catch(e){addText("(콘텐츠 캡처 실패: "+e.message+")",9,[150,150,150]);}
+    }catch(e){
+      console.error("캡처 오류:",e);
+      if(!isFirstPage)pdf.addPage();
+      isFirstPage=false;
+    }
   }
 
-  // ── 표지 ──
-  pdf.setFillColor(0,109,58);pdf.rect(0,0,A4W,32,"F");
-  pdf.setFontSize(18);pdf.setTextColor(255,255,255);pdf.setFont("helvetica","bold");
-  pdf.text(REPORT_TITLE,A4W/2,14,{align:"center"});
-  pdf.setFontSize(10);pdf.setFont("helvetica","normal");
-  pdf.text(ORG_NAME,A4W/2,22,{align:"center"});
-  curY=40;
+  // ── 표지: 별도 hidden div 생성해서 캡처 ──
+  const cover=document.createElement("div");
+  cover.style.cssText=`position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:Pretendard,-apple-system,sans-serif;overflow:hidden`;
+  cover.innerHTML=`
+    <div style="background:linear-gradient(135deg,#006D3A,#5C2D91);padding:60px 48px 48px;color:#fff">
+      <div style="font-size:11px;opacity:.75;margin-bottom:12px;letter-spacing:.1em">SURVEY ANALYSIS REPORT</div>
+      <div style="font-size:30px;font-weight:800;line-height:1.3;margin-bottom:16px">${REPORT_TITLE}</div>
+      <div style="font-size:14px;opacity:.85;margin-bottom:8px">${ORG_NAME}</div>
+      <div style="font-size:12px;opacity:.65">분석일: ${new Date().toLocaleDateString("ko-KR")} &nbsp;|&nbsp; 파일: ${currentFileName} &nbsp;|&nbsp; 응답자: ${DATA.length}명</div>
+    </div>
+    <div style="padding:32px 48px;background:#faf9f7">
+      <div style="font-size:13px;font-weight:700;color:#5C2D91;margin-bottom:16px">📋 분석 목차</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${[["1. 종합분석","전체 문항 평균·응답자 개요·자동 리포트"],["2. 교차분석 총괄","교차변수별 집단 통계 카드"],["3. 히트맵","집단×문항 발산형 히트맵"],["4. 집단비교","수평 막대 기준선 비교"],["5. 응답분포","발산형 긍정·부정 분포"],["6. 통계검정","t-test/ANOVA·사후검정·해설"]].map(([t,d])=>`
+          <div style="background:#fff;border:1px solid #e8e5df;border-radius:8px;padding:12px 14px">
+            <div style="font-size:12px;font-weight:700;color:#006D3A;margin-bottom:3px">${t}</div>
+            <div style="font-size:11px;color:#7a7068">${d}</div>
+          </div>`).join("")}
+      </div>
+      <div style="margin-top:24px;padding:12px 16px;background:#fff;border-left:4px solid #FDB913;border-radius:0 8px 8px 0;font-size:11px;color:#7a7068">
+        교차변수: <strong>${currentCross}</strong> &nbsp;·&nbsp; 분석 문항: <strong>${selectedScales.length}개</strong> &nbsp;·&nbsp; 교차 집단: <strong>${[...new Set(DATA.map(r=>String(r[currentCross]||"")).filter(Boolean))].length}개</strong>
+      </div>
+    </div>`;
+  document.body.appendChild(cover);
+  await new Promise(r=>setTimeout(r,300));
+  await addElementToPDF(cover,"");
+  document.body.removeChild(cover);
 
-  // 분석 개요
-  pdf.setFontSize(10);pdf.setTextColor(80,80,80);
-  pdf.text(`분석일: ${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}   파일: ${currentFileName}   응답자: ${DATA.length}명   교차변수: ${currentCross}`,MARGIN,curY);
-  curY+=8;addHRule();
-
-  // ── 종합분석 ──
-  addTitle("1. 종합분석",13);
+  // ── 각 섹션 순서대로 캡처 ──
   const savedTab=currentTab,savedMode=currentMode;
-  currentTab="simple";currentMode="simple";renderTabs();renderContent();
-  await new Promise(r=>setTimeout(r,500));
-  await addCurrentTabContent();
-  addHRule();
+  const sections=[
+    {tab:"simple", mode:"simple",  label:"1"},
+    {tab:"overview",mode:"cross",  label:"2"},
+    {tab:"heat",    mode:"cross",  label:"3"},
+    {tab:"bar",     mode:"cross",  label:"4"},
+    {tab:"dist",    mode:"cross",  label:"5"},
+    {tab:"stats",   mode:"deep",   label:"6"},
+  ];
 
-  // ── 교차분석 (총괄·히트맵) ──
-  addTitle("2. 교차분석",13);
-  for(const t of ["overview","heat"]){
-    currentTab=t;currentMode="cross";renderTabs();renderContent();
-    await new Promise(r=>setTimeout(r,600));
-    addText(`[${TABS.find(x=>x.id===t)?.label||t}]`,10,[80,80,80]);
-    await addCurrentTabContent();
+  for(const sec of sections){
+    currentTab=sec.tab; currentMode=sec.mode;
+    renderTabs(); renderContent();
+    await new Promise(r=>setTimeout(r,700));
+    const el=document.getElementById("tabContent");
+    await addElementToPDF(el, sec.label);
   }
-  addHRule();
 
-  // ── 시각화 차트 ──
-  addTitle("3. 집단 비교 시각화",13);
-  for(const t of ["bar","dist"]){
-    currentTab=t;currentMode="cross";renderTabs();renderContent();
-    await new Promise(r=>setTimeout(r,600));
-    addText(`[${TABS.find(x=>x.id===t)?.label||t}]`,10,[80,80,80]);
-    await addCurrentTabContent();
-  }
-  addHRule();
-
-  // ── 심층분석 ──
-  addTitle("4. 심층분석",13);
-  currentTab="stats";currentMode="deep";renderTabs();renderContent();
-  await new Promise(r=>setTimeout(r,600));
-  await addCurrentTabContent();
-  addHRule();
-
-  // ── 풋터 ──
-  const pageCount=pdf.internal.getNumberOfPages();
-  for(let i=1;i<=pageCount;i++){
+  // ── 풋터: 각 페이지에 페이지 번호 이미지 바 추가 ──
+  const totalPgs=pdf.internal.getNumberOfPages();
+  for(let i=1;i<=totalPgs;i++){
     pdf.setPage(i);
-    pdf.setFontSize(8);pdf.setTextColor(150,150,150);
-    pdf.text(`${ORG_NAME} · ${REPORT_TITLE} · ${pageCount}페이지 중 ${i}페이지`,A4W/2,A4H-6,{align:"center"});
+    pdf.setFillColor(248,247,244);
+    pdf.rect(0,A4H-8,A4W,8,"F");
+    pdf.setFillColor(0,109,58);
+    pdf.rect(0,A4H-8,A4W*i/totalPgs,1.5,"F");  // 진행 바
   }
 
-  // 현재 탭 복원
-  currentTab=savedTab;currentMode=savedMode;renderTabs();renderContent();
+  // 복원
+  currentTab=savedTab; currentMode=savedMode;
+  renderTabs(); renderContent();
 
-  pdf.save(`분석결과_${dateStr}_${currentFileName.replace(/\.[^.]+$/,"")}.pdf`);
+  const now=new Date();
+  const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
+  pdf.save(`분석결과_${ds}_${currentFileName.replace(/\.[^.]+$/,"")}.pdf`);
   toast("✅ PDF 다운로드 완료!");
 }
+
 /* ===== DOCX EXPORT ===== */
 async function exportDocx(){
   if(!DATA.length)return;
@@ -2388,7 +2390,12 @@ function addToHistory(){
     scales:selectedScales.slice(),rawData:DATA,lastTab:currentTab,
     summary:genAnalysisPlain(multi,allGroups,gm).slice(0,500)
   };
-  const hist=getHistory();hist.unshift(entry);
+  const hist=getHistory();
+  // 같은 파일명+날짜 이력이 있으면 덮어쓰기 (중복 방지)
+  const today=new Date().toISOString().slice(0,10);
+  const dupIdx=hist.findIndex(h=>h.fileName===entry.fileName&&h.date&&h.date.slice(0,10)===today);
+  if(dupIdx>=0)hist.splice(dupIdx,1);
+  hist.unshift(entry);
   if(hist.length>50)hist.length=50;
   localStorage.setItem("surveyHistory",JSON.stringify(hist));
   updateHistCount();
