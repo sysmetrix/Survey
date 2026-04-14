@@ -3113,24 +3113,34 @@ function renderContent(){
     document.getElementById("barBadges").innerHTML=wt.map((d,i)=>`<span style="font-size:11px;padding:3px 9px;border-radius:99px;background:${i===wt.length-1?"#e8ddf2":PLIGHT[i%PLIGHT.length]};color:${i===wt.length-1?"#006D3A":PALETTE[i%PALETTE.length]};font-weight:600">${d.group} n=${d.n} M=${d.mean.toFixed(2)} SD=${d.std.toFixed(2)}</span>`).join("");
   }
   else if(currentTab==="dist"){
-    // 발산형 누적 막대: 1~2점 왼쪽(부정), 3점 중립, 4~5점 오른쪽(긍정)
-    const wt=[...single,singleTotal];
+    // 현재 선택 문항 (집단비교와 동일한 방식)
+    const distSV=window._distSV&&selectedScales.includes(window._distSV)?window._distSV:selectedScales[0];
+    const distData=analyze(DATA,currentCross,distSV);
+    const distTotal=calcTotal(DATA,distSV);
+    const wt=[...distData,distTotal];
     // 긍정/부정 비율 분석
     const posRates=wt.map(d=>d.pct[3]+d.pct[4]);
     const negRates=wt.map(d=>d.pct[0]+d.pct[1]);
     const topPos=wt[posRates.indexOf(Math.max(...posRates))];
-    const descTxt=`'${selectedScales[0]}' 문항의 ${currentCross}별 응답 분포입니다. 막대가 오른쪽으로 길수록 긍정(4~5점) 응답 비율이 높고, 왼쪽으로 길수록 부정(1~2점) 응답이 많습니다. '${topPos.group}'의 긍정 응답 비율이 ${posRates[wt.indexOf(topPos)].toFixed(1)}%로 가장 높습니다.`;
+    const topNeg=wt.filter(d=>d.group!=="종합").reduce((a,b)=>negRates[wt.indexOf(a)]>negRates[wt.indexOf(b)]?a:b,wt[0]);
+    const descTxt=`'${distSV}' 문항의 ${currentCross}별 응답 분포입니다. '${topPos.group}'의 긍정(4~5점) 비율이 ${posRates[wt.indexOf(topPos)].toFixed(1)}%로 가장 높고, '${topNeg.group}'의 부정(1~2점) 비율이 ${negRates[wt.indexOf(topNeg)].toFixed(1)}%로 가장 높습니다.`;
+    const svOpts=selectedScales.map(sv=>`<option value="${sv}"${sv===distSV?" selected":""}>${sv.length>20?sv.slice(0,20)+"…":sv}</option>`).join("");
     el.innerHTML=`<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-        <div><div class="card-title">📈 응답 분포 (발산형) — "${selectedScales[0]}"</div>
-        <div class="card-sub">← 부정(1~2점) · 중립(3점) · 긍정(4~5점) → · 집단별 비율(%)</div></div>
-        <div style="display:flex;gap:4px"><button class="abtn abtn-copy" onclick="copyChartPNG('dist')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadChartPNG('dist','응답분포_${currentCross}')" title="PNG 저장">📥 PNG</button></div>
+        <div style="flex:1;min-width:0">
+          <div class="card-title">📈 응답 분포 (발산형)</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--text-sec);white-space:nowrap">문항 선택</span>
+            <select onchange="window._distSV=this.value;renderContent()" class="sb-select" style="width:auto;max-width:240px;font-size:12px">${svOpts}</select>
+          </div>
+          <div class="card-sub" style="margin-top:4px">← 부정(1~2점) · 중립(3점) · 긍정(4~5점) → · 집단별 비율(%)</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0"><button class="abtn abtn-copy" onclick="copyChartPNG('dist')" title="클립보드 복사">📋 복사</button><button class="abtn abtn-copy" onclick="downloadChartPNG('dist','응답분포_${currentCross}_${distSV}')" title="PNG 저장">📥 PNG</button></div>
       </div>
       <div class="chart-wrap"><canvas id="distChart"></canvas></div>
       <div style="margin-top:10px;padding:10px 14px;background:#f8faff;border-left:3px solid var(--brand);border-radius:0 6px 6px 0;font-size:12px;color:var(--text-sec);line-height:1.7">📝 ${descTxt}</div>
       </div></div>`;
     const ctx=document.getElementById("distChart").getContext("2d");
-    // 데이터셋: 부정(1점·2점 음수), 중립(3점), 긍정(4점·5점)
     const ds=[
       {label:"1점(매우 불만)",data:wt.map(d=>-d.pct[0]),backgroundColor:"#b91c1c",stack:"neg"},
       {label:"2점(불만)",      data:wt.map(d=>-d.pct[1]),backgroundColor:"#ef4444",stack:"neg"},
