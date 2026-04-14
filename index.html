@@ -340,7 +340,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 
     <!-- 빠른 실행 버튼 -->
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-      <button class="demo-btn" onclick="loadDemo()" style="flex:1;min-width:160px">🧪 데모 데이터 체험 <span style="font-size:10px;color:var(--text-muted)">(300명·8문항)</span></button>
+      <button class="demo-btn" onclick="loadDemo()" style="flex:1;min-width:160px">🧪 데모 데이터 체험 <span style="font-size:10px;color:var(--text-muted)">(500명·8문항·주관식)</span></button>
       <button onclick="downloadTemplate()" style="flex:1;min-width:140px;margin-top:0;padding:10px 14px;font-size:13px;font-weight:600;background:#fff;border:1px solid var(--accent-light);border-radius:8px;cursor:pointer;color:var(--accent2);transition:all .15s;font-family:inherit" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='#fff'">📋 데이터 템플릿 다운로드</button>
     </div>
     <div class="history-link" style="margin-top:10px">
@@ -2704,10 +2704,111 @@ function downloadTemplate(){
   toast("📋 템플릿 다운로드 완료! Excel에서 열어 형식을 확인하세요.");
 }
 function loadDemo(){
-  const G=["남성","여성"],A=["10대","20대","30대","40대","50대 이상"],R=["소사","원미","오정","상동"],S=["청소년","청년","학부모","실무자"];
-  const Q=["전반적 만족도","프로그램 내용","강사 전문성","시설 환경","접근성","재참여 의향","타인 추천","행정 서비스"];
+  /* ── 교차변수 ── */
+  const GENDER=['남','여'];
+  const AGE=['10대','20대','30대','40대','50대 이상'];
+  const REGION=['소사','원미','오정','상동'];
+  const ROLE=['청소년','청년','학부모','실무자'];
+  /* ── 척도 문항 ── */
+  const QS=['전반적 만족도','프로그램 내용','강사 전문성','시설 환경','접근성','재참여 의향','타인 추천','행정 서비스'];
+  /* ── 주관식: 좋았던 점 (긍정 키워드 풍부) ── */
+  const GOOD=[
+    "프로그램 내용이 실생활에 바로 적용할 수 있어 매우 유익했습니다.",
+    "강사님의 전문적인 설명 덕분에 복잡한 내용도 쉽게 이해할 수 있었습니다.",
+    "참여자들과의 소통이 활발하게 이루어져 협력하는 방법을 배웠습니다.",
+    "체험 위주의 활동으로 기억에 오래 남는 교육이었습니다.",
+    "청소년 눈높이에 딱 맞는 전문적인 교육 내용이 인상적이었습니다.",
+    "강사의 친절하고 열정적인 진행이 참여 의욕을 높여 주었습니다.",
+    "다양한 사례를 통해 배운 점이 많았고 만족도가 높았습니다.",
+    "시간 구성이 알차고 집중력 있는 프로그램이었습니다.",
+    "실용적인 내용으로 현장에서 바로 활용할 수 있어 유익했습니다.",
+    "팀 활동을 통해 협력과 소통의 중요성을 다시 생각하게 되었습니다.",
+    "강사님의 풍부한 경험과 전문 지식이 느껴지는 강의였습니다.",
+    "참여형 수업 방식이 지루하지 않고 흥미롭게 진행되었습니다.",
+    "학부모 입장에서 자녀 교육에 도움이 되는 내용이라 만족합니다.",
+    "행정 처리가 친절하고 신속하여 이용하기 편리했습니다.",
+    "만족도가 높아 주변 지인에게 적극 추천하고 싶습니다.",
+    "연령대에 맞는 맞춤형 교육 내용이 효과적이었습니다.",
+    "새로운 정보와 지식을 많이 얻을 수 있어 성장한 느낌입니다.",
+    "강사의 역량이 뛰어나고 열정이 학습 동기를 자극했습니다.",
+    "참여 신청 절차가 간편하고 안내가 명확해서 편리했습니다.",
+    "청소년들이 주체적으로 참여할 수 있는 프로그램 구성이 좋았습니다.",
+    "전문성 향상에 실질적인 도움이 되었습니다. 내년에도 참여하겠습니다.",
+    "강의 내용과 실습이 균형 있게 구성되어 이해도가 높았습니다.",
+    "자녀와 함께 참여해서 서로 소통하는 시간이 되어 좋았습니다.",
+    "지역 청소년을 위한 양질의 프로그램을 제공해 주셔서 감사합니다.",
+    "참여 후 실제로 생활 습관이 개선되는 것을 느꼈습니다.",
+  ];
+  /* ── 주관식: 개선 사항 (부정·건의 키워드) ── */
+  const IMPROVE=[
+    "시설이 노후화되어 있어 환경 개선이 필요합니다.",
+    "주차 공간이 부족하여 원거리 참여자에게 불편합니다.",
+    "프로그램 시간이 짧아 심층적인 내용을 다루기 어렵습니다.",
+    "교통 접근성이 불편한 위치라 개선이 필요합니다.",
+    "심화 과정이나 후속 프로그램이 있으면 더 좋겠습니다.",
+    "온라인 참여 옵션도 함께 제공해 주시면 좋겠습니다.",
+    "참여 인원이 많아 개인별 맞춤 피드백이 부족했습니다.",
+    "교재와 참고 자료를 미리 배포해 주시면 준비에 도움이 됩니다.",
+    "냉난방 시설이 불완전하여 집중하기 어려운 환경이었습니다.",
+    "참여 신청 시스템이 복잡하여 개선이 필요합니다.",
+    "수준별 반 편성이 있으면 학습 효과가 더 높을 것 같습니다.",
+    "쉬는 시간이 짧아 집중력 유지에 어려움이 있었습니다.",
+    "더 다양한 주제의 프로그램을 개설해 주시면 좋겠습니다.",
+    "일정 공지를 더 미리 해주시면 참여 계획을 세우기 좋겠습니다.",
+    "화장실 시설 개선과 청결 관리가 필요합니다.",
+    "강의 자료를 디지털 형태로 제공해 주시면 활용도가 높아집니다.",
+    "프로그램 후 결과물이나 수료증 발급이 있으면 좋겠습니다.",
+    "같은 프로그램 중복 신청이 되어 관리가 필요합니다.",
+  ];
+  /* ── 헬퍼 ── */
   const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
-  initDashboard(Array.from({length:300},(_,i)=>{const row={"번호":i+1,"성별":pick(G),"연령대":pick(A),"지역":pick(R),"신분":pick(S)};Q.forEach(q=>{row[q]=Math.random()<.15?Math.ceil(Math.random()*2):Math.floor(Math.random()*3)+3;});return row;}),"데모_설문데이터_300명.csv");
+  const pickN=(arr,exclude)=>{const a=arr.filter(x=>x!==exclude);return a[Math.floor(Math.random()*a.length)];};
+  const clamp=(v,mn=1,mx=5)=>Math.max(mn,Math.min(mx,Math.round(v)));
+  const norm=(mu,sd)=>{const u1=Math.random()||1e-10,u2=Math.random();return mu+sd*Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);};
+  /* ── 집단 기준 점수 (통계적 유의 차이 설계) ── */
+  const roleBase={청소년:3.0,청년:3.4,학부모:3.8,실무자:4.1};
+  const ageBase={'10대':-0.35,'20대':-0.1,'30대':0.1,'40대':0.2,'50대 이상':0.15};
+  const regionBase={소사:-0.2,원미:0.15,오정:0.0,상동:0.05};
+  /* ── 인구통계 가중치 ── */
+  const ageW=[0.16,0.18,0.22,0.26,0.18];
+  const roleW=[0.22,0.24,0.30,0.24];
+  const pickW=(arr,w)=>{let s=0,r=Math.random();for(let i=0;i<arr.length;i++){s+=w[i];if(r<s)return arr[i];}return arr[arr.length-1];};
+
+  const data=Array.from({length:500},(_,i)=>{
+    const gender=Math.random()<0.47?'남':'여';
+    const age=pickW(AGE,ageW);
+    const region=pick(REGION);
+    const role=pickW(ROLE,roleW);
+    const row={번호:i+1,성별:gender,연령대:age,지역:region,신분:role};
+    /* 불성실 응답 5% — straight-lining 탐지 시연 */
+    if(Math.random()<0.05){
+      const v=Math.random()<0.5?3:4;
+      QS.forEach(q=>{row[q]=v;});
+    } else {
+      const base=roleBase[role]+ageBase[age]+regionBase[region];
+      const indEff=norm(0,0.25);/* 개인 편차 */
+      /* 문항별 조정 + 성별 효과 */
+      const iAdj=[0,0.05,0.1,-0.1,-0.05,0,0,-0.05];
+      const gAdj=gender==='남'?[0.05,-0.05,0.15,-0.15,0,0,0.05,-0.05]:[-0.05,0.05,-0.15,0.15,0,0,-0.05,0.05];
+      QS.forEach((q,qi)=>{row[q]=clamp(norm(base+indEff+iAdj[qi]+gAdj[qi],0.65));});
+      /* 상관 구조 강제 적용 — 회귀·상관 분석 시연 */
+      row['재참여 의향']=clamp(row['전반적 만족도']+clamp(norm(0,0.7),-1,1));
+      row['타인 추천']=clamp(row['전반적 만족도']+clamp(norm(0,0.8),-1,1));
+      row['강사 전문성']=clamp(row['프로그램 내용']+clamp(norm(0,0.6),-1,1));
+      row['접근성']=clamp(row['시설 환경']+clamp(norm(0,0.9),-2,2));
+    }
+    /* 주관식 — 좋았던 점 (응답률 72%) */
+    if(Math.random()<0.72){
+      const sat=row['전반적 만족도'];
+      row['좋았던 점']=sat>=4?pick(GOOD):sat<=2?pick(IMPROVE.slice(0,6)):Math.random()<0.6?pick(GOOD):pick(IMPROVE);
+    }
+    /* 주관식 — 개선 사항 (응답률 55%) */
+    if(Math.random()<0.55){
+      row['개선 사항']=row['전반적 만족도']<=3?pick(IMPROVE):pick([...IMPROVE.slice(0,8),...IMPROVE.slice(0,8),pick(GOOD)]);
+    }
+    return row;
+  });
+  initDashboard(data,"데모_설문데이터_500명.csv");
 }
 
 function initDashboard(data,name){
