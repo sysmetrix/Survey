@@ -635,8 +635,20 @@ function renderSimpleOverview(el){
   h+=`<div class="analysis-box"><h3>📝 자동 분석 리포트</h3>${genSimpleReport(items,gm2,ovrScale)}</div>`;
   // 응답자 분포 (교차변수별)
   if(CROSS.length){
-    h+=`<div class="card"><div class="card-title">👥 응답자 개요</div><div class="card-sub">교차변수별 응답자 구성</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">`;
-    CROSS.forEach(cv=>{const gmap={};DATA.forEach(r=>{const k=String(r[cv]||"무응답").trim();gmap[k]=(gmap[k]||0)+1;});const total=DATA.length;const entries=Object.entries(gmap).sort((a,b)=>b[1]-a[1]);h+=`<div style="background:#faf9f7;border:1px solid var(--border);border-radius:8px;padding:12px 14px"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--accent-light)">🔀 ${cv}</div>`;entries.forEach(([k,n])=>{const pct=(n/total*100).toFixed(1);h+=`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:500">${k}</span><span style="color:var(--text-muted);font-size:11px">${n}명 (${pct}%)</span></div><div style="height:7px;background:#e8e5df;border-radius:99px"><div style="height:7px;background:var(--accent2);border-radius:99px;width:${pct}%;transition:width .4s"></div></div>`;});h+=`</div>`;});h+=`</div></div>`;
+    h+=`<div class="card"><div class="card-title">👥 응답자 개요</div><div class="card-sub">교차변수별 응답자 구성 (${CROSS.length}개 교차변수)</div><div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px">`;
+    CROSS.forEach(cv=>{
+      const gmap={};DATA.forEach(r=>{const k=String(r[cv]||"무응답").trim();gmap[k]=(gmap[k]||0)+1;});
+      const total=DATA.length;
+      const entries=Object.entries(gmap).sort((a,b)=>b[1]-a[1]);
+      h+=`<div style="flex:0 0 calc(50% - 6px);min-width:0;box-sizing:border-box;background:#faf9f7;border:1.5px solid var(--accent-light);border-radius:10px;padding:12px 14px">`;
+      h+=`<div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--accent-light);display:flex;align-items:center;gap:5px">🔀 ${cv} <span style="font-size:10px;color:var(--text-muted);font-weight:400">(${Object.keys(gmap).length}개 집단)</span></div>`;
+      entries.forEach(([k,n])=>{
+        const pct=(n/total*100).toFixed(1);
+        h+=`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:500">${k}</span><span style="color:var(--text-muted);font-size:11px">${n}명 (${pct}%)</span></div><div style="height:7px;background:#e8e5df;border-radius:99px;overflow:hidden"><div style="height:7px;background:var(--accent2);border-radius:99px;width:${pct}%"></div></div></div>`;
+      });
+      h+=`</div>`;
+    });
+    h+=`</div></div>`;
   }
   // 문항별 평균 랭킹
   h+=`<div class="card"><div class="card-title">📊 문항별 평균 (전체 기준)</div><div class="card-sub">응답자 전체의 문항별 평균 · SD · 응답 분포</div>`;
