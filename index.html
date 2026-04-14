@@ -239,75 +239,71 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 
 <!-- RELEASE NOTES MODAL -->
 <div id="releaseModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
-<div style="background:#fff;border-radius:14px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+<div style="background:#fff;border-radius:14px;max-width:540px;width:92%;max-height:82vh;overflow-y:auto;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
 <span style="font-size:16px;font-weight:800;color:var(--brand)">📋 업데이트 내역</span>
 <button onclick="document.getElementById('releaseModal').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)">✕</button>
 </div>
 <div style="font-size:13px;color:var(--text-sec);line-height:1.9">
+
+<div style="margin-bottom:16px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+  <span style="font-weight:800;color:var(--brand)">v4.3</span>
+  <span style="font-size:10px;padding:2px 8px;background:#f0fdf4;color:#166534;border-radius:99px;border:1px solid #bbf7d0;font-weight:700">최신</span>
+  <span style="font-size:11px;color:var(--text-muted)">2026.04.14</span>
+</div>
+<div style="padding-left:12px;border-left:3px solid #86efac">
+• <strong>PDF 내보내기 전면 재설계</strong> — 한글 깨짐 완전 해결 (완전 이미지 캡처 방식), 표지+6섹션 자동 구성<br>
+• <strong>리포트 복사 3섹션으로 확장</strong> — 종합분석·교차분석·심층분석(상관·회귀·통계검정) 모두 포함<br>
+• 심층분석 서브탭 유지 버그 수정 — 주관식·원본데이터 탭에서도 서브탭 표시<br>
+• HWPX 버튼 개발중 표기 — 오작동 혼선 방지<br>
+• 분석 이력 중복 방지 — 같은 파일·같은 날 재업로드 시 이력 덮어쓰기<br>
+• 응답자 개요 2열 그리드 — 교차변수별 박스 나란히 배치<br>
+• 첫 화면 전면 개편 — 빠른 시작, FAQ, 템플릿 다운로드, 개인정보 안내 추가
+</div></div>
+
 <div style="margin-bottom:16px">
 <div style="font-weight:700;color:var(--brand);margin-bottom:4px">v4.2 — 2026.04.13</div>
 <div style="padding-left:12px;border-left:3px solid var(--accent-light)">
-• 2단 계층 탭 구조 도입 — 모드 바(종합분석/교차분석/심층분석) + 서브 탭<br>
-• 원본데이터·주관식 → 심층분석 서브탭 + 사이드바 하단 바로가기로 접근성 개선<br>
-• 반응형 모드바 — 좁은 화면에서 자동 줄바꿈<br>
-• DOCX 보고서에 <strong>상관행렬</strong> 섹션 추가 (섹션 6)<br>
-• <strong>ANOVA Tukey HSD 사후검정</strong> 추가 — 유의한 문항의 쌍별 집단 차이 분석<br>
-• 교차변수 선택 시 항상 교차분석 모드로 자동 전환
+• 2단 계층 탭 — 모드 바(종합/교차/심층) + 서브 탭 구조<br>
+• 원본데이터·주관식 → 심층분석 서브탭 + 사이드바 바로가기<br>
+• DOCX 보고서 상관행렬 섹션 추가 · 회귀분석 자동 포함<br>
+• ANOVA Tukey HSD 사후검정 — 유의 문항의 쌍별 집단 차이<br>
+• 차트 4종 재설계: 수평막대·발산형분포·점플롯·발산형히트맵<br>
+• 집단비교 탭 문항 전환 드롭다운 · ⚙️ 기관명·보고서제목 설정
 </div></div>
+
 <div style="margin-bottom:16px">
 <div style="font-weight:700;color:var(--brand);margin-bottom:4px">v4.1 — 2026.04.13</div>
 <div style="padding-left:12px;border-left:3px solid var(--accent-light)">
-• 헤더 "설문 분석 결과"로 텍스트 통일 (title 태그 포함)<br>
-• 사이드바 종합분석 버튼 탭 active 연동 (선택 시 골드 강조)<br>
-• 분석 이력에 마지막 탭 상태 저장·복원<br>
-• 🧮 심층분석에 <strong>카이제곱 검정</strong> 추가 (분할표 · Cramér's V · 기대빈도)<br>
-• 💬 주관식 집단비교 탭에서 교차변수 선택 드롭다운 추가<br>
-• DOCX 보고서에 종합분석(문항 순위) · 주관식(키워드·감성) 섹션 추가
+• 카이제곱 검정 추가 (분할표·Cramér's V·기대빈도)<br>
+• 각 분석 탭 자동 해설 리포트 (통계검정·상관·회귀·카이제곱)<br>
+• 주관식 집단비교 교차변수 드롭다운 · 이력에 마지막 탭 저장
 </div></div>
+
 <div style="margin-bottom:16px">
 <div style="font-weight:700;color:var(--brand);margin-bottom:4px">v4.0 — 2026.04.13</div>
 <div style="padding-left:12px;border-left:3px solid var(--accent-light)">
-• 재단 로고·명칭 업로드 화면에서 제거<br>
-• 타이틀 "사업 설문 데이터 분석 대시보드" 간소화<br>
-• 종합 만족도 카드 별도 골드 강조 스타일 적용<br>
-• 교차변수 없이 전체 평균 분석하는 <strong>📊 종합분석</strong> 탭 추가 (응답자 개요 포함)<br>
-• <strong>💬 주관식</strong> 탭 추가 — 자유응답 자동 감지, 키워드 빈도·원문 검색<br>
-• <strong>🧮 심층분석</strong> 탭 추가 — Pearson 상관행렬, 다중 회귀분석(OLS) 결과 시각화<br>
-• 교차변수 시각적 리스트 선택 UI 유지
+• 📊 종합분석 탭 신설 (전체 평균·응답자 개요·자동 리포트)<br>
+• 💬 주관식 탭 — 키워드·워드맵·연어·감성·집단비교·원문<br>
+• 🧮 심층분석 — Pearson 상관행렬·OLS 회귀분석
 </div></div>
+
 <div style="margin-bottom:16px">
-<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v3.1 — 2026.04.12</div>
+<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v3.x — 2026.04.12</div>
 <div style="padding-left:12px;border-left:3px solid var(--accent-light)">
-• 차트 수치 라벨 표시 (chartjs-plugin-datalabels)<br>
-• 차트 폰트 확대 및 가독성 개선<br>
-• DOCX 차트 이미지 문서 너비 맞춤<br>
-• HWPX 내보내기 추가 (검증된 OWPML 템플릿 기반)<br>
-• HWPX 내용 DOCX와 동일 구조로 통일<br>
-• 재단 CI 컬러(그린·퍼플·골드) 전면 적용<br>
-• 로고 심볼마크 적용 (투명 배경)
+• EUC-KR 한글 CSV 자동 감지 · Straight-lining 불성실 응답 탐지<br>
+• HWPX 내보내기 · Wong 색약 대응 팔레트 · 모바일 반응형
 </div></div>
+
 <div style="margin-bottom:16px">
-<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v3.0 — 2026.04.12</div>
+<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v2.0 — 최초 릴리즈</div>
 <div style="padding-left:12px;border-left:3px solid var(--accent-light)">
-• 한글 CSV 인코딩(EUC-KR/CP949) 자동 감지<br>
-• JSON 분석 이력 내보내기·불러오기<br>
-• 불성실 응답(straight-lining) 자동 감지·제외<br>
-• 시각적 위계 재설계 (종합 평균 히어로 카드)<br>
-• 색약자 대응 Wong 팔레트 적용<br>
-• 카드 fadeUp 애니메이션·hover 효과<br>
-• 모바일·태블릿 반응형 (1024px·640px 브레이크포인트)
+• CSV/XLSX 업로드·자동 변수 감지 · 히트맵·막대·분포·레이더 4종<br>
+• DOCX·Google Docs 내보내기 · 분석 이력 localStorage
 </div></div>
-<div style="margin-bottom:16px">
-<div style="font-weight:700;color:var(--brand);margin-bottom:4px">v2.0 — 초기 릴리즈</div>
-<div style="padding-left:12px;border-left:3px solid var(--accent-light)">
-• 설문 교차분석 대시보드 최초 배포<br>
-• CSV/XLSX 파일 업로드·자동 변수 감지<br>
-• 히트맵·막대·분포·레이더 차트 4종<br>
-• DOCX·Google Docs 내보내기<br>
-• 분석 이력 localStorage 저장 (24시간 보존)
-</div></div>
-<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:12px">부천여성청소년재단 전략경영실 전략기획부</div>
+
+<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:12px;border-top:1px solid var(--border);padding-top:10px">부천여성청소년재단 전략경영실 전략기획부</div>
 </div></div></div>
 
 <!-- 설정 모달 -->
@@ -328,45 +324,160 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
 <!-- UPLOAD SCREEN -->
 <div id="uploadScreen" class="upload-screen">
   <div class="upload-box">
-    <div class="brand-bar" style="display:none">
-      <div class="brand-icon" style="background:transparent"><img src="data:image/png;base64,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" style="width:38px;height:38px;object-fit:contain"></div>
-      <div class="brand-text"><div class="brand-name">부천여성청소년재단</div><div class="brand-dept">전략경영실 전략기획부</div></div>
-    </div>
-    <div style="text-align:center"><span class="upload-badge">SURVEY ANALYSIS</span></div>
+
+    <!-- 헤더 -->
+    <div style="text-align:center;margin-bottom:6px"><span class="upload-badge">SURVEY ANALYSIS v4.3</span></div>
     <h1 class="upload-h1">사업 설문 데이터<br>분석 대시보드</h1>
-    <p class="upload-h2">부천여성청소년재단 사업 만족도 조사,<br>정책 수요 조사 등 설문 데이터의 교차집단 분석 도구</p>
+    <p class="upload-h2">교차집단 자동 분석 · 통계검정 · 자동 해설 리포트 생성<br>부천여성청소년재단 전략경영실 전략기획부</p>
+
+    <!-- 파일 업로드 -->
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
       <div class="icon">📂</div>
       <div class="label">파일을 드래그하거나 클릭하여 업로드</div>
-      <div class="hint">.csv · .tsv · .xlsx · .xls</div>
+      <div class="hint">.csv · .xlsx · .xls · .tsv &nbsp;·&nbsp; EUC-KR / UTF-8 한글 자동 감지</div>
     </div>
     <input type="file" id="fileInput" accept=".csv,.tsv,.xlsx,.xls" style="display:none">
-    <div style="text-align:center">
-      <button class="demo-btn" onclick="loadDemo()">🧪 데모 데이터로 체험하기 (300명)</button>
+
+    <!-- 빠른 실행 버튼 -->
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="demo-btn" onclick="loadDemo()" style="flex:1;min-width:160px">🧪 데모 데이터 체험 <span style="font-size:10px;color:var(--text-muted)">(300명·8문항)</span></button>
+      <button onclick="downloadTemplate()" style="flex:1;min-width:140px;margin-top:0;padding:10px 14px;font-size:13px;font-weight:600;background:#fff;border:1px solid var(--accent-light);border-radius:8px;cursor:pointer;color:var(--accent2);transition:all .15s;font-family:inherit" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='#fff'">📋 데이터 템플릿 다운로드</button>
     </div>
-    <div class="history-link"><a onclick="showHistoryPage()">📂 이전 분석 이력 보기 (<span id="histCount">0</span>건)</a>
-    <div style="font-size:11px;color:#8a857e;margin-top:4px">⚠️ 이력은 현재 브라우저에만 저장 · 다른 PC에서는 보이지 않음 · 24시간 후 자동 삭제</div></div>
+    <div class="history-link" style="margin-top:10px">
+      <a onclick="showHistoryPage()">📂 이전 분석 이력 (<span id="histCount">0</span>건)</a>
+      <span style="font-size:10px;color:#8a857e;margin-left:8px">· 이 브라우저에만 저장 · 24시간 보존</span>
+    </div>
+
+    <!-- 빠른 시작 3단계 -->
+    <div style="margin-top:20px;background:linear-gradient(135deg,#f0fdf4,#f8f4ff);border:1.5px solid var(--accent-light);border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;color:var(--brand);letter-spacing:.05em;margin-bottom:10px">⚡ 빠른 시작 3단계</div>
+      <div style="display:flex;gap:0;align-items:stretch">
+        <div style="flex:1;text-align:center;padding:0 8px">
+          <div style="width:28px;height:28px;background:var(--brand);color:#fff;border-radius:50%;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 6px">1</div>
+          <div style="font-size:11px;font-weight:700;color:#1a1a1a;margin-bottom:3px">파일 업로드</div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.5">CSV / XLSX 드래그 또는 클릭</div>
+        </div>
+        <div style="color:#c8c5c0;font-size:18px;display:flex;align-items:center">›</div>
+        <div style="flex:1;text-align:center;padding:0 8px">
+          <div style="width:28px;height:28px;background:var(--accent);color:#fff;border-radius:50%;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 6px">2</div>
+          <div style="font-size:11px;font-weight:700;color:#1a1a1a;margin-bottom:3px">교차변수 선택</div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.5">성별·연령대 등 클릭 → 자동 교차분석</div>
+        </div>
+        <div style="color:#c8c5c0;font-size:18px;display:flex;align-items:center">›</div>
+        <div style="flex:1;text-align:center;padding:0 8px">
+          <div style="width:28px;height:28px;background:#be123c;color:#fff;border-radius:50%;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 6px">3</div>
+          <div style="font-size:11px;font-weight:700;color:#1a1a1a;margin-bottom:3px">보고서 내보내기</div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.5">PDF · DOCX · 리포트 복사</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 분석 기능 4종 카드 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+      <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid var(--ci-gold);border-radius:10px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:5px">📊 종합분석</div>
+        <div style="font-size:11px;color:#78350f;line-height:1.7">전체 평균 순위 · 응답자 분포<br>강점/개선 자동 리포트</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;border-radius:10px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:5px">🔀 교차분석</div>
+        <div style="font-size:11px;color:#14532d;line-height:1.7">집단비교 · 히트맵 · 점플롯<br>응답분포 · 상세표 · 자동 리포트</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#faf4ff,#f3e8ff);border:1.5px solid var(--accent-light);border-radius:10px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:700;color:#5C2D91;margin-bottom:5px">🧮 심층분석</div>
+        <div style="font-size:11px;color:#4a235a;line-height:1.7">t-test · ANOVA · Tukey HSD<br>상관행렬 · 회귀분석 · 카이제곱</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:10px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:5px">💬 주관식 분석</div>
+        <div style="font-size:11px;color:#1e3a8a;line-height:1.7">키워드 · 워드맵 · 연어 · 감성<br>집단비교 · 길이분포 · 원문</div>
+      </div>
+    </div>
+
+    <!-- 내보내기 형식 -->
+    <div style="margin-top:12px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px">📤 보고서 내보내기</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <span style="padding:4px 10px;background:#fff1f2;color:#be123c;border:1px solid #fecdd3;border-radius:6px;font-size:11px;font-weight:600" title="한글 완벽 지원 · 6섹션 자동 구성">📄 PDF</span>
+        <span style="padding:4px 10px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:600" title="7개 섹션 · 상관/회귀 포함">📥 DOCX</span>
+        <span style="padding:4px 10px;background:var(--accent-light);color:var(--accent);border:1px solid #d4bde8;border-radius:6px;font-size:11px;font-weight:600">📥 HWPX <span style="font-size:9px;opacity:.65">개발중</span></span>
+        <span style="padding:4px 10px;background:#eff6ff;color:#1e40af;border:1px solid #93c5fd;border-radius:6px;font-size:11px;font-weight:600" title="종합+교차+심층 3섹션 · GDocs·Word 붙여넣기">📋 리포트 복사</span>
+        <span style="padding:4px 10px;background:#fefce8;color:#713f12;border:1px solid #fde68a;border-radius:6px;font-size:11px;font-weight:600">📊 차트 PNG</span>
+        <span style="padding:4px 10px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:600">🔤 주관식 CSV</span>
+      </div>
+    </div>
+
+    <!-- 분석 절차 안내 -->
     <div class="proc-guide">
       <div class="proc-title">📋 분석 절차 안내</div>
       <div class="proc-steps">
-        <div class="proc-step"><div class="proc-num">1</div><div class="proc-content"><strong>데이터 준비</strong><span>Excel 또는 CSV 설문 결과 파일 준비. 1행 변수명, 2행부터 응답 데이터.</span></div></div>
-        <div class="proc-step"><div class="proc-num">2</div><div class="proc-content"><strong>파일 업로드</strong><span>위 영역에 파일 드래그 또는 클릭. 교차변수·척도변수 자동 감지.</span></div></div>
-        <div class="proc-step"><div class="proc-num">3</div><div class="proc-content"><strong>교차변수 선택</strong><span>좌측 사이드바에서 분석 기준(성별, 연령대, 지역 등) 선택.</span></div></div>
-        <div class="proc-step"><div class="proc-num">4</div><div class="proc-content"><strong>분석 결과 확인</strong><span>6개 탭에서 시각화와 자동 분석 리포트 확인.</span></div></div>
-        <div class="proc-step"><div class="proc-num">5</div><div class="proc-content"><strong>보고서 추출</strong><span>DOCX 또는 Google Docs 형식으로 전체 분석 결과를 문서로 내보내기.</span></div></div>
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-content"><strong>데이터 준비</strong><span>Excel(.xlsx) 또는 CSV. <b>1행 = 변수명</b>, 2행부터 응답. 아래 템플릿 버튼으로 예시 파일 다운로드 가능.</span></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-content"><strong>파일 업로드</strong><span>드래그 또는 클릭. 교차변수·척도변수·주관식 <b>자동 감지</b>. EUC-KR·UTF-8 인코딩 자동 처리.</span></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-content"><strong>교차변수 선택</strong><span>사이드바에서 성별·연령대 등 클릭 → <b>교차분석 모드 자동 전환</b>. 여러 교차변수 순서대로 선택 가능.</span></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">4</div>
+          <div class="proc-content"><strong>모드 전환 · 시각화</strong><span>상단 모드바에서 <b>종합분석 → 교차분석 → 심층분석</b> 전환. 서브탭으로 히트맵·점플롯·분포 등 개별 선택.</span></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">5</div>
+          <div class="proc-content"><strong>심층 통계 검증</strong><span>심층분석 탭 → t-test·ANOVA·Tukey HSD 사후검정·상관행렬·회귀분석·카이제곱. 모든 결과에 <b>자동 해설</b> 포함.</span></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">6</div>
+          <div class="proc-content"><strong>보고서 내보내기</strong><span>헤더의 <b>📄 PDF · 📥 DOCX</b> 버튼으로 자동 보고서. <b>📋 리포트 복사</b>로 GDocs·Word 붙여넣기. ⚙️ 설정에서 기관명·제목 변경.</span></div>
+        </div>
       </div>
     </div>
+
+    <!-- 데이터 형식 가이드 -->
     <div class="guide-box">
       <strong>📌 데이터 형식 가이드</strong><br>
-      <strong>교차변수</strong> — 성별, 연령대, 지역, 신분 등 (2~20개 범주)<br>
-      <strong>척도변수</strong> — 1~5점 리커트 척도 (정수 값)<br>
-      변수 유형은 자동 감지됩니다.
+      <strong>교차변수</strong> — 성별·연령대·지역·신분·소속 등 범주형 (2~20개 값, 자동 감지)<br>
+      <strong>척도변수</strong> — <b>1~5점 리커트 척도</b> 정수값 (고유값 ≤ 10인 숫자 컬럼 자동 감지)<br>
+      <strong>주관식</strong> — 자유응답 텍스트 (텍스트 응답 20건 이상 컬럼 자동 감지)<br>
+      <span style="color:#8a857e;font-size:11px">· EUC-KR/UTF-8 자동 처리 · 권장 최대 5MB · 불성실 응답(straight-lining) 자동 탐지</span>
     </div>
-    <div class="footer" style="margin-top:24px;border-top:none;padding:0">
-      <span>부천여성청소년재단 전략경영실 전략기획부</span><br>
-      <span style="font-size:10px;color:var(--text-muted)">설문 분석 대시보드 v4.0</span>
-      <a href="javascript:void(0)" onclick="document.getElementById('releaseModal').style.display='flex'" style="display:inline-block;margin-left:8px;font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--accent-light);padding:2px 8px;border-radius:4px">📋 업데이트 내역</a>
+
+    <!-- FAQ -->
+    <div style="margin-top:14px;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="padding:10px 16px;background:var(--bg-alt);font-size:11px;font-weight:700;color:var(--text-sec);border-bottom:1px solid var(--border)">❓ 자주 묻는 질문</div>
+      <div style="padding:12px 16px;font-size:12px;color:var(--text-sec);line-height:1.8">
+        <div style="margin-bottom:10px"><span style="font-weight:700;color:#1a1a1a">Q. 분석 결과가 외부 서버에 저장되나요?</span><br>
+        아니요. 모든 데이터 처리는 <b>브라우저 내에서만</b> 이루어지며 어떠한 서버에도 전송되지 않습니다. 개인정보를 포함한 설문 데이터를 안전하게 사용할 수 있습니다.</div>
+        <div style="margin-bottom:10px"><span style="font-weight:700;color:#1a1a1a">Q. 척도변수가 자동 감지되지 않아요.</span><br>
+        척도변수 컬럼의 값이 <b>1~5 사이 정수</b>이어야 합니다. 빈 셀이 많거나 값이 문자(①②③)인 경우 감지되지 않습니다. 숫자 1~5로 변환 후 재업로드하세요.</div>
+        <div style="margin-bottom:10px"><span style="font-weight:700;color:#1a1a1a">Q. 분석 이력이 사라졌어요.</span><br>
+        이력은 해당 브라우저의 localStorage에 <b>24시간만 보존</b>됩니다. 중요한 분석은 📥 DOCX 또는 📄 PDF로 저장하거나, 이력 화면에서 JSON으로 내보내기하세요.</div>
+        <div><span style="font-weight:700;color:#1a1a1a">Q. 집단 수가 너무 많아 히트맵이 잘려요.</span><br>
+        교차변수의 범주가 15개 이상이면 열이 좁아집니다. 범주를 통합하거나 상세표 탭을 이용하세요.</div>
+      </div>
     </div>
+
+    <!-- 개인정보 안내 배너 -->
+    <div style="margin-top:12px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;display:flex;align-items:flex-start;gap:8px">
+      <span style="font-size:16px;flex-shrink:0">🔒</span>
+      <div style="font-size:11px;color:#166534;line-height:1.6"><strong>개인정보 보호 안내</strong> — 업로드된 데이터는 브라우저 메모리에서만 처리됩니다. 인터넷 연결이 없어도 작동하며, 파일은 외부 서버로 전송되지 않습니다.</div>
+    </div>
+
+    <!-- footer -->
+    <div class="footer" style="margin-top:20px;border-top:none;padding:0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+      <div>
+        <span>부천여성청소년재단 전략경영실 전략기획부</span><br>
+        <span style="font-size:10px;color:var(--text-muted)">설문 분석 대시보드 v4.3</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <a href="javascript:void(0)" onclick="document.getElementById('settingsModal').style.display='flex';document.getElementById('settingsOrg').value=ORG_NAME;document.getElementById('settingsTitle').value=REPORT_TITLE" style="font-size:10px;color:var(--text-sec);text-decoration:none;border:1px solid var(--border);padding:3px 10px;border-radius:5px;background:#fff">⚙️ 설정</a>
+        <a href="javascript:void(0)" onclick="document.getElementById('releaseModal').style.display='flex'" style="font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--accent-light);padding:3px 10px;border-radius:5px">📋 업데이트 내역</a>
+      </div>
+    </div>
+
   </div>
 </div>
 <div id="historyPage" class="hidden" style="min-height:100vh;background:#f8f7f4">
@@ -439,7 +550,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
       <div id="modeBar"></div>
       <div class="sub-bar" id="subBar"></div>
       <div id="tabContent"></div>
-      <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.2</div>
+      <div class="footer">부천여성청소년재단 전략경영실 전략기획부 · 설문 분석 결과 v4.3</div>
     </div>
   </div>
 </div>
@@ -2577,6 +2688,21 @@ function handleFile(file){
   else{alert("지원: .csv .tsv .xlsx .xls");}
 }
 
+function downloadTemplate(){
+  const headers=["번호","성별","연령대","지역","신분","전반적 만족도","프로그램 내용","강사 전문성","시설 환경","접근성","재참여 의향","자유의견"];
+  const sample=[
+    [1,"남","20대","소사","청소년",4,4,3,4,5,4,"전반적으로 만족스러웠습니다."],
+    [2,"여","30대","원미","학부모",5,5,4,3,4,5,"강사 선생님이 매우 전문적이었어요."],
+    [3,"남","40대","상동","실무자",3,3,3,3,3,3,"보통 수준입니다."],
+    [4,"여","20대","오정","청년",4,5,5,4,4,5,"시설이 조금 아쉽지만 내용은 좋았어요."],
+    [5,"남","50대 이상","소사","학부모",2,3,3,2,3,2,"접근성 개선이 필요합니다."],
+  ];
+  const bom="\uFEFF";
+  const csv=bom+[headers,...sample].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="설문데이터_템플릿.csv";a.click();URL.revokeObjectURL(a.href);
+  toast("📋 템플릿 다운로드 완료! Excel에서 열어 형식을 확인하세요.");
+}
 function loadDemo(){
   const G=["남성","여성"],A=["10대","20대","30대","40대","50대 이상"],R=["소사","원미","오정","상동"],S=["청소년","청년","학부모","실무자"];
   const Q=["전반적 만족도","프로그램 내용","강사 전문성","시설 환경","접근성","재참여 의향","타인 추천","행정 서비스"];
