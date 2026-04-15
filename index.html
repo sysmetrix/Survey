@@ -398,7 +398,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         <span style="padding:4px 10px;background:#fff1f2;color:#be123c;border:1px solid #fecdd3;border-radius:6px;font-size:11px;font-weight:600" title="한글 완벽 지원 · 6섹션 자동 구성">📄 PDF</span>
         <span style="padding:4px 10px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:600" title="7개 섹션 · 상관/회귀 포함">📥 DOCX</span>
-        <span style="padding:4px 10px;background:var(--accent-light);color:var(--accent);border:1px solid #d4bde8;border-radius:6px;font-size:11px;font-weight:600">📥 HWPX <span style="font-size:9px;opacity:.65">개발중</span></span>
+        <span style="padding:4px 10px;background:var(--accent-light);color:var(--accent);border:1px solid #d4bde8;border-radius:6px;font-size:11px;font-weight:600">📥 HWPX</span>
         <span style="padding:4px 10px;background:#eff6ff;color:#1e40af;border:1px solid #93c5fd;border-radius:6px;font-size:11px;font-weight:600" title="종합+교차+심층 3섹션 · GDocs·Word 붙여넣기">📋 리포트 복사</span>
         <span style="padding:4px 10px;background:#fefce8;color:#713f12;border:1px solid #fde68a;border-radius:6px;font-size:11px;font-weight:600">📊 차트 PNG</span>
         <span style="padding:4px 10px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:600">🔤 주관식 CSV</span>
@@ -507,7 +507,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#f8f7f4;color:
     <div class="header-right">
       <button class="exp-btn exp-pdf" onclick="exportPDF()" title="PDF 파일 다운로드">📄 PDF</button>
       <button class="exp-btn exp-docx" onclick="exportDocx()" title="Word 문서 다운로드">📥 DOCX</button>
-      <button class="exp-btn exp-hwpx" onclick="exportHwpx()" title="한글 문서 다운로드 (개발 중 — 일부 환경에서 열리지 않을 수 있음)">📥 HWPX <span style="font-size:9px;opacity:.7">(개발중)</span></button>
+      <button class="exp-btn exp-hwpx" onclick="exportHwpx()" title="한글 문서 다운로드">📥 HWPX</button>
       <button class="exp-btn exp-gdoc" onclick="exportGoogleDocs()" title="리포트 복사">📋 리포트 복사</button>
       <button onclick="document.getElementById('settingsOrg').value=ORG_NAME;document.getElementById('settingsTitle').value=REPORT_TITLE;document.getElementById('settingsModal').style.display='flex'" style="padding:5px 10px;font-size:12px;background:var(--bg-alt);color:var(--text-sec);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit">⚙️ 설정</button>
       <button class="new-btn" onclick="resetAll()">🔄 새 파일</button>
@@ -1419,12 +1419,13 @@ img{display:block;margin:10px auto;border:1px solid #e0e0e0;max-width:100%}
 async function exportHwpx(){
   if(!DATA.length)return;
   toast("📥 HWPX 생성 중...");
+  try{
   const multi=selectedScales.map(sv=>({name:sv,results:analyze(DATA,currentCross,sv)}));
   const allGroups=[...new Set(multi.flatMap(d=>d.results.map(r=>r.group)))];
   const grandAll=[];selectedScales.forEach(sv=>DATA.forEach(r=>{const v=Number(r[sv]);if(!isNaN(v))grandAll.push(v);}));
   const gm=avg(grandAll);
   const now=new Date();const ds=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,"0")}.${String(now.getDate()).padStart(2,"0")}`;
-  const xe=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const xe=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   const mkP=(text,charPr,paraPr)=>`<hp:p id="0" paraPrIDRef="${paraPr||0}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="${charPr||0}"><hp:t>${xe(text)}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
   const mkTbl=(headers,rows)=>{const nc=headers.length;const cw=Math.floor(42520/nc);let tbl=`<hp:tbl id="0" noAdjust="0" rowCnt="${rows.length+1}" colCnt="${nc}" cellSpacing="0" borderFillIDRef="3"><hp:tblPr pageBreak="CELL" repeatHeader="1" rowSzSplitable="0"><hp:sz width="42520" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/>`;for(let i=0;i<nc;i++)tbl+=`<hp:cellZone startRowAddr="0" startColAddr="${i}" endRowAddr="0" endColAddr="${i}"/>`;tbl+=`</hp:tblPr>`;tbl+=`<hp:tr><hp:trPr height="0" sizetype="AT_LEAST"/>`;headers.forEach((h,i)=>{tbl+=`<hp:tc><hp:tcPr><hp:cellAddr colAddr="${i}" rowAddr="0"/><hp:cellSpan colSpan="1" rowSpan="1"/><hp:sz width="${cw}" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/><hp:tcMargin><hp:left width="80"/><hp:right width="80"/><hp:top width="40"/><hp:bottom width="40"/></hp:tcMargin><hp:borderFillIDRef>4</hp:borderFillIDRef></hp:tcPr><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${mkP(h,9,20)}</hp:subList></hp:tc>`;});tbl+=`</hp:tr>`;rows.forEach((row,ri)=>{tbl+=`<hp:tr><hp:trPr height="0" sizetype="AT_LEAST"/>`;row.forEach((cell,ci)=>{tbl+=`<hp:tc><hp:tcPr><hp:cellAddr colAddr="${ci}" rowAddr="${ri+1}"/><hp:cellSpan colSpan="1" rowSpan="1"/><hp:sz width="${cw}" widthRelTo="ABSOLUTE" height="0" heightRelTo="ABSOLUTE"/><hp:tcMargin><hp:left width="80"/><hp:right width="80"/><hp:top width="40"/><hp:bottom width="40"/></hp:tcMargin><hp:borderFillIDRef>3</hp:borderFillIDRef></hp:tcPr><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${mkP(String(cell),0,20)}</hp:subList></hp:tc>`;});tbl+=`</hp:tr>`;});tbl+=`</hp:tbl>`;return `<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="0"><hp:ctrl>${tbl}</hp:ctrl></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;};
   const SECPR=`<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134" tabStop="8000" tabStopVal="4000" tabStopUnit="HWPUNIT" outlineShapeIDRef="1" memoShapeIDRef="0" textVerticalWidthHead="0" masterPageCnt="0">
@@ -1462,7 +1463,7 @@ async function exportHwpx(){
   const COLPR=`<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/></hp:ctrl>`;
   const SEC_NS=`xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf/" xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0"`;
   let sec="";
-  sec+=`<hp:p id="0" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="0">${SECPR}${COLPR}</hp:run><hp:run charPrIDRef="7"><hp:t>${xe(REPORT_TITLE)}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
+  sec+=`<hp:p id="0" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">${SECPR}<hp:run charPrIDRef="0">${COLPR}</hp:run><hp:run charPrIDRef="7"><hp:t>${xe(REPORT_TITLE)}</hp:t></hp:run><hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`;
   sec+=mkP(`분석일: ${ds} | 파일: ${currentFileName} | 응답자: ${DATA.length}명 | 교차변수: ${currentCross} | 분석 문항: ${selectedScales.length}개`);
   sec+=mkP(ORG_NAME);
   sec+=mkP("");
@@ -1492,8 +1493,8 @@ async function exportHwpx(){
   });
   sec+=mkP("");
   sec+=mkP(ORG_NAME+" · "+REPORT_TITLE+" 자동 생성");
-  const sectionXml=`<?xml version='1.0' encoding='UTF-8'?>\n<hs:sec ${SEC_NS}>${sec}</hs:sec>`;
-  const TPL_CONTAINER=`<?xml version='1.0' encoding='UTF-8'?>
+  const sectionXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n<hs:sec ${SEC_NS}>${sec}</hs:sec>`;
+  const TPL_CONTAINER=`<?xml version="1.0" encoding="UTF-8"?>
 <ocf:container xmlns:ocf="urn:oasis:names:tc:opendocument:xmlns:container" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf">
   <ocf:rootfiles>
     <ocf:rootfile full-path="Contents/content.hpf" media-type="application/hwpml-package+xml"/>
@@ -1502,14 +1503,14 @@ async function exportHwpx(){
   </ocf:rootfiles>
 </ocf:container>
 `;
-  const TPL_MANIFEST=`<?xml version='1.0' encoding='UTF-8'?>
+  const TPL_MANIFEST=`<?xml version="1.0" encoding="UTF-8"?>
 <odf:manifest xmlns:odf="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"/>
 `;
   const TPL_RDF=`<?xml version="1.0" encoding="UTF-8" standalone="yes" ?><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""><ns0:hasPart xmlns:ns0="http://www.hancom.co.kr/hwpml/2016/meta/pkg#" rdf:resource="Contents/header.xml"/></rdf:Description><rdf:Description rdf:about="Contents/header.xml"><rdf:type rdf:resource="http://www.hancom.co.kr/hwpml/2016/meta/pkg#HeaderFile"/></rdf:Description><rdf:Description rdf:about=""><ns0:hasPart xmlns:ns0="http://www.hancom.co.kr/hwpml/2016/meta/pkg#" rdf:resource="Contents/section0.xml"/></rdf:Description><rdf:Description rdf:about="Contents/section0.xml"><rdf:type rdf:resource="http://www.hancom.co.kr/hwpml/2016/meta/pkg#SectionFile"/></rdf:Description><rdf:Description rdf:about=""><rdf:type rdf:resource="http://www.hancom.co.kr/hwpml/2016/meta/pkg#Document"/></rdf:Description></rdf:RDF>`;
-  const TPL_VERSION=`<?xml version='1.0' encoding='UTF-8'?>
+  const TPL_VERSION=`<?xml version="1.0" encoding="UTF-8"?>
 <hv:HCFVersion xmlns:hv="http://www.hancom.co.kr/hwpml/2011/version" tagetApplication="WORDPROCESSOR" major="5" minor="1" micro="1" buildNumber="0" os="1" xmlVersion="1.5" application="Hancom Office Hangul" appVersion="13, 0, 0, 1408 WIN32LEWindows_10"/>
 `;
-  const TPL_HPF=`<?xml version='1.0' encoding='UTF-8'?>
+  const TPL_HPF=`<?xml version="1.0" encoding="UTF-8"?>
 <opf:package xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf/" xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" version="" unique-identifier="" id="">
   <opf:metadata>
     <opf:title/>
@@ -1534,7 +1535,7 @@ async function exportHwpx(){
   </opf:spine>
 </opf:package>
 `;
-  const TPL_HEADER=`<?xml version='1.0' encoding='UTF-8'?>
+  const TPL_HEADER=`<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <hh:head xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf/" xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" version="1.5" secCnt="1">
   <hh:beginNum page="1" footnote="1" endnote="1" pic="1" tbl="1" equation="1"/>
   <hh:refList>
@@ -1635,7 +1636,7 @@ async function exportHwpx(){
         <hh:topBorder type="SOLID" width="0.12 mm" color="#000000"/>
         <hh:bottomBorder type="SOLID" width="0.12 mm" color="#000000"/>
         <hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>
-        <hh:fillBrush><hh:winBrush faceColor="#E8E0F0" hatchColor="#000000" hatchStyle="NONE" alpha="0"/></hh:fillBrush>
+        <hc:fillBrush><hc:winBrush faceColor="#E8E0F0" hatchColor="#000000" hatchStyle="NONE" alpha="0"/></hc:fillBrush>
       </hh:borderFill>
     </hh:borderFills>
     <hh:charProperties itemCnt="10">
@@ -2362,8 +2363,31 @@ async function exportHwpx(){
     <hh:paraPr id="20" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">
         <hh:align horizontal="CENTER" vertical="BASELINE"/>
         <hh:heading type="NONE" idRef="0" level="0"/>
-        <hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="1" widowOrphan="0" keepWithNext="0" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>
+        <hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="BREAK_WORD" widowOrphan="0" keepWithNext="0" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>
         <hh:autoSpacing eAsianEng="0" eAsianNum="0"/>
+        <hp:switch>
+          <hp:case hp:required-namespace="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar">
+            <hh:margin>
+              <hc:intent value="0" unit="HWPUNIT"/>
+              <hc:left value="0" unit="HWPUNIT"/>
+              <hc:right value="0" unit="HWPUNIT"/>
+              <hc:prev value="0" unit="HWPUNIT"/>
+              <hc:next value="0" unit="HWPUNIT"/>
+            </hh:margin>
+            <hh:lineSpacing type="PERCENT" value="160" unit="HWPUNIT"/>
+          </hp:case>
+          <hp:default>
+            <hh:margin>
+              <hc:intent value="0" unit="HWPUNIT"/>
+              <hc:left value="0" unit="HWPUNIT"/>
+              <hc:right value="0" unit="HWPUNIT"/>
+              <hc:prev value="0" unit="HWPUNIT"/>
+              <hc:next value="0" unit="HWPUNIT"/>
+            </hh:margin>
+            <hh:lineSpacing type="PERCENT" value="160" unit="HWPUNIT"/>
+          </hp:default>
+        </hp:switch>
+        <hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/>
       </hh:paraPr>
     </hh:paraProperties>
     <hh:styles itemCnt="23">
@@ -2402,7 +2426,7 @@ async function exportHwpx(){
   <hh:trackchageConfig flags="56"/>
 </hh:head>
 `;
-  const TPL_SETTINGS=`<?xml version='1.0' encoding='UTF-8'?>
+  const TPL_SETTINGS=`<?xml version="1.0" encoding="UTF-8"?>
 <ha:HWPApplicationSetting xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0">
   <ha:CaretPosition listIDRef="0" paraIDRef="0" pos="16"/>
 </ha:HWPApplicationSetting>
@@ -2428,6 +2452,7 @@ async function exportHwpx(){
   a.download=`분석_보고서_${ds.replace(/\./g,"")}.hwpx`;a.click();
   URL.revokeObjectURL(a.href);
   toast("📥 HWPX 파일 다운로드 완료!");
+  }catch(err){console.error("HWPX export error:",err);toast("⚠️ HWPX 생성 실패: "+err.message);}
 }
 
 /* ===== GOOGLE DOCS EXPORT ===== */
