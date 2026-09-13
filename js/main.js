@@ -8,7 +8,7 @@ import * as business from "./ui/views/business.js";
 import * as dash from "./ui/views/dash.js";
 import * as report from "./ui/views/report.js";
 
-export const APP_VERSION = "5.0.0";
+export const APP_VERSION = "5.1.0";
 const VIEWS = { load, setup, business, dash, report };
 let current = load, currentId = "";
 

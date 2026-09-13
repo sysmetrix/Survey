@@ -26,6 +26,31 @@ export function recodeNumeric(col, rawValues) {
   return { values, raw, invalid, missing };
 }
 
+/**
+ * 점수로 변환되지 않는 응답(보기 문구 미지정·범위 밖 숫자) 목록
+ * @returns {{value:string, n:number, reason:'label'|'range'}[]}
+ */
+export function unmappedValues(col, rawValues) {
+  const miss = new Set((col.missingCodes || []).map(s => String(s).trim()));
+  const map = col.labelMap || {};
+  const { min, max } = col.scale || {};
+  const counts = new Map();
+  rawValues.forEach(v => {
+    if (isBlank(v)) return;
+    const s = String(v).trim();
+    if (miss.has(s)) return;
+    let x = Object.prototype.hasOwnProperty.call(map, s) ? map[s] : toNum(v);
+    if (x === null || Number.isNaN(x)) x = leadingNumber(s);
+    let reason = null;
+    if (x === null || !Number.isFinite(x)) reason = "label";
+    else if (col.role !== "numeric" && min !== undefined && (x < min || x > max)) reason = "range";
+    if (!reason) return;
+    const k = `${reason}${s}`;
+    counts.set(k, (counts.get(k) || 0) + 1);
+  });
+  return [...counts.entries()].map(([k, n]) => { const [reason, value] = k.split(""); return { value, n, reason }; }).sort((a, b) => b.n - a.n);
+}
+
 /** 범주 열: 문자열 또는 null (valueLabels 로 코드→라벨 치환) */
 export function recodeCategory(col, rawValues) {
   const miss = new Set((col.missingCodes || []).map(s => String(s).trim()));
