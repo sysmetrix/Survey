@@ -23,6 +23,19 @@ test("SVG 차트들이 올바른 XML을 생성", () => {
   assert.ok(C.wrap("아주 긴 문항 이름이 들어가서 두 줄로 줄바꿈 되어야 하는 경우", 120, 13).length <= 2);
 });
 
+test("긴 문항명은 자르지 않고 행 높이·라벨 폭을 늘림", () => {
+  const long = "프로그램에서 제공한 체험 활동이 나의 진로를 탐색하고 결정하는 데 실질적인 도움이 되었다고 생각한다";
+  const short = C.hbar([{ label: "짧은 문항", value: 70 }, { label: "둘째", value: 60 }], { max: 100 });
+  const tall = C.hbar([{ label: long, value: 70 }, { label: "둘째", value: 60 }], { max: 100 });
+  for (const c of [tall, C.likertDiverging([{ label: long, pct: [10, 20, 30, 20, 20] }], ["1", "2", "3", "4", "5"]), C.dumbbell([{ label: long, pre: 3, post: 4 }]), C.kpiBullet([{ label: long, rate: 95 }]), C.groupedHbar([long], [{ name: "남", values: [70] }, { name: "여", values: [80] }]), C.ipaScatter([{ label: long, importance: 0.6, performance: 70 }, { label: "b", importance: 0.4, performance: 80 }], { meanI: 0.5, meanP: 75 })]) {
+    wellFormed(c.svg);
+    assert.ok(!c.svg.includes("…"), "말줄임 없음");
+    const shown = [...c.svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(m => m[1]).join("");
+    assert.ok(shown.replace(/\s|\d+\.\s?/g, "").includes(long.replace(/\s/g, "")), "문항 전체가 글자로 표시");
+  }
+  assert.ok(tall.height > short.height, "줄 수만큼 높이 증가");
+});
+
 test("다크 테마·툴팁·데이터 끝 둥근 막대", async () => {
   const { THEMES, contrast } = await import("../../js/charts/theme.js");
   const d = C.hbar([{ label: "<문항> & 'x'", value: 70 }], { max: 100, theme: "dark" });

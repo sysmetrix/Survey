@@ -2,12 +2,14 @@
 export const STEPS = [
   { id: "load", label: "불러오기", n: 1 },
   { id: "setup", label: "데이터 설정", n: 2 },
-  { id: "business", label: "사업정보·성과지표", n: 3 },
+  { id: "business", label: "성과지표(선택)", n: 3 },
   { id: "dash", label: "분석 결과", n: 4 },
   { id: "report", label: "보고서", n: 5 },
 ];
 /** 단계 표시줄에 없는 화면 */
-export const EXTRA_VIEWS = ["present"];
+export const EXTRA_VIEWS = ["present", "history"];
+/** 데이터 없이 열 수 있는 화면 */
+export const NO_DATA_VIEWS = ["load", "history"];
 
 export function parseHash() {
   const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);

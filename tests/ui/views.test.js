@@ -11,6 +11,7 @@ import * as business from "../../js/ui/views/business.js";
 import * as dash from "../../js/ui/views/dash.js";
 import * as report from "../../js/ui/views/report.js";
 import * as present from "../../js/ui/views/present.js";
+import * as historyView from "../../js/ui/views/history.js";
 import { splitChapters } from "../../js/report/render-html.js";
 import { makeTemplate } from "../../js/io/template-xlsx.js";
 import { projectToJson, parseProject } from "../../js/io/project.js";
@@ -118,4 +119,40 @@ test("발표 모드: 개요·슬라이드 숨기기·번호 범위", async () =>
   assert.equal(bad(present.render({ sub: "3" })), null);
   present.actions["p-unhide-all"]();
   assert.equal(present.visibleSlides().length, n);
+});
+
+test("작업 내역 화면: 저장소가 없는 환경에서도 안내 표시", () => {
+  const html = historyView.render({ sub: "" });
+  assert.ok(html.includes("작업 내역"));
+  assert.equal(bad(html), null);
+});
+
+test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
+  const f = "2026_문화의집_만족도_구글폼.csv";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  let html = business.render();
+  assert.ok(html.includes("빠른 추가") && html.includes("선택 · 고급") && !html.includes("id=\"lmBody\""), "사업정보는 접힌 상태");
+  business.actions["kpi-quick"]({ dataset: { id: "sat" } });
+  assert.equal(state.kpis.length, 1);
+  assert.equal(state.kpis[0].metric, "score100");
+  assert.ok(Number.isFinite(compute().evaluation.results[0].rate), "빠른 추가 지표는 바로 계산");
+  business.actions["lm-toggle"]();
+  html = business.render();
+  assert.ok(html.includes("id=\"lmBody\""));
+  assert.equal(bad(html), null);
+});
+
+test("직접 고친 문장의 근거 수치가 바뀌면 표시(stale)", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  const box = reportBlocks().find(b => b.type === "box");
+  const key = box.lines[0].key, autoText = box.lines[0].text;
+  state.overrides[key] = "직접 고침";
+  state.overrideBase[key] = autoText;
+  assert.equal(reportBlocks().find(b => b.type === "box").lines[0].stale, false, "근거 그대로");
+  state.overrideBase[key] = "예전 자동 문장";
+  const line = reportBlocks().find(b => b.type === "box").lines[0];
+  assert.equal(line.stale, true);
+  assert.equal(line.auto, autoText);
+  assert.ok(report.render().includes("근거 변경"));
 });

@@ -42,19 +42,20 @@ export function parseTime(header) {
 /** 문항 짝 비교용 키 */
 export const normKey = s => String(s ?? "").replace(/^\s*(Q|문항|문)?\s*\d+(-\d+)?\s*[.)\]:]\s*/i, "").replace(/[\s?？.,·*]/g, "").toLowerCase();
 
-/** 표시용 짧은 문항명 */
+/** 표시용 문항명 — 번호·필수 표시·물음표만 정리하고 내용은 자르지 않음(보고서에서 문항이 잘리지 않도록) */
 export function shortLabel(header) {
   let h = String(header ?? "").trim();
   const grid = h.match(/^(.*?)\s*\[([^\]]+)\]\s*$/); // 구글폼 그리드 "질문 [행]"
   if (grid && grid[2].trim()) h = grid[2];
   const t = parseTime(h);
   if (t) h = h.match(PREFIX_RE)?.[2] ?? h.match(SUFFIX_RE)?.[1] ?? h;
-  h = h.replace(/^\s*(\[필수\]|\*|※)\s*/, "")
+  h = h.replace(/^\s*(\[필수\]|\(필수\)|\*|※)\s*/, "")
+    .replace(/\s*(\(필수\)|\[필수\]|\(required\)|\*필수)\s*/gi, " ")
     .replace(/^\s*(Q|문항|문)?\s*\d+(-\d+)?\s*[.)\]:]\s*/i, "")
     .replace(/\s*[?？]\s*$/, "")
     .replace(/\s*\*\s*$/, "")
     .trim();
-  return h.length > 30 ? h.slice(0, 29) + "…" : h;
+  return h.length > 300 ? h.slice(0, 299) + "…" : h;
 }
 
 /** 구글폼 그리드 헤더의 상위 질문 (영역 후보) */

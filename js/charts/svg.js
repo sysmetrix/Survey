@@ -2,6 +2,7 @@
 // dataviz 규격: 막대 ≤24px·데이터 끝 4px 둥글림, 실선 헤어라인 격자, 채움 사이 2px 표면 간격,
 //   점 2px 표면 링, 글자는 잉크색(계열색 금지), 2계열 이상 범례, 상태색은 아이콘·글자 병기,
 //   모든 표시 요소에 data-tip(툴팁) — 이미지(HWPX)에서는 무시됨
+// 문항명은 자르지 않는다: 긴 문항은 줄 수만큼 행 높이를 늘리고, 라벨 영역도 필요하면 넓힌다.
 import { themeOf, inkOn, divergingFor, THEMES } from "./theme.js";
 
 export const FONT = "'Pretendard GOV Variable','Pretendard GOV','Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',sans-serif";
@@ -20,7 +21,7 @@ export function textWidth(s, fs) {
   for (const ch of String(s ?? "")) w += /[ᄀ-ᇿ㄰-㆏가-힣一-鿿]/.test(ch) ? fs * 0.95 : /[A-Z0-9%]/.test(ch) ? fs * 0.62 : fs * 0.52;
   return w;
 }
-/** 폭에 맞춰 최대 maxLines 줄로 나눔 */
+/** 폭에 맞춰 최대 maxLines 줄로 나눔 (넘치면 마지막 줄 말줄임) */
 export function wrap(s, maxW, fs, maxLines = 2) {
   const words = String(s ?? "").split(/(\s+)/).filter(Boolean);
   const lines = [""];
@@ -37,6 +38,22 @@ export function wrap(s, maxW, fs, maxLines = 2) {
   });
   if (out.length > maxLines) { const cut = out.slice(0, maxLines); let last = cut[maxLines - 1]; while (textWidth(last + "…", fs) > maxW && last.length) last = last.slice(0, -1); cut[maxLines - 1] = last + "…"; return cut.map(s2 => s2.trim()); }
   return out.map(s2 => s2.trim());
+}
+
+const LABEL_MAX_LINES = 6;
+/** 라벨 영역 폭: 기본값보다 긴 문항이 있으면 차트 폭의 42%까지 넓힘 */
+export function fitLabelWidth(labels, base, width, fs) {
+  const need = Math.max(0, ...labels.map(l => textWidth(l, fs)));
+  return Math.round(Math.max(base, Math.min(need, width * 0.42)));
+}
+/** 행 배치: 문항 줄 수에 맞춘 행 높이·위치 */
+export function rowLayout(labels, maxW, fs, minH, maxLines = LABEL_MAX_LINES) {
+  const lines = labels.map(l => wrap(l, maxW, fs, maxLines));
+  const hs = lines.map(ls => Math.max(minH, Math.ceil(ls.length * fs * 1.2 + 14)));
+  const ys = [];
+  let y = 0;
+  hs.forEach(h => { ys.push(y); y += h; });
+  return { lines, hs, ys, total: y };
 }
 
 const text = (tx, ty, s, { fs = 12, anchor = "start", weight = 400, fill = "#0b0b0b", baseline = "middle" } = {}) =>
@@ -89,7 +106,7 @@ const tickLabel = v => (Number.isInteger(v) ? String(v) : v.toFixed(1));
  */
 export function hbar(data, { width = 720, max = null, min = 0, refValue = null, refLabel = "", valueFmt = v => v.toFixed(1), unit = "", barColor = null, labelWidth = 220, title = "", theme = "light" } = {}) {
   const T = themeOf(theme);
-  const fs = 13, rowH = 34, barH = 20;
+  const fs = 13, barH = 20;
   const hasRef = refValue !== null && Number.isFinite(refValue);
   const top = (title ? 34 : 12) + (hasRef ? 18 : 0), bottom = 30;
   // 최댓값을 지정하지 않으면 1·2·5 단위의 보기 좋은 눈금으로 축 결정
@@ -98,19 +115,21 @@ export function hbar(data, { width = 720, max = null, min = 0, refValue = null, 
   const step = auto ? niceStep((dataMax - min) / 5) : 0;
   const mx = auto ? min + Math.ceil((dataMax * 1.08 - min) / step) * step : max;
   const ticks = auto ? Array.from({ length: Math.round((mx - min) / step) + 1 }, (_, i) => min + i * step) : ticksFor(min, mx);
-  const plotX = labelWidth + 12, plotW = width - plotX - 76;
+  const lw = fitLabelWidth(data.map(d => d.label), labelWidth, width, fs);
+  const Lay = rowLayout(data.map(d => d.label), lw, fs, 34);
+  const plotX = lw + 12, plotW = width - plotX - 76;
   const sx = v => plotX + (Math.max(min, Math.min(mx, v)) - min) / (mx - min) * plotW;
-  const plotH = data.length * rowH;
+  const plotH = Lay.total;
   let b = title ? text(0, 14, title, { fs: 14, weight: 700, fill: T.ink }) : "";
   ticks.forEach(v => { const gx = sx(v); b += line(gx, top, gx, top + plotH, T.grid) + text(gx, top + plotH + 14, tickLabel(v), { fs: 11, anchor: "middle", fill: T.muted }); });
   data.forEach((d, i) => {
-    const cy = top + i * rowH + rowH / 2;
+    const cy = top + Lay.ys[i] + Lay.hs[i] / 2;
     const w = sx(d.value) - plotX;
     const val = `${Number.isFinite(d.value) ? valueFmt(d.value) : "-"}${unit}`;
-    const inner = multiline(labelWidth, cy, wrap(d.label, labelWidth, fs), { fs, anchor: "end", fill: T.ink }) +
+    const inner = multiline(lw, cy, Lay.lines[i], { fs, anchor: "end", fill: T.ink }) +
       hBarPath(plotX, cy - barH / 2, w, barH, d.color || barColor || T.accent) +
       text(plotX + w + 6, cy, `${val}${d.sub ? ` ${d.sub}` : ""}`, { fs: 12, weight: 600, fill: T.ink });
-    b += tip(d.label, val, inner, hitRect(0, cy - rowH / 2, width, rowH));
+    b += tip(d.label, val, inner, hitRect(0, top + Lay.ys[i], width, Lay.hs[i]));
   });
   b += line(plotX, top, plotX, top + plotH, T.axis);
   if (hasRef) {
@@ -127,18 +146,20 @@ export function hbar(data, { width = 720, max = null, min = 0, refValue = null, 
 export function likertDiverging(rows, levelLabels, { width = 720, labelWidth = 200, title = "", theme = "light" } = {}) {
   const T = themeOf(theme);
   const k = levelLabels.length, pal = divergingFor(k, T);
-  const fs = 13, rowH = 36, barH = 24, top = title ? 40 : 16;
+  const fs = 13, barH = 24, top = title ? 40 : 16;
   const mid = (k - 1) / 2;
   const negOf = p => p.reduce((s, v, i) => s + (i < mid ? v : i === mid ? v / 2 : 0), 0);
   const maxNeg = Math.max(50, ...rows.map(r => negOf(r.pct)));
   const maxPos = Math.max(50, ...rows.map(r => 100 - negOf(r.pct)));
-  const plotX = labelWidth + 12, plotW = width - plotX - 56;
+  const lw = fitLabelWidth(rows.map(r => r.label), labelWidth, width, fs);
+  const Lay = rowLayout(rows.map(r => r.label), lw, fs, 36);
+  const plotX = lw + 12, plotW = width - plotX - 56;
   const scale = plotW / (maxNeg + maxPos), zero = plotX + maxNeg * scale;
   let b = title ? text(0, 14, title, { fs: 14, weight: 700, fill: T.ink }) : "";
-  b += line(zero, top - 6, zero, top + rows.length * rowH + 6, T.axis, 1);
+  b += line(zero, top - 6, zero, top + Lay.total + 6, T.axis, 1);
   rows.forEach((r, i) => {
-    const cy = top + i * rowH + rowH / 2;
-    b += multiline(labelWidth, cy, wrap(r.label, labelWidth, fs), { fs, anchor: "end", fill: T.ink });
+    const cy = top + Lay.ys[i] + Lay.hs[i] / 2;
+    b += multiline(lw, cy, Lay.lines[i], { fs, anchor: "end", fill: T.ink });
     let cx = zero - negOf(r.pct) * scale;
     r.pct.forEach((p, j) => {
       const w = p * scale;
@@ -153,7 +174,7 @@ export function likertDiverging(rows, levelLabels, { width = 720, labelWidth = 2
     });
     if (r.n !== undefined) b += text(width - 4, cy, `n=${r.n}`, { fs: 10, anchor: "end", fill: T.muted });
   });
-  const bottomY = top + rows.length * rowH;
+  const bottomY = top + Lay.total;
   const lg = legend(T, levelLabels.map((l, i) => [l, pal[i]]), plotX, bottomY + 20, width - plotX);
   return wrapSvg(T, width, lg.bottom + 12, b + lg.svg, title);
 }
@@ -164,25 +185,27 @@ export function likertDiverging(rows, levelLabels, { width = 720, labelWidth = 2
  */
 export function dumbbell(rows, { width = 720, min = 1, max = 5, labelWidth = 200, title = "", valueFmt = v => v.toFixed(2), theme = "light" } = {}) {
   const T = themeOf(theme);
-  const fs = 13, rowH = 38, top = title ? 40 : 18;
-  const plotX = labelWidth + 16, plotW = width - plotX - 70;
+  const fs = 13, top = title ? 40 : 18;
+  const lw = fitLabelWidth(rows.map(r => r.label), labelWidth, width, fs);
+  const Lay = rowLayout(rows.map(r => r.label), lw, fs, 38);
+  const plotX = lw + 16, plotW = width - plotX - 70;
   const sx = v => plotX + (v - min) / (max - min) * plotW;
   let b = title ? text(0, 14, title, { fs: 14, weight: 700, fill: T.ink }) : "";
   const steps = max - min <= 10 ? max - min : 5;
-  ticksFor(min, max, steps).forEach(v => { const gx = sx(v); b += line(gx, top, gx, top + rows.length * rowH, T.grid) + text(gx, top + rows.length * rowH + 14, tickLabel(v), { fs: 11, anchor: "middle", fill: T.muted }); });
+  ticksFor(min, max, steps).forEach(v => { const gx = sx(v); b += line(gx, top, gx, top + Lay.total, T.grid) + text(gx, top + Lay.total + 14, tickLabel(v), { fs: 11, anchor: "middle", fill: T.muted }); });
   rows.forEach((r, i) => {
-    const cy = top + i * rowH + rowH / 2;
+    const cy = top + Lay.ys[i] + Lay.hs[i] / 2;
     const a = sx(r.pre), c = sx(r.post);
     const up = r.post >= r.pre;
-    const inner = multiline(labelWidth, cy, wrap(r.label, labelWidth, fs), { fs, anchor: "end", fill: T.ink }) +
+    const inner = multiline(lw, cy, Lay.lines[i], { fs, anchor: "end", fill: T.ink }) +
       line(a, cy, c, cy, T.axis, 3) +
       `<circle class="m" cx="${r1(a)}" cy="${r1(cy)}" r="6" fill="${T.accentSoft}" stroke="${T.surface}" stroke-width="2"/>` +
       `<circle class="m" cx="${r1(c)}" cy="${r1(cy)}" r="7" fill="${T.accent}" stroke="${T.surface}" stroke-width="2"/>` +
       text(Math.min(a, c) - 12, cy, valueFmt(up ? r.pre : r.post), { fs: 11, anchor: "end", fill: T.muted }) +
       text(Math.max(a, c) + 12, cy, valueFmt(up ? r.post : r.pre) + (r.sig ? " *" : ""), { fs: 12, weight: 700, fill: T.ink });
-    b += tip(r.label, `사전 ${valueFmt(r.pre)} → 사후 ${valueFmt(r.post)} (${r.post - r.pre >= 0 ? "+" : ""}${(r.post - r.pre).toFixed(2)})${r.sig ? " · 유의함" : ""}`, inner, hitRect(0, cy - rowH / 2, width, rowH));
+    b += tip(r.label, `사전 ${valueFmt(r.pre)} → 사후 ${valueFmt(r.post)} (${r.post - r.pre >= 0 ? "+" : ""}${(r.post - r.pre).toFixed(2)})${r.sig ? " · 유의함" : ""}`, inner, hitRect(0, top + Lay.ys[i], width, Lay.hs[i]));
   });
-  const bottomY = top + rows.length * rowH + 22;
+  const bottomY = top + Lay.total + 22;
   const lg = legend(T, [["사전", T.accentSoft], ["사후", T.accent]], plotX, bottomY + 12, plotW, 11, "dot");
   return wrapSvg(T, width, lg.bottom + 12, b + lg.svg, title);
 }
@@ -195,22 +218,24 @@ const STATUS_ICON = { good: "✓", warning: "△", critical: "✕" };
  */
 export function kpiBullet(rows, { width = 720, labelWidth = 230, title = "", maxRate = 150, mostly = 90, theme = "light" } = {}) {
   const T = themeOf(theme);
-  const fs = 13, rowH = 38, top = title ? 44 : 24;
-  const plotX = labelWidth + 12, plotW = width - plotX - 92;
+  const fs = 13, top = title ? 44 : 24;
+  const lw = fitLabelWidth(rows.map(r => r.label), labelWidth, width, fs);
+  const Lay = rowLayout(rows.map(r => r.label), lw, fs, 38);
+  const plotX = lw + 12, plotW = width - plotX - 92;
   const sx = v => plotX + Math.max(0, Math.min(maxRate, v)) / maxRate * plotW;
   let b = title ? text(0, 14, title, { fs: 14, weight: 700, fill: T.ink }) : "";
   rows.forEach((r, i) => {
-    const cy = top + i * rowH + rowH / 2;
+    const cy = top + Lay.ys[i] + Lay.hs[i] / 2;
     const ok = Number.isFinite(r.rate);
     const st = !ok ? null : r.rate >= 100 ? "good" : r.rate >= mostly ? "warning" : "critical";
     const judge = !ok ? "측정 불가" : st === "good" ? "달성" : st === "warning" ? "대체로 달성" : "미달성";
-    const inner = multiline(labelWidth, cy, wrap(r.label, labelWidth, fs), { fs, anchor: "end", fill: T.ink }) +
+    const inner = multiline(lw, cy, Lay.lines[i], { fs, anchor: "end", fill: T.ink }) +
       rect(plotX, cy - 13, sx(mostly) - plotX, 26, T.bands[0]) + rect(sx(mostly), cy - 13, sx(100) - sx(mostly), 26, T.bands[1]) + rect(sx(100), cy - 13, sx(maxRate) - sx(100), 26, T.bands[2]) +
       (ok ? hBarPath(plotX, cy - 6, sx(r.rate) - plotX, 12, T.status[st]) : "") +
       text(sx(maxRate) + 8, cy, ok ? `${STATUS_ICON[st]} ${r.rate.toFixed(1)}%${r.rate > maxRate ? "▶" : ""}` : "측정 불가", { fs: 12, weight: 700, fill: ok ? T.ink : T.muted });
-    b += tip(r.label, ok ? `달성률 ${r.rate.toFixed(1)}% · ${judge}` : "측정 불가", inner, hitRect(0, cy - rowH / 2, width, rowH));
+    b += tip(r.label, ok ? `달성률 ${r.rate.toFixed(1)}% · ${judge}` : "측정 불가", inner, hitRect(0, top + Lay.ys[i], width, Lay.hs[i]));
   });
-  const bottomY = top + rows.length * rowH;
+  const bottomY = top + Lay.total;
   b += line(sx(100), top - 6, sx(100), bottomY + 4, T.ink, 2) + text(sx(100), top - 13, "목표 100%", { fs: 11, anchor: "middle", weight: 700, fill: T.ink });
   b += line(sx(mostly), top, sx(mostly), bottomY, T.muted, 1) + text(sx(mostly), bottomY + 14, `${mostly}%`, { fs: 10, anchor: "middle", fill: T.muted });
   const lg = legend(T, [[`${STATUS_ICON.good} 달성(100% 이상)`, T.status.good], [`${STATUS_ICON.warning} 대체로 달성(${mostly}~99%)`, T.status.warning], [`${STATUS_ICON.critical} 미달성`, T.status.critical]], plotX, bottomY + 34, width - plotX);
@@ -219,6 +244,7 @@ export function kpiBullet(rows, { width = 720, labelWidth = 230, title = "", max
 
 /**
  * IPA 사분면 산점도 (x: 중요도, y: 만족도) — 집중 개선 영역만 강조색
+ * 점에는 번호만 적고, 전체 문항명은 그림 아래 번호표로 제시(문항명이 잘리거나 겹치지 않도록)
  * @param {{label:string, importance:number, performance:number}[]} points
  */
 export function ipaScatter(points, { width = 720, height = 460, meanI, meanP, title = "", theme = "light" } = {}) {
@@ -230,25 +256,38 @@ export function ipaScatter(points, { width = 720, height = 460, meanI, meanP, ti
   const W = width - pad.l - pad.r, H = height - pad.t - pad.b;
   const sx = v => pad.l + (v - xmin) / (xmax - xmin) * W, sy = v => pad.t + H - (v - ymin) / (ymax - ymin) * H;
   let b = title ? text(0, 14, title, { fs: 14, weight: 700, fill: T.ink }) : "";
-  b += rect(sx(meanI), pad.t, pad.l + W - sx(meanI), sy(meanP) - pad.t, "transparent") + rect(sx(meanI), sy(meanP), pad.l + W - sx(meanI), pad.t + H - sy(meanP), T.wash);
+  b += rect(sx(meanI), sy(meanP), pad.l + W - sx(meanI), pad.t + H - sy(meanP), T.wash);
   [xmin, (xmin + xmax) / 2, xmax].forEach(v => { b += line(sx(v), pad.t, sx(v), pad.t + H, T.grid) + text(sx(v), pad.t + H + 14, v.toFixed(2), { fs: 10, anchor: "middle", fill: T.muted }); });
   [ymin, (ymin + ymax) / 2, ymax].forEach(v => { b += line(pad.l, sy(v), pad.l + W, sy(v), T.grid) + text(pad.l - 6, sy(v), v.toFixed(0), { fs: 10, anchor: "end", fill: T.muted }); });
   b += rect(pad.l, pad.t, W, H, "none", `stroke="${T.axis}" stroke-width="1"`);
   b += line(sx(meanI), pad.t, sx(meanI), pad.t + H, T.sub, 1, "5,4") + line(pad.l, sy(meanP), pad.l + W, sy(meanP), T.sub, 1, "5,4");
   const q = (tx, ty, s, anchor) => text(tx, ty, s, { fs: 12, weight: 700, fill: T.sub, anchor });
   b += q(pad.l + W - 8, pad.t + 16, "유지·강화", "end") + q(pad.l + W - 8, pad.t + H - 12, "집중 개선", "end") + q(pad.l + 8, pad.t + 16, "과잉 투자 점검", "start") + q(pad.l + 8, pad.t + H - 12, "점진 개선", "start");
-  points.forEach(p => {
+  points.forEach((p, i) => {
     const px = sx(p.importance), py = sy(p.performance);
     const focus = p.importance >= meanI && p.performance < meanP;
-    const lbl = p.label.length > 16 ? p.label.slice(0, 15) + "…" : p.label;
-    const nearRight = px + 10 + textWidth(lbl, 11) > pad.l + W - 4;
+    const nearRight = px + 22 > pad.l + W - 4;
     const inner = `<circle class="m" cx="${r1(px)}" cy="${r1(py)}" r="6" fill="${focus ? T.emphasis : T.accent}" stroke="${T.surface}" stroke-width="2"/>` +
-      text(nearRight ? px - 10 : px + 10, py - 10, lbl, { fs: 11, anchor: nearRight ? "end" : "start", fill: T.ink, weight: focus ? 700 : 400 });
-    b += tip(p.label, `만족도 ${p.performance.toFixed(1)}점 · 중요도 ${p.importance.toFixed(2)}${focus ? " · 집중 개선" : ""}`, inner, `<circle cx="${r1(px)}" cy="${r1(py)}" r="14" fill="transparent" pointer-events="all"/>`);
+      text(nearRight ? px - 9 : px + 9, py - 9, String(i + 1), { fs: 11, anchor: nearRight ? "end" : "start", fill: T.ink, weight: 700 });
+    b += tip(`${i + 1}. ${p.label}`, `만족도 ${p.performance.toFixed(1)}점 · 중요도 ${p.importance.toFixed(2)}${focus ? " · 집중 개선" : ""}`, inner, `<circle cx="${r1(px)}" cy="${r1(py)}" r="14" fill="transparent" pointer-events="all"/>`);
   });
   b += text(pad.l + W / 2, height - 12, "중요도 (전반 만족도와의 상관계수)", { fs: 12, anchor: "middle", fill: T.sub });
   b += `<text transform="translate(16 ${pad.t + H / 2}) rotate(-90)" font-size="12" text-anchor="middle" fill="${T.sub}">만족도 (100점 환산)</text>`;
-  return wrapSvg(T, width, height, b, title);
+  // 번호표 (2단)
+  const kfs = 11.5, colW = (width - pad.l - 10) / 2, keyTop = height + 4;
+  const entries = points.map((p, i) => wrap(`${i + 1}. ${p.label}`, colW - 14, kfs, 4));
+  let keyH = 0;
+  for (let i = 0; i < entries.length; i += 2) {
+    const rowH = Math.max(entries[i].length, entries[i + 1]?.length || 0) * kfs * 1.25 + 6;
+    [0, 1].forEach(k => {
+      const e = entries[i + k];
+      if (!e) return;
+      const focus = points[i + k].importance >= meanI && points[i + k].performance < meanP;
+      e.forEach((ln, li) => { b += text(pad.l + k * colW, keyTop + keyH + kfs * 0.7 + li * kfs * 1.25, ln, { fs: kfs, fill: T.ink, weight: focus ? 700 : 400 }); });
+    });
+    keyH += rowH;
+  }
+  return wrapSvg(T, width, keyTop + keyH + 8, b, title);
 }
 
 /** NPS 100% 누적 막대 (비추천·중립·추천 = 발산 3단계) */
@@ -282,22 +321,25 @@ export function npsBar({ detractors, passives, promoters, nps, n }, { width = 72
 export function groupedHbar(categories, series, { width = 720, max = 100, labelWidth = 180, title = "", valueFmt = v => v.toFixed(1), theme = "light" } = {}) {
   const T = themeOf(theme);
   const fs = 12, barH = Math.max(10, Math.min(18, 48 / series.length)), gap = 16;
-  const groupH = barH * series.length + gap, top = title ? 40 : 12;
-  const plotX = labelWidth + 12, plotW = width - plotX - 56;
+  const top = title ? 40 : 12;
+  const lw = fitLabelWidth(categories, labelWidth, width, fs);
+  const Lay = rowLayout(categories, lw, fs, barH * series.length + gap);
+  const plotX = lw + 12, plotW = width - plotX - 56;
   const sx = v => plotX + Math.max(0, Math.min(max, v)) / max * plotW;
   let b = title ? text(0, 14, title, { fs: 14, weight: 700, fill: T.ink }) : "";
-  ticksFor(0, max).forEach(v => { const gx = sx(v); b += line(gx, top, gx, top + categories.length * groupH, T.grid) + text(gx, top + categories.length * groupH + 12, tickLabel(v), { fs: 10, anchor: "middle", fill: T.muted }); });
+  ticksFor(0, max).forEach(v => { const gx = sx(v); b += line(gx, top, gx, top + Lay.total, T.grid) + text(gx, top + Lay.total + 12, tickLabel(v), { fs: 10, anchor: "middle", fill: T.muted }); });
   categories.forEach((c, i) => {
-    const gy = top + i * groupH;
-    b += multiline(labelWidth, gy + (groupH - gap) / 2, wrap(c, labelWidth, fs), { fs, anchor: "end", fill: T.ink });
+    const gh = Lay.hs[i], gy = top + Lay.ys[i];
+    const barsTop = gy + (gh - barH * series.length) / 2;
+    b += multiline(lw, gy + gh / 2, Lay.lines[i], { fs, anchor: "end", fill: T.ink });
     series.forEach((s, j) => {
-      const v = s.values[i], by = gy + j * barH;
+      const v = s.values[i], by = barsTop + j * barH;
       if (!Number.isFinite(v)) return;
       const inner = hBarPath(plotX, by + 1, sx(v) - plotX, barH - 2, T.series[j % T.series.length], 3) + text(sx(v) + 4, by + barH / 2, valueFmt(v), { fs: 10, fill: T.sub });
       b += tip(`${c} · ${s.name}`, valueFmt(v), inner, hitRect(plotX - 4, by, plotW + 60, barH));
     });
   });
-  b += line(plotX, top, plotX, top + categories.length * groupH, T.axis);
-  const lg = legend(T, series.map((s, j) => [s.name, T.series[j % T.series.length]]), plotX, top + categories.length * groupH + 32, width - plotX);
+  b += line(plotX, top, plotX, top + Lay.total, T.axis);
+  const lg = legend(T, series.map((s, j) => [s.name, T.series[j % T.series.length]]), plotX, top + Lay.total + 32, width - plotX);
   return wrapSvg(T, width, lg.bottom + 10, b + lg.svg, title);
 }
