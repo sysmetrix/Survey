@@ -70,6 +70,13 @@ try {
   await evaluate(`document.querySelector('[data-file="${SAMPLE}"]').click()`);
   await waitFor(`location.hash === '#/setup' && !!document.querySelector('.tbl.setup')`);
   await shot("2-setup");
+  if (await evaluate(`!!document.querySelector('[data-act="toggle-labels"]')`)) {
+    await evaluate(`document.querySelector('[data-act="toggle-labels"]').click()`);
+    await waitFor(`!!document.querySelector('.labelpanel')`);
+    await evaluate(`document.querySelector('.labelpanel').scrollIntoView({block:'center'})`);
+    await sleep(200);
+    await shot("2b-label-panel");
+  }
 
   for (const [hash, name, sel] of [["#/business", "3-business", ".tbl.kpi"], ["#/dash", "4-dash", ".cards"], ["#/dash/사전·사후 성과 변화", "4b-dash-prepost", ".paper"], ["#/report", "5-report", "#reportPaper"]]) {
     await evaluate(`location.hash = ${JSON.stringify(hash)}`);

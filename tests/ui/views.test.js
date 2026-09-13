@@ -61,7 +61,28 @@ test("문장 수정·숨김·장 제외가 보고서에 반영", async () => {
   assert.equal(p.kpis.length, 6);
 });
 
+test("데이터 설정: 보기 점수 패널·일괄 적용", async () => {
+  const L = ["완전 별로", "별로", "그냥", "좋음", "완전 좋음"];
+  const rows = Array.from({ length: 10 }, (_, i) => [i % 2 ? "남" : "여", L[i % 5], L[(i + 2) % 5]]);
+  loadDataset({ fileName: "custom.csv", source: "file", sheets: [{ name: "응답", headers: ["성별", "만족 [내용]", "만족 [강사]"], rows }] });
+  const [, a, b] = state.codebook.columns;
+  setup.actions.col({ dataset: { key: a.key, field: "role" }, value: "likert" });
+  assert.equal(a.role, "likert");
+  const html = setup.render();
+  assert.ok(html.includes("보기별 점수") && html.includes("미변환"), "문자 응답 패널 자동 표시");
+  L.forEach((t, i) => setup.actions.labelmap({ dataset: { key: a.key, raw: t }, value: String(i + 1) }));
+  setup.actions["labelmap-apply-all"]({ dataset: { key: a.key } });
+  assert.equal(b.role, "likert"); assert.equal(b.labelMap["완전 좋음"], 5);
+  const r = compute();
+  assert.equal(r.analysis.items.length, 2); assert.equal(r.analysis.items[0].n, 10);
+  assert.ok(!setup.render().includes("미변환"));
+  setup.actions["labelmap-reverse"]({ dataset: { key: a.key } });
+  assert.equal(a.labelMap["완전 별로"], 5);
+});
+
 test("KPI 편집 → 재계산", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
   const k = state.kpis.find(x => x.id === "K1");
   k.actual = 6; invalidate();
   const r = compute();

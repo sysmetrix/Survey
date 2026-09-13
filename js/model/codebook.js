@@ -1,6 +1,35 @@
 // 코드북: 열 역할·척도·영역·사전사후 짝·성과지표 연결 — 모든 분석의 기준
 import { detectColumn, harmonizeScales, parseTime, shortLabel, gridParent, isOverallHeader, normKey } from "./detect.js";
+import { LABEL_SETS, matchLabelSet, mapWithSet } from "./label-sets.js";
 import { isBlank, hash } from "../core/util.js";
+
+/**
+ * 같은 계열 라벨(예: 동의형)을 쓰는 문항들을 모든 응답을 합쳐 한 척도로 통일
+ * (한 문항에 '보통' 응답이 없어 5점/4점이 갈리는 문제 방지)
+ */
+function harmonizeLabelScales(columns, dataset) {
+  const labeled = columns.filter(c => c.role === "likert" && c.labelSetId);
+  const famOf = c => LABEL_SETS.find(s => s.id === c.labelSetId)?.family;
+  const families = [...new Set(labeled.map(famOf).filter(Boolean))];
+  for (const fam of families) {
+    const group = labeled.filter(c => famOf(c) === fam);
+    const valuesOf = c => dataset.sheets[c.sheet].rows.map(r => r[c.index]).filter(v => !isBlank(v));
+    const union = matchLabelSet(group.flatMap(valuesOf), 0.8, LABEL_SETS.filter(s => s.family === fam));
+    if (!union) continue;
+    group.forEach(c => {
+      if (c.labelSetId !== union.set.id) {
+        const m = mapWithSet(valuesOf(c), union.set);
+        if (m.size >= Object.keys(c.labelMap || {}).length) {
+          c.labelSetId = union.set.id;
+          c.labelMap = Object.fromEntries(m);
+          c.scale = { min: union.set.min, max: union.set.max };
+          c.detected.reason = `라벨(${union.set.name}) — 같은 보기를 쓰는 ${group.length}개 문항 기준`;
+        }
+      }
+      c.labelAmbiguous = union.ambiguous;
+    });
+  }
+}
 
 export const CODEBOOK_VERSION = 1;
 
@@ -42,7 +71,7 @@ export function buildCodebook(dataset) {
       const nums = vals.map(Number).filter(Number.isFinite);
       columns.push({
         key: `s${si}c${ci}`, sheet: si, index: ci, header: String(header), label: shortLabel(header),
-        role: det.role, scale: det.scale || null, labelMap: det.labelMap || null, labelSetId: det.labelSetId || null,
+        role: det.role, scale: det.scale || null, labelMap: det.labelMap || null, labelSetId: det.labelSetId || null, labelAmbiguous: !!det.labelAmbiguous,
         options: det.options || null, delimiter: det.delimiter || null,
         reverse: false, missingCodes: [], valueLabels: null,
         domain: gridParent(header), competency: null,
@@ -57,6 +86,7 @@ export function buildCodebook(dataset) {
     });
   });
   harmonizeScales(columns);
+  harmonizeLabelScales(columns, dataset);
   columns.forEach(c => delete c.observedMax);
 
   // 사전/사후 시트는 동일 문항명(pairKey)끼리 짝, 척도가 아닌 열도 sheet 기준으로 구분
@@ -123,6 +153,8 @@ export function lintCodebook(codebook) {
     warn.push({ level: "warn", msg: "사전·사후 시트를 연결할 ID 열이 없습니다. ID 또는 이름+연락처 뒷자리 열을 지정하세요." });
   }
   if (codebook.design !== "single" && !pairsOf(codebook).length) warn.push({ level: "warn", msg: "사전·사후로 짝지어진 문항이 없습니다." });
+  const amb = cols.filter(c => c.role === "likert" && c.labelAmbiguous);
+  if (amb.length) warn.push({ level: "warn", msg: `'보통' 응답이 없어 4점/5점 척도가 불분명한 문항 ${amb.length}개(${amb.slice(0, 3).map(c => c.label).join(", ")}${amb.length > 3 ? " 등" : ""}): 설문지의 보기 수를 확인하고 필요하면 척도 범위와 '보기 점수'를 고치세요.` });
   const pii = cols.filter(c => c.pii);
   if (pii.length) warn.push({ level: "info", msg: `개인정보 추정 열 ${pii.length}개(${pii.map(c => c.label).join(", ")})는 분석에서 제외되며 화면에 마스킹됩니다.` });
   return warn;

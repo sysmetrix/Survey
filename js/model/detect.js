@@ -7,8 +7,8 @@ export const ROLES = {
   multi: "복수응답", text: "주관식", numeric: "숫자(연속형)", timestamp: "응답일시", ignore: "분석 제외",
 };
 
-const TIMESTAMP_RE = /타임스탬프|timestamp|응답\s*일시|제출\s*일시|응답\s*시간|작성\s*일시|제출\s*시간|시작\s*시간|완료\s*시간/i;
-const ID_RE = /^\s*(id|no\.?|번호|순번|연번|학번|참여자\s*(번호|코드|id)|응답자\s*(번호|id)|고유\s*번호|식별\s*번호|관리\s*번호)\s*$/i;
+const TIMESTAMP_RE = /타임스탬프|timestamp|응답\s*일시|제출\s*일시|응답\s*시간|작성\s*일시|제출\s*시간|제출\s*시각|시작\s*시간|완료\s*시간|submitted\s*at|submit\s*date|date\s*submitted|start\s*date|end\s*date|completed\s*at|created\s*at/i;
+const ID_RE = /^\s*(id|#|no\.?|번호|순번|연번|학번|참여자\s*(번호|코드|id)|응답자\s*(번호|id)|고유\s*번호|식별\s*번호|관리\s*번호|submission\s*id|respondent\s*id|response\s*id|network\s*id|token|response\s*type)\s*$/i;
 const PII_RE = /이름|성명|연락처|전화|휴대|핸드폰|이메일|e-?mail|메일\s*주소|주소|생년월일|카카오/i;
 const NPS_RE = /추천/;
 const DEMOG_RE = /^\s*(\d+[.)]\s*)?(성별|학년|연령(대)?|나이|지역|거주\s*지역|학교(급|명)?|소속|신분|구분|참여자\s*유형|유형|참여\s*(횟수|경로|기간|회차)|직업|가구\s*형태|학급|반|기수|회차|프로그램(명)?|참여\s*프로그램)\s*$/;
@@ -106,7 +106,7 @@ export function detectColumn(header, values) {
   const ls = matchLabelSet(nonBlank);
   if (ls) {
     const labelMap = Object.fromEntries(ls.map);
-    return { role: "likert", scale: { min: ls.set.min, max: ls.set.max }, labelSetId: ls.set.id, labelMap, confidence: 0.85, reason: `라벨(${ls.set.name}) ${Math.round(ls.coverage * 100)}% 일치` };
+    return { role: "likert", scale: { min: ls.set.min, max: ls.set.max }, labelSetId: ls.set.id, labelMap, labelAmbiguous: ls.ambiguous, confidence: ls.ambiguous ? 0.7 : 0.85, reason: `라벨(${ls.set.name}) ${Math.round(ls.coverage * 100)}% 일치${ls.ambiguous ? " · '보통' 응답 없음(4점/5점 확인 필요)" : ""}` };
   }
   const lead = nonBlank.map(leadingNumber);
   if (lead.filter(v => v !== null).length / n >= 0.9 && new Set(lead).size <= 11 && !TEXT_RE.test(h)) {

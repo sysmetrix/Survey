@@ -3,6 +3,7 @@ import { esc } from "../core/util.js";
 export { esc };
 
 export function toast(msg, kind = "info", ms = 3200) {
+  if (typeof document === "undefined") return;
   const el = document.getElementById("toast");
   if (!el) return;
   el.textContent = msg;
@@ -12,6 +13,7 @@ export function toast(msg, kind = "info", ms = 3200) {
 }
 
 export function busy(on, msg = "처리 중…") {
+  if (typeof document === "undefined") return;
   const el = document.getElementById("busy");
   if (!el) return;
   el.hidden = !on;

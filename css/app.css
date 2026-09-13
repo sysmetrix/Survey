@@ -73,6 +73,10 @@ textarea.in { resize: vertical; }
 .tbl.kpi td:nth-child(2) { min-width: 180px; } .tbl.kpi td:nth-child(3) select, .tbl.kpi td:nth-child(4) select, .tbl.kpi td:nth-child(10) select { min-width: 86px; }
 .tbl.kpi td:nth-child(5) select { min-width: 170px; } .tbl.kpi td:nth-child(6) input { min-width: 130px; }
 .tbl.corr td { font-size: 11px; min-width: 44px; }
+.labelrow > td { background: #F7FAF8; border-bottom: 2px solid #CFE3D6; }
+.labelpanel { padding: 6px 4px 10px; display: flex; flex-direction: column; gap: 8px; }
+.tbl.mini { width: auto; min-width: 420px; background: #fff; }
+.tbl.mini tr.unmapped td { background: #FFF1EE; }
 
 .logic { display: flex; gap: 6px; align-items: stretch; overflow-x: auto; }
 .logic-col { display: flex; flex-direction: column; gap: 3px; min-width: 150px; flex: 1; }
