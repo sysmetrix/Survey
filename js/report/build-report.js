@@ -17,7 +17,7 @@ const H = (level, text, extra = {}) => ({ type: "heading", level, text, ...extra
 const cellH = text => ({ text, shade: "header", bold: true });
 
 /** 척도 수준 라벨 (코드북 라벨 → 기본 라벨 → n점) */
-function levelLabels(col, min, max) {
+export function levelLabels(col, min, max) {
   const k = max - min + 1;
   if (col?.labelMap) {
     const inv = {};

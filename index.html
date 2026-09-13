@@ -2,26 +2,46 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#006D3A">
+  <meta name="description" content="설문 엑셀로 통계 분석, 청소년 사업 성과지표 달성 평가, 한글(HWPX) 보고서와 발표 슬라이드를 브라우저 안에서 만듭니다.">
   <title>설문 분석·결과평가 보고서 | 부천여성청소년재단</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23006D3A'/%3E%3Crect x='3' y='8' width='2' height='5' fill='%23fff'/%3E%3Crect x='7' y='5' width='2' height='8' fill='%23fff'/%3E%3Crect x='11' y='3' width='2' height='10' fill='%23fff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/app.css?v=5.1.0">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="설문분석">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="vendor/fonts/pretendard-gov/pretendard-gov-dynamic-subset.css">
+  <link rel="stylesheet" href="css/app.css?v=5.2.0">
+  <link rel="stylesheet" href="css/present.css?v=5.2.0">
   <script src="js/boot-check.js"></script>
   <script src="vendor/papaparse-5.4.1.min.js"></script>
   <script src="vendor/xlsx-0.20.3.full.min.js"></script>
   <script src="vendor/jszip-3.10.1.min.js"></script>
-  <script type="module" src="js/main.js?v=5.1.0"></script>
+  <script type="module" src="js/main.js?v=5.2.0"></script>
 </head>
 <body>
+  <button class="skip no-print" data-act="skip">본문 바로가기</button>
   <header class="topbar no-print">
-    <a class="brand" href="#/load"><span class="logo">📊</span><span>설문 분석 · 결과평가<small>부천여성청소년재단</small></span></a>
-    <nav id="steps" class="steps-nav" aria-label="진행 단계"></nav>
-    <span id="ver" class="ver"></span>
+    <a class="brand" href="#/load" aria-label="설문 분석 · 결과평가 처음 화면">
+      <svg class="logo" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--brand)"/><rect x="8" y="16" width="4" height="8" rx="1.5" fill="var(--on-brand)"/><rect x="14" y="11" width="4" height="13" rx="1.5" fill="var(--on-brand)"/><rect x="20" y="7" width="4" height="17" rx="1.5" fill="var(--on-brand)" opacity=".75"/></svg>
+      <span><b>설문 분석 · 결과평가</b><small>부천여성청소년재단</small></span>
+    </a>
+    <nav id="steps" class="stepper" aria-label="진행 단계"></nav>
+    <div class="top-actions">
+      <span id="net" class="chip warn" role="status" hidden></span>
+      <button id="presentBtn" class="btn sm" data-act="goto" data-to="present" data-sub="1" title="분석 결과 발표 모드" disabled></button>
+      <button id="installBtn" class="btn sm ghost" data-act="install" hidden></button>
+      <button id="themeBtn" class="icon-btn" data-act="theme"></button>
+      <span id="ver" class="ver"></span>
+    </div>
   </header>
-  <main id="main" class="container"></main>
-  <footer class="foot no-print">모든 분석은 이 브라우저 안에서만 처리됩니다 · 부천여성청소년재단 전략경영실 전략기획부</footer>
+  <main id="main" class="container" tabindex="-1"></main>
+  <footer class="foot no-print"><span>모든 분석은 이 브라우저 안에서만 처리되며 파일은 외부로 전송되지 않습니다</span><span>·</span><span>부천여성청소년재단 전략경영실 전략기획부</span></footer>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="snack" class="snack" role="status" aria-live="polite" hidden></div>
   <div id="busy" class="busy" hidden><div class="busy-box"><div class="spinner"></div><div class="busy-msg"></div></div></div>
   <noscript><p style="padding:20px">이 도구는 JavaScript가 필요합니다.</p></noscript>
 </body>

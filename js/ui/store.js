@@ -8,6 +8,7 @@ import { evaluateKpis } from "../evaluation/kpi.js";
 import { lintEvaluation } from "../evaluation/linkage.js";
 import { buildReport } from "../report/build-report.js";
 import { finalizeBlocks } from "../report/model.js";
+import { buildDeck } from "../present/deck.js";
 import { DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { koDate } from "../core/util.js";
 
@@ -26,6 +27,7 @@ export const state = {
   logicModel: emptyLogicModel(), kpis: [],
   settings: loadSettings(),
   overrides: {}, hidden: [], hiddenChapters: [],
+  deckHidden: [],
   excludeStraight: false,
   businessFound: null,
   results: null, dirty: true,
@@ -52,7 +54,7 @@ export function loadDataset(dataset, project = null) {
   if (!project) {
     state.logicModel = biz.logicModel || emptyLogicModel();
     state.kpis = biz.kpis || [];
-    state.overrides = {}; state.hidden = []; state.hiddenChapters = [];
+    state.overrides = {}; state.hidden = []; state.hiddenChapters = []; state.deckHidden = [];
     state.settings.reportTitle = "";
   }
   invalidate();
@@ -66,6 +68,7 @@ export function applyProject(p) {
   state.overrides = p.report?.overrides || {};
   state.hidden = p.report?.hidden || [];
   state.hiddenChapters = p.report?.hiddenChapters || [];
+  state.deckHidden = p.present?.hidden || [];
   state.excludeStraight = !!p.excludeStraight;
   Object.assign(state.settings, p.settings || {});
   state.pendingProject = p;
@@ -96,6 +99,18 @@ export function compute() {
   state.results = { survey, analysis, evaluation, lint, blocksRaw, straight, excludedCount, codebookWarnings: lintCodebook(cb), ms: Math.round(performance.now() - t0) };
   state.dirty = false;
   return state.results;
+}
+
+/** 발표 슬라이드 (분석 결과가 바뀔 때만 다시 구성) */
+let deckCache = { results: null, settingsKey: "", slides: [] };
+export function deckSlides() {
+  const r = compute();
+  if (!r) return [];
+  const settingsKey = JSON.stringify([state.settings.orgName, state.settings.reportTitle, state.settings.date]);
+  if (deckCache.results !== r || deckCache.settingsKey !== settingsKey) {
+    deckCache = { results: r, settingsKey, slides: buildDeck({ analysis: r.analysis, evaluation: r.evaluation, logicModel: state.logicModel, codebook: state.codebook, settings: state.settings }) };
+  }
+  return deckCache.slides;
 }
 
 export function reportBlocks() {

@@ -43,9 +43,9 @@ function tableHtml(b) {
 
 /**
  * @param {object[]} blocks  finalizeBlocks 결과
- * @param {{editable?:boolean, figureHtml?:(b)=>string}} opts
+ * @param {{editable?:boolean, figureHtml?:(b)=>string, theme?:'light'|'dark'}} opts  theme: 화면 표시용 차트 테마(보고서·HWPX는 항상 light)
  */
-export function blocksToHtml(blocks, { editable = false, figureHtml = null } = {}) {
+export function blocksToHtml(blocks, { editable = false, figureHtml = null, theme = "light" } = {}) {
   return blocks.map(b => {
     switch (b.type) {
       case "title": return `<h1 class="r-title">${esc(b.text)}</h1>${b.subtitle ? `<p class="r-sub">${esc(b.subtitle)}</p>` : ""}`;
@@ -56,7 +56,7 @@ export function blocksToHtml(blocks, { editable = false, figureHtml = null } = {
       case "table": return tableHtml(b);
       case "figure": {
         let inner;
-        try { inner = figureHtml ? figureHtml(b) : chartSvg(b.chart).svg; } catch (e) { inner = `<div class="r-err">차트 오류: ${esc(e.message)}</div>`; }
+        try { inner = figureHtml ? figureHtml(b) : chartSvg(theme === "light" ? b.chart : { ...b.chart, opts: { ...(b.chart.opts || {}), theme } }).svg; } catch (e) { inner = `<div class="r-err">차트 오류: ${esc(e.message)}</div>`; }
         return `<figure class="r-fig">${inner}<figcaption>${esc(b.display)}</figcaption>${(b.notes || []).map(n => `<div class="r-note c">${inlineHtml(n)}</div>`).join("")}</figure>`;
       }
       case "pageBreak": return `<div class="r-pb" aria-hidden="true"></div>`;

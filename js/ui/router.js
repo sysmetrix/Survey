@@ -1,4 +1,4 @@
-// 해시 라우터: #/load, #/setup, #/business, #/dash/<tab>, #/report
+// 해시 라우터: #/load, #/setup, #/business, #/dash/<tab>, #/report, #/present/<슬라이드 번호>
 export const STEPS = [
   { id: "load", label: "불러오기", n: 1 },
   { id: "setup", label: "데이터 설정", n: 2 },
@@ -6,10 +6,12 @@ export const STEPS = [
   { id: "dash", label: "분석 결과", n: 4 },
   { id: "report", label: "보고서", n: 5 },
 ];
+/** 단계 표시줄에 없는 화면 */
+export const EXTRA_VIEWS = ["present"];
 
 export function parseHash() {
   const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
-  const view = STEPS.some(s => s.id === parts[0]) ? parts[0] : "load";
+  const view = STEPS.some(s => s.id === parts[0]) || EXTRA_VIEWS.includes(parts[0]) ? parts[0] : "load";
   return { view, sub: parts[1] || "" };
 }
 

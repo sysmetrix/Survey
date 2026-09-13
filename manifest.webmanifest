@@ -1,0 +1,37 @@
+{
+  "id": "./",
+  "name": "설문 분석 · 결과평가 보고서",
+  "short_name": "설문분석",
+  "description": "설문 엑셀로 통계 분석, 청소년 사업 성과지표 달성 평가, 한글(HWPX) 보고서와 발표 슬라이드를 브라우저 안에서 만듭니다.",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "./#/load",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#F4F5F2",
+  "theme_color": "#006D3A",
+  "categories": ["productivity", "business", "education"],
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "설문 파일 불러오기", "short_name": "불러오기", "url": "./#/load", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "이전 버전(v4.3) 열기", "short_name": "v4.3", "url": "./legacy/v4.html" }
+  ],
+  "file_handlers": [
+    {
+      "action": "./index.html",
+      "accept": {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+        "application/vnd.ms-excel": [".xls"],
+        "text/csv": [".csv"],
+        "text/tab-separated-values": [".tsv"]
+      }
+    }
+  ],
+  "launch_handler": { "client_mode": ["focus-existing", "auto"] }
+}

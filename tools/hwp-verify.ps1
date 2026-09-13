@@ -1,4 +1,4 @@
-# 생성된 HWPX 를 설치된 한글(COM)로 열어 검증하고 PDF 로 저장한다.
+﻿# 생성된 HWPX 를 설치된 한글(COM)로 열어 검증하고 PDF 로 저장한다.
 # 파일마다 별도 프로세스로 실행하고, 제한시간 초과 시 화면을 캡처한 뒤 종료한다.
 # 사용: powershell -ExecutionPolicy Bypass -File tools/hwp-verify.ps1 -Dir out [-TimeoutSec 60]
 param([string]$Dir = "out", [int]$TimeoutSec = 60)
@@ -7,6 +7,10 @@ $files = Get-ChildItem -Path $root -Filter *.hwpx -File
 if (-not $files) { Write-Output "HWPX 파일 없음: $root"; exit 1 }
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $opener = Join-Path $PSScriptRoot "hwp-open-one.ps1"
+. (Join-Path $PSScriptRoot "lib\hwp-com.ps1")
+if (-not (Get-HwpSecurityModuleName)) {
+  Write-Output "[안내] 한글 보안 승인 모듈이 등록되지 않아 파일 열기 때 승인 창이 뜰 수 있습니다. 설치: powershell -ExecutionPolicy Bypass -File tools/install-hwp-security-module.ps1 -Test"
+}
 $fail = 0
 foreach ($f in $files) {
   $log = [IO.Path]::ChangeExtension($f.FullName, ".verify.txt")

@@ -1,5 +1,10 @@
-// 파일을 직접 더블클릭(file://)해 열면 ES 모듈이 차단되므로 안내 표시
+// 첫 화면 그리기 전에 실행되는 동기 스크립트 (CSP 때문에 인라인 대신 파일)
+// 1) 저장된 화면 테마를 먼저 적용해 깜빡임 방지  2) file:// 로 열었을 때 안내
 (function () {
+  try {
+    var t = localStorage.getItem("survey-v5-theme");
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { /* 저장소 사용 불가 */ }
   if (location.protocol !== "file:") return;
   document.addEventListener("DOMContentLoaded", function () {
     var d = document.createElement("div");

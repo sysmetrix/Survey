@@ -5,6 +5,7 @@ import { makeTemplate } from "../../io/template-xlsx.js";
 import { parseProject } from "../../io/project.js";
 import { toast, busy, download, readFileBytes, readFileText, nextFrame, esc } from "../util.js";
 import { go } from "../router.js";
+import { icon } from "../icons.js";
 
 export const SAMPLES = [
   { file: "2026_진로탐색_사전사후.xlsx", title: "사전·사후 + 성과지표", desc: "사전/사후 시트 ID 매칭, 사업정보·성과지표 시트 포함" },
@@ -15,48 +16,63 @@ export const SAMPLES = [
 export function render() {
   return `
   <section class="hero">
-    <h1>청소년 사업 설문 분석 · 결과평가 보고서</h1>
-    <p>설문 엑셀을 올리면 <b>통계 분석 → 성과지표 달성 판정 → 개조식 분석글·그래프가 들어간 한글(HWPX) 붙임 보고서</b>까지 만들어 줍니다.
-    모든 처리는 이 브라우저 안에서만 이루어지며 파일은 외부로 전송되지 않습니다.</p>
+    <p class="eyebrow">${icon("sparkle", 14)}청소년 사업 결과평가 도구</p>
+    <h1>설문 엑셀 하나로 분석부터<br>한글 보고서·발표 자료까지</h1>
+    <p class="lead">파일을 올리면 <b>통계 분석 → 성과지표 달성 판정 → 분석글·그래프가 들어간 한글(HWPX) 붙임 보고서</b>와 <b>발표용 슬라이드</b>를 자동으로 만듭니다.</p>
+    <ul class="trust">
+      <li>${icon("shield", 17)}브라우저 안에서만 처리 · 외부 전송 없음</li>
+      <li>${icon("doc", 17)}한글(HWPX) 보고서</li>
+      <li>${icon("play", 17)}발표 모드</li>
+      <li>${icon("install", 17)}앱 설치 · 오프라인 사용</li>
+    </ul>
   </section>
   <div class="grid2">
     <section class="card">
       <h2>설문 데이터 불러오기</h2>
-      <label class="drop" data-drop="data">
+      <label class="drop" data-drop="data" role="button" tabindex="0" aria-label="설문 파일 선택">
         <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.tsv" data-change="pick-file" hidden>
-        <span class="drop-icon">📂</span>
-        <span class="drop-main">엑셀·CSV 파일을 끌어다 놓거나 클릭하세요</span>
-        <span class="drop-sub">.xlsx .xls .csv .tsv · 여러 시트(사전/사후/사업정보/성과지표) 자동 인식 · 구글폼·네이버폼 원본 가능</span>
+        <span class="drop-icon">${icon("upload", 28)}</span>
+        <span class="drop-main">엑셀·CSV 파일을 끌어다 놓거나 눌러서 선택하세요</span>
+        <span class="drop-sub">.xlsx .xls .csv .tsv · 여러 시트(사전/사후/사업정보/성과지표) 자동 인식 · 구글폼·네이버폼·타입폼·탈리 원본 그대로 가능</span>
       </label>
-      <div class="row gap">
-        <label class="btn ghost">프로젝트 파일 열기<input type="file" accept=".json" data-change="pick-project" hidden></label>
-        ${state.dataset ? `<button class="btn" data-act="goto" data-to="setup">현재 데이터 계속 (${esc(state.dataset.fileName)})</button>` : ""}
+      <div class="row gap wrap">
+        <label class="btn">${icon("folder", 17)}프로젝트 파일 열기<input type="file" accept=".json" data-change="pick-project" hidden></label>
+        ${state.dataset ? `<button class="btn primary" data-act="goto" data-to="setup">현재 데이터 계속 (${esc(state.dataset.fileName)}) ${icon("right", 16)}</button>` : ""}
       </div>
       ${state.pendingProject && !state.dataset ? `<p class="hint ok">프로젝트 설정을 불러왔습니다. 같은 설문 데이터 파일을 올리면 설정이 적용됩니다.</p>` : ""}
     </section>
     <section class="card">
-      <h2>입력 템플릿</h2>
-      <p class="muted">처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다.</p>
-      <div class="row gap">
-        <button class="btn" data-act="template" data-kind="satisfaction">만족도 조사 템플릿</button>
-        <button class="btn" data-act="template" data-kind="prepost">사전·사후 조사 템플릿</button>
-      </div>
-      <h3>샘플로 체험하기</h3>
+      <h2>샘플로 체험하기</h2>
       <div class="samples">
-        ${SAMPLES.map(s => `<button class="sample" data-act="sample" data-file="${esc(s.file)}"><b>${esc(s.title)}</b><span>${esc(s.desc)}</span></button>`).join("")}
+        ${SAMPLES.map(s => `<button class="sample" data-act="sample" data-file="${esc(s.file)}"><span class="sample-ico">${icon(s.file.endsWith(".csv") ? "file" : "table", 20)}</span><b>${esc(s.title)}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 18, "go")}</button>`).join("")}
+      </div>
+      <h3>입력 템플릿</h3>
+      <p class="muted small">처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다.</p>
+      <div class="row gap wrap">
+        <button class="btn sm" data-act="template" data-kind="satisfaction">${icon("download", 15)}만족도 조사 템플릿</button>
+        <button class="btn sm" data-act="template" data-kind="prepost">${icon("download", 15)}사전·사후 조사 템플릿</button>
       </div>
     </section>
   </div>
-  <section class="card steps">
+  <section class="card">
     <h2>진행 순서</h2>
-    <ol>
-      <li><b>데이터 설정</b> — 자동 판별된 문항 역할(척도·응답자 특성·주관식 등), 척도 범위, 역문항, 영역, 사전·사후 짝을 확인합니다.</li>
-      <li><b>사업정보·성과지표</b> — 사업 목적·추진목표·논리모형과 성과지표(목표값·측정방법)를 입력하거나 엑셀 시트에서 불러옵니다.</li>
-      <li><b>분석 결과</b> — 성과지표 달성, 사전·사후 변화, 만족도, 집단 비교, 주관식을 확인합니다.</li>
-      <li><b>보고서</b> — 자동 작성된 개조식 문장을 고치고, <b>HWPX</b>로 내려받거나 PDF로 인쇄합니다.</li>
+    <ol class="flow">
+      <li><b>데이터 설정</b>자동 판별된 문항 역할·척도 범위·역문항·영역·사전·사후 짝을 확인합니다.</li>
+      <li><b>사업정보·성과지표</b>사업 목적·논리모형과 성과지표(목표값·측정방법)를 입력하거나 엑셀 시트에서 불러옵니다.</li>
+      <li><b>분석 결과</b>성과지표 달성, 사전·사후 변화, 만족도, 집단 비교, 주관식을 확인합니다.</li>
+      <li><b>보고서</b>자동 작성된 개조식 문장을 고치고 HWPX로 내려받거나 PDF로 인쇄합니다.</li>
+      <li><b>발표</b>핵심 결과를 슬라이드로 바로 발표하고 PDF로 나눠 줍니다.</li>
     </ol>
     <p class="muted small">이전 버전(v4.3) 화면은 <a href="legacy/v4.html">여기</a>에서 계속 사용할 수 있습니다.</p>
   </section>`;
+}
+
+/** 파일 선택 영역: Enter·Space 로도 열기 */
+export function onKey(e) {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches?.(".drop")) {
+    e.preventDefault();
+    e.target.querySelector("input[type=file]")?.click();
+  }
 }
 
 async function openBytes(bytes, fileName) {

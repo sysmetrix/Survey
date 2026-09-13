@@ -7,6 +7,7 @@ import { svgToPng } from "../../charts/rasterize.js";
 import { projectToJson } from "../../io/project.js";
 import { esc, toast, busy, download, safeFileName, nextFrame } from "../util.js";
 import { refresh } from "../router.js";
+import { icon } from "../icons.js";
 
 let includeData = false;
 
@@ -30,9 +31,10 @@ export function render() {
       <p class="small">수정 ${nEdited}건 · 숨김 ${nHidden}건</p>
       <div class="row gap wrap">${nEdited ? `<button class="btn sm ghost" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm ghost" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>
       <h3>내보내기</h3>
-      <button class="btn primary block" data-act="export-hwpx">한글(HWPX) 내려받기</button>
-      <button class="btn block" data-act="print">인쇄 / PDF 저장</button>
+      <button class="btn primary block" data-act="export-hwpx">${icon("download", 17)}한글(HWPX) 내려받기</button>
+      <button class="btn block" data-act="print">${icon("printer", 17)}인쇄 / PDF 저장</button>
       <button class="btn block" data-act="copy">보고서 복사(워드·구글문서 붙여넣기)</button>
+      <button class="btn block" data-act="goto" data-to="present" data-sub="1">${icon("play", 16)}발표 모드로 보기</button>
       <hr>
       <label class="check small"><input type="checkbox" ${includeData ? "checked" : ""} data-change="include-data"> 원자료 포함 (개인정보 주의)</label>
       <button class="btn block ghost" data-act="save-project">프로젝트 파일 저장</button>
