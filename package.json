@@ -1,0 +1,17 @@
+{
+  "name": "survey-analysis-v5",
+  "version": "5.0.0",
+  "private": true,
+  "description": "부천여성청소년재단 설문 분석·사업 결과평가 보고서(HWPX) 도구",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "samples": "node tools/make-samples.mjs",
+    "reports": "node tools/build-sample-reports.mjs",
+    "validate": "node tools/validate-hwpx.mjs out",
+    "serve": "python -m http.server 8000"
+  },
+  "devDependencies": {
+    "@xmldom/xmldom": "^0.8.10"
+  }
+}
