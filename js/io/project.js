@@ -8,6 +8,7 @@ export function projectToJson(state, { includeData = false } = {}) {
     settings: { orgName: state.settings.orgName, reportTitle: state.settings.reportTitle, date: state.settings.date, thresholds: state.settings.thresholds },
     codebook: state.codebook, logicModel: state.logicModel, kpis: state.kpis,
     report: { overrides: state.overrides, hidden: state.hidden, hiddenChapters: state.hiddenChapters },
+    present: { hidden: state.deckHidden || [] },
     excludeStraight: state.excludeStraight,
     dataFingerprint: state.dataset ? { fileName: state.dataset.fileName, headersHash: state.codebook?.headersHash, rows: state.dataset.sheets.map(s => s.rows.length) } : null,
   };

@@ -7,6 +7,8 @@ import { DESIGN_LABELS } from "../../model/codebook.js";
 import { maskPII } from "../../core/util.js";
 import { esc, option } from "../util.js";
 import { go, refresh } from "../router.js";
+import { icon } from "../icons.js";
+import { resolvedTheme } from "../theme.js";
 
 const TYPE_LABEL = { positive: "긍정", negative: "부정", suggestion: "건의", neutral: "기타", none: "없음" };
 let textFilter = { col: "", type: "", q: "" };
@@ -50,7 +52,7 @@ function qualityTab(r) {
     return `<tr><td>${esc(c.label)}</td><td>${esc(c.role)}</td><td class="c">${miss}</td><td class="c ${Number(pct) > 20 ? "bad-text" : ""}">${pct}</td><td class="c ${inv > 0 ? "warn-text" : ""}">${inv}</td></tr>`;
   }).join("");
   const corr = A.correlation;
-  const corrHtml = corr ? `<h3>문항 간 상관(Pearson r)</h3><div class="tblwrap"><table class="tbl corr"><tr><th></th>${corr.labels.map(l => `<th title="${esc(l)}">${esc(l.slice(0, 8))}</th>`).join("")}</tr>${corr.matrix.map((row, i) => `<tr><th class="l" title="${esc(corr.labels[i])}">${esc(corr.labels[i].slice(0, 14))}</th>${row.map((cell, j) => { const v = cell?.r; const a = Math.min(1, Math.abs(v || 0)); return `<td class="c" style="background:${i === j ? "#eee" : v >= 0 ? `rgba(46,117,182,${a * 0.7})` : `rgba(197,90,17,${a * 0.7})`};color:${a > 0.55 && i !== j ? "#fff" : "inherit"}">${Number.isFinite(v) ? v.toFixed(2) : "-"}${cell?.p < 0.05 && i !== j ? "*" : ""}</td>`; }).join("")}</tr>`).join("")}</table></div>` : "";
+  const corrHtml = corr ? `<h3>문항 간 상관(Pearson r)</h3><div class="tblwrap"><table class="tbl corr"><tr><th></th>${corr.labels.map(l => `<th title="${esc(l)}">${esc(l.slice(0, 8))}</th>`).join("")}</tr>${corr.matrix.map((row, i) => `<tr><th class="l" title="${esc(corr.labels[i])}">${esc(corr.labels[i].slice(0, 14))}</th>${row.map((cell, j) => { const v = cell?.r; const a = Math.min(1, Math.abs(v || 0)); return `<td class="c" style="background:${i === j ? "var(--surface-3)" : v >= 0 ? `rgba(42,120,214,${a * 0.7})` : `rgba(199,72,69,${a * 0.7})`};color:${a > 0.55 && i !== j ? "#fff" : "inherit"}">${Number.isFinite(v) ? v.toFixed(2) : "-"}${cell?.p < 0.05 && i !== j ? "*" : ""}</td>`; }).join("")}</tr>`).join("")}</table></div>` : "";
   const reg = A.regression;
   const regHtml = reg ? `<h3>전반 만족도 영향 요인(다중회귀)</h3><p class="small muted">종속변수: ${esc(reg.dependent)} · R²=${f2(reg.r2)} · 수정 R²=${f2(reg.adjR2)} · n=${reg.n}</p>
     <table class="tbl"><tr><th>문항</th><th>B</th><th>β</th><th>t</th><th>p</th><th>VIF</th></tr>${reg.coef.slice(1).map(c => `<tr><td>${esc(c.name)}</td><td class="c">${f2(c.b)}</td><td class="c"><b>${f2(c.beta)}</b></td><td class="c">${f2(c.t)}</td><td class="c">${pText(c.p)}</td><td class="c ${c.vif > 5 ? "warn-text" : ""}">${f2(c.vif)}</td></tr>`).join("")}</table>` : "";
@@ -70,12 +72,15 @@ export function render({ sub }) {
   let body;
   if (cur.key === "__text") body = textTab(r);
   else if (cur.key === "__quality") body = qualityTab(r);
-  else body = `<div class="paper view">${blocksToHtml(chapters.find(c => c.key === cur.key)?.blocks || [])}</div>`;
+  else body = `<div class="paper view">${blocksToHtml(chapters.find(c => c.key === cur.key)?.blocks || [], { theme: resolvedTheme() })}</div>`;
   return `
+  <div class="page-head">
+    <div><h2>분석 결과</h2><p class="small muted">${esc(state.dataset.fileName)} · 계산 ${r.ms}ms · 그래프에 마우스를 올리면 값이 보입니다</p></div>
+    <div class="row gap wrap"><button class="btn" data-act="goto" data-to="present" data-sub="1">${icon("play", 16)}발표 모드</button><button class="btn primary" data-act="goto" data-to="report">보고서 편집·내보내기${icon("right", 16)}</button></div>
+  </div>
+  ${cards(r)}
   <section class="card">
-    <div class="row between wrap"><h2>분석 결과</h2><div class="row gap"><span class="small muted">계산 ${r.ms}ms</span><button class="btn" data-act="goto" data-to="report">보고서 편집·내보내기 →</button></div></div>
-    ${cards(r)}
-    <nav class="tabs">${tabs.map(t => `<button class="tab${t.key === cur.key ? " on" : ""}" data-act="goto" data-to="dash" data-sub="${esc(t.key)}">${esc(t.title)}</button>`).join("")}</nav>
+    <nav class="tabs" aria-label="분석 장">${tabs.map(t => `<button class="tab${t.key === cur.key ? " on" : ""}" ${t.key === cur.key ? 'aria-current="page"' : ""} data-act="goto" data-to="dash" data-sub="${esc(t.key)}">${esc(t.title)}</button>`).join("")}</nav>
     <div class="tabbody">${body}</div>
   </section>`;
 }

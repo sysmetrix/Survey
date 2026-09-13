@@ -12,6 +12,33 @@ export function toast(msg, kind = "info", ms = 3200) {
   toast._t = setTimeout(() => { el.className = "toast"; }, ms);
 }
 
+/** 버튼이 있는 알림 (업데이트 안내 등). 문구는 textContent 로만 삽입 */
+export function notify(msg, { action = "", onAction = null, sticky = false, ms = 6000 } = {}) {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById("snack");
+  if (!el) return;
+  const text = document.createElement("span");
+  text.textContent = msg;
+  const parts = [text];
+  if (action && onAction) {
+    const b = document.createElement("button");
+    b.className = "btn sm primary";
+    b.textContent = action;
+    b.addEventListener("click", () => { el.hidden = true; onAction(); });
+    parts.push(b);
+  }
+  const close = document.createElement("button");
+  close.className = "icon-btn sm";
+  close.setAttribute("aria-label", "닫기");
+  close.textContent = "✕";
+  close.addEventListener("click", () => { el.hidden = true; });
+  parts.push(close);
+  el.replaceChildren(...parts);
+  el.hidden = false;
+  clearTimeout(notify._t);
+  if (!sticky) notify._t = setTimeout(() => { el.hidden = true; }, ms);
+}
+
 export function busy(on, msg = "처리 중…") {
   if (typeof document === "undefined") return;
   const el = document.getElementById("busy");

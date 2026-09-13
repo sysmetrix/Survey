@@ -10,6 +10,7 @@ import * as setup from "../../js/ui/views/setup.js";
 import * as business from "../../js/ui/views/business.js";
 import * as dash from "../../js/ui/views/dash.js";
 import * as report from "../../js/ui/views/report.js";
+import * as present from "../../js/ui/views/present.js";
 import { splitChapters } from "../../js/report/render-html.js";
 import { makeTemplate } from "../../js/io/template-xlsx.js";
 import { projectToJson, parseProject } from "../../js/io/project.js";
@@ -23,7 +24,7 @@ for (const file of ["2026_진로탐색_사전사후.xlsx", "2026_문화의집_�
   test(`화면 렌더: ${file}`, async () => {
     const ds = parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa });
     loadDataset(ds);
-    const views = { load, setup, business, dash, report };
+    const views = { load, setup, business, dash, report, present };
     for (const [name, v] of Object.entries(views)) {
       const html = v.render({ sub: "" });
       assert.ok(html.length > 500, `${name} 렌더 길이`);
@@ -98,4 +99,23 @@ test("엑셀 템플릿 생성 → 다시 읽으면 시트 역할 인식", () => 
     assert.equal(state.codebook.design, kind === "prepost" ? "prepost-sheets" : "single");
     assert.ok(state.kpis.length >= 2, "템플릿 예시 지표 인식");
   }
+});
+
+test("발표 모드: 개요·슬라이드 숨기기·번호 범위", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  const first = present.render({ sub: "1" });
+  assert.ok(first.includes("t-cover") && first.includes("p-bar"));
+  assert.ok(present.render({ sub: "999" }).includes("t-end"), "범위 밖 번호는 마지막 장");
+  present.actions["p-overview"]();
+  const ov = present.render({ sub: "2" });
+  assert.ok(ov.includes("p-ov-grid") && (ov.match(/class="p-thumb[ "]/g) || []).length === present.visibleSlides().length);
+  present.actions["p-overview"]();
+  const n = present.visibleSlides().length;
+  present.actions["p-toggle"]({ dataset: { id: "cover" } });
+  assert.equal(present.visibleSlides().length, n - 1);
+  assert.ok(!present.render({ sub: "1" }).includes("t-cover"));
+  assert.equal(bad(present.render({ sub: "3" })), null);
+  present.actions["p-unhide-all"]();
+  assert.equal(present.visibleSlides().length, n);
 });

@@ -22,3 +22,14 @@ test("SVG 차트들이 올바른 XML을 생성", () => {
   charts.forEach(c => { wellFormed(c.svg); assert.ok(c.width > 0 && c.height > 0); });
   assert.ok(C.wrap("아주 긴 문항 이름이 들어가서 두 줄로 줄바꿈 되어야 하는 경우", 120, 13).length <= 2);
 });
+
+test("다크 테마·툴팁·데이터 끝 둥근 막대", async () => {
+  const { THEMES, contrast } = await import("../../js/charts/theme.js");
+  const d = C.hbar([{ label: "<문항> & 'x'", value: 70 }], { max: 100, theme: "dark" });
+  wellFormed(d.svg);
+  assert.ok(d.svg.includes(THEMES.dark.surface) && d.svg.includes("data-tip=") && /<path class="m" d="M/.test(d.svg));
+  assert.ok(!d.svg.includes("<문항>"), "라벨 이스케이프");
+  for (const T of Object.values(THEMES)) {
+    assert.ok(contrast(T.ink, T.surface) >= 4.5 && contrast(T.sub, T.surface) >= 4.5 && contrast(T.muted, T.surface) >= 3, `${T.name} 텍스트 대비`);
+  }
+});

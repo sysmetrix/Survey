@@ -1,0 +1,254 @@
+// ⑥ 발표 모드: 분석 결과를 16:9 슬라이드로 — 키보드·전체화면·개요·발표자 노트·슬라이드 숨기기·PDF 인쇄
+import { state, deckSlides } from "../store.js";
+import { chartSvg } from "../../report/model.js";
+import { maskPII } from "../../core/util.js";
+import { esc } from "../util.js";
+import { go, refresh, parseHash } from "../router.js";
+import { icon } from "../icons.js";
+import { resolvedTheme } from "../theme.js";
+
+const PREF_KEY = "survey-v5-present";
+const ui = (() => {
+  let p = {};
+  try { p = JSON.parse(localStorage.getItem(PREF_KEY) || "{}"); } catch { /* 저장소 사용 불가 */ }
+  return { stage: ["auto", "light", "dark"].includes(p.stage) ? p.stage : "auto", notes: !!p.notes };
+})();
+const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(ui)); } catch { /* 무시 */ } };
+const view = { overview: false, blank: false, help: false, printing: false, digits: "", startedAt: 0 };
+
+const TONE = { good: ["✓", "양호"], warning: ["△", "주의"], critical: ["✕", "보완 필요"] };
+const STAGE_LABEL = { auto: "화면 테마 따름", light: "밝은 무대", dark: "어두운 무대" };
+const KEYS = [["→  Space  PgDn", "다음"], ["←  PgUp", "이전"], ["Home / End", "처음 / 마지막"], ["숫자 + Enter", "해당 번호로 이동"], ["O", "슬라이드 개요"], ["N", "발표자 노트"], ["F", "전체화면"], ["B", "화면 가리기"], ["T", "무대 밝기"], ["P", "PDF 인쇄"], ["Esc", "닫기 · 발표 끝내기"]];
+
+export const visibleSlides = () => { const hidden = new Set(state.deckHidden); return deckSlides().filter(s => !hidden.has(s.id)); };
+const stageTheme = () => (ui.stage === "auto" ? resolvedTheme() : ui.stage);
+
+function chart(c, theme) {
+  if (!c) return "";
+  try { return chartSvg({ ...c, opts: { ...(c.opts || {}), theme } }).svg; } catch (e) { return `<p class="s-err">차트를 그리지 못했습니다: ${esc(e.message)}</p>`; }
+}
+const toneMark = t => (TONE[t] ? `<span class="tone ${t}" role="img" aria-label="${TONE[t][1]}">${TONE[t][0]}</span>` : "");
+const quoteText = q => maskPII(typeof q === "string" ? q : q?.text ?? "");
+const list = items => `<ul class="s-list">${items.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+
+/** 슬라이드 1장 HTML (무대·개요 썸네일·인쇄 공용) */
+export function slideHtml(s, i, total, theme) {
+  const org = state.settings.orgName || "";
+  const head = `<header class="s-head"><p class="s-eyebrow">${esc(s.section)}</p><h2 class="s-title">${esc(s.title)}</h2>${s.subtitle ? `<p class="s-sub">${esc(s.subtitle)}</p>` : ""}</header>`;
+  let inner;
+  switch (s.type) {
+    case "cover":
+      inner = `<div class="s-cover"><p class="s-eyebrow">${esc(s.section)}</p><h1 class="s-cover-title">${esc(s.title)}</h1>${s.subtitle ? `<p class="s-sub">${esc(s.subtitle)}</p>` : ""}${s.chips?.length ? `<ul class="s-chips">${s.chips.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}</div><div class="s-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>`;
+      break;
+    case "stats":
+      inner = head + `<div class="s-stats n${s.stats.length}">${s.stats.map(st => `<div class="s-stat"><p class="s-stat-label">${esc(st.label)}</p><p class="s-stat-value">${esc(st.value)}<small>${esc(st.unit || "")}</small></p><p class="s-stat-sub">${toneMark(st.tone)}${esc(st.sub || "")}</p></div>`).join("")}</div>`;
+      break;
+    case "hero":
+      inner = head + `<div class="s-body s-hero-body"><div class="s-hero"><p class="s-hero-value">${esc(s.hero.value)}<small>${esc(s.hero.unit || "")}</small></p><p class="s-hero-cap">${esc(s.hero.caption)}</p>${list(s.hero.facts)}</div><div class="s-chart">${chart(s.chart, theme)}</div></div>`;
+      break;
+    case "voice": {
+      const group = (title, qs, tone) => (qs?.length ? `<section class="s-qgroup"><h3>${toneMark(tone)}${esc(title)}</h3>${qs.map(q => `<blockquote>${esc(quoteText(q))}</blockquote>`).join("")}</section>` : "");
+      inner = head + `<div class="s-body${s.chart ? " s-voice" : ""}">${s.chart ? `<div class="s-chart">${chart(s.chart, theme)}</div>` : ""}<div class="s-quotes">${group("좋았던 점", s.quotes?.positive, "good")}${group("개선이 필요한 점", s.quotes?.improve, "critical")}</div></div>`;
+      break;
+    }
+    case "columns":
+      inner = head + `<div class="s-cols">${s.columns.map(c => `<section class="s-col"><h3>${toneMark(c.tone)}${esc(c.title)}</h3>${list(c.items.length ? c.items : ["해당 없음"])}</section>`).join("")}</div>`;
+      break;
+    case "end":
+      inner = `<div class="s-end"><h1>${esc(s.title)}</h1>${s.subtitle ? `<p>${esc(s.subtitle)}</p>` : ""}</div>`;
+      break;
+    default:
+      inner = head + `<div class="s-body${s.aside ? " s-aside-body" : ""}"><div class="s-chart">${chart(s.chart, theme)}</div>${s.aside ? `<aside class="s-aside"><h3>${esc(s.aside.title)}</h3>${list(s.aside.items)}</aside>` : ""}</div>`;
+  }
+  const edge = s.type === "cover" || s.type === "end";
+  const foot = `<footer class="s-foot"><span>${edge ? "" : esc(s.source || "")}</span><span>${esc(org)}${edge ? "" : `${org ? " · " : ""}${i + 1} / ${total}`}</span></footer>`;
+  return `<article class="slide t-${s.type} ${theme}" aria-roledescription="슬라이드" aria-label="${i + 1} / ${total}. ${esc(s.title)}">${inner}${foot}</article>`;
+}
+
+const btn = (act, ic, label, extra = "") => `<button class="p-btn" data-act="${act}" aria-label="${esc(label)}" title="${esc(label)}" ${extra}>${icon(ic, 20)}</button>`;
+
+function bar(idx, total, fs) {
+  return `<nav class="p-bar" aria-label="발표 제어">
+    ${btn("p-prev", "left", "이전 (←)", idx === 0 ? "disabled" : "")}
+    <button class="p-count" data-act="p-overview" title="슬라이드 개요 (O)"><b>${idx + 1}</b> / ${total}</button>
+    ${btn("p-next", "right", "다음 (→)", idx === total - 1 ? "disabled" : "")}
+    <span class="p-div" aria-hidden="true"></span>
+    ${btn("p-overview", "grid", "슬라이드 개요 (O)", `aria-pressed="${view.overview}"`)}
+    ${btn("p-notes", "notes", "발표자 노트 (N)", `aria-pressed="${ui.notes}"`)}
+    ${btn("p-stage", ui.stage === "dark" ? "moon" : ui.stage === "light" ? "sun" : "monitor", `무대: ${STAGE_LABEL[ui.stage]} (T)`)}
+    ${btn("p-print", "printer", "PDF로 인쇄 (P)")}
+    ${btn("p-fullscreen", fs ? "shrink" : "expand", fs ? "전체화면 끝내기 (F)" : "전체화면 (F)")}
+    <button class="p-btn p-key" data-act="p-help" aria-label="단축키 (?)" title="단축키 (?)" aria-pressed="${view.help}">?</button>
+    <span class="p-div" aria-hidden="true"></span>
+    ${btn("p-exit", "x", "발표 끝내기 (Esc)")}
+  </nav>`;
+}
+
+const clock = () => {
+  const sec = view.startedAt ? Math.floor((Date.now() - view.startedAt) / 1000) : 0;
+  return `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+};
+
+function notesHtml(s, idx, slides) {
+  const next = slides[idx + 1];
+  return `<aside class="p-notes" aria-label="발표자 노트">
+    <div class="p-notes-head"><b>발표자 노트</b><span class="p-clock">${icon("clock", 15)}<span id="pClock">${clock()}</span></span></div>
+    <p class="p-notes-title">${idx + 1}. ${esc(s.title)}</p>
+    ${s.notes.length ? `<ul class="p-notes-list">${s.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : `<p class="muted small">메모가 없습니다.</p>`}
+    <div class="p-notes-next"><span>다음</span><p>${next ? esc(next.title) : "마지막 슬라이드입니다"}</p></div>
+  </aside>`;
+}
+
+function overviewHtml(idx, theme) {
+  const hidden = new Set(state.deckHidden);
+  const all = deckSlides();
+  const total = all.filter(s => !hidden.has(s.id)).length;
+  let n = 0;
+  return `<div class="p-overview" role="dialog" aria-label="슬라이드 개요">
+    <div class="p-ov-head"><div><h2>슬라이드 개요</h2><p class="small muted">${total}장 발표 · 눈 아이콘으로 숨긴 슬라이드는 발표와 인쇄에서 빠집니다</p></div><button class="btn" data-act="p-overview">닫기 <kbd>Esc</kbd></button></div>
+    <div class="p-ov-grid">${all.map(s => {
+      const off = hidden.has(s.id), num = off ? 0 : ++n;
+      return `<div class="p-thumb${off ? " off" : ""}${num === idx + 1 ? " on" : ""}">
+        <div class="p-thumb-go" role="button" tabindex="0" data-act="${off ? "p-toggle" : "p-goto"}" data-n="${num}" data-id="${esc(s.id)}" aria-label="${off ? "숨김 해제" : `${num}번 슬라이드로 이동`}: ${esc(s.title)}">${slideHtml(s, Math.max(0, num - 1), total, theme)}</div>
+        <div class="p-thumb-foot"><span class="p-thumb-n">${off ? "숨김" : num}</span><span class="p-thumb-title">${esc(s.section || s.title)}</span><button class="icon-btn sm" data-act="p-toggle" data-id="${esc(s.id)}" aria-label="${off ? "슬라이드 보이기" : "슬라이드 숨기기"}" title="${off ? "보이기" : "숨기기"}">${icon(off ? "eyeOff" : "eye", 16)}</button></div>
+      </div>`;
+    }).join("")}</div>
+  </div>`;
+}
+
+export function render({ sub }) {
+  const slides = visibleSlides();
+  const total = slides.length;
+  if (!total) {
+    return `<section class="card empty-state"><h2>발표할 슬라이드가 없습니다</h2><p class="muted">모든 슬라이드를 숨겼습니다.</p><div class="row gap"><button class="btn primary" data-act="p-unhide-all">숨긴 슬라이드 모두 보이기</button><button class="btn" data-act="goto" data-to="dash">분석 결과로</button></div></section>`;
+  }
+  const idx = Math.min(total, Math.max(1, parseInt(sub, 10) || 1)) - 1;
+  const theme = stageTheme();
+  const fs = typeof document !== "undefined" && !!document.fullscreenElement;
+  return `<div class="present st-${theme}${ui.notes ? " notes-on" : ""}" id="present" tabindex="-1">
+    <div class="p-main">
+      <div class="p-progress" aria-hidden="true"><i style="width:${((idx + 1) / total * 100).toFixed(2)}%"></i></div>
+      <div class="p-stage">${slideHtml(slides[idx], idx, total, theme)}</div>
+      ${view.blank ? `<button class="p-blank" data-act="p-blank" aria-label="화면 가림 해제 (B)"></button>` : ""}
+      <output class="p-jump" id="pJump" hidden></output>
+      ${bar(idx, total, fs)}
+      ${view.help ? `<div class="p-help" role="dialog" aria-label="단축키"><b>단축키</b><dl>${KEYS.map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join("")}</dl></div>` : ""}
+    </div>
+    ${ui.notes ? notesHtml(slides[idx], idx, slides) : ""}
+    ${view.overview ? overviewHtml(idx, theme) : ""}
+    ${view.printing ? `<div class="p-print">${slides.map((x, i) => slideHtml(x, i, total, "light")).join("")}</div>` : ""}
+  </div>`;
+}
+
+const goN = n => go("present", String(n));
+function step(d) {
+  const total = visibleSlides().length;
+  const cur = Math.min(total, Math.max(1, parseInt(parseHash().sub, 10) || 1));
+  const n = Math.min(total, Math.max(1, cur + d));
+  if (n !== cur) goN(n);
+}
+function toggleFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  else document.documentElement.requestFullscreen?.().catch(() => {});
+}
+function exit() {
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  go("dash");
+}
+function showJump() {
+  const el = document.getElementById("pJump");
+  if (!el) return;
+  el.hidden = !view.digits;
+  el.textContent = view.digits ? `${view.digits}번으로 → Enter` : "";
+}
+
+export const actions = {
+  "p-prev": () => step(-1),
+  "p-next": () => step(1),
+  "p-goto": el => { view.overview = false; goN(el.dataset.n); },
+  "p-overview": () => { view.overview = !view.overview; view.help = false; refresh(); },
+  "p-notes": () => { ui.notes = !ui.notes; savePrefs(); refresh(); },
+  "p-stage": () => { ui.stage = { auto: "light", light: "dark", dark: "auto" }[ui.stage]; savePrefs(); refresh(); },
+  "p-print": () => window.print(),
+  "p-fullscreen": () => toggleFullscreen(),
+  "p-help": () => { view.help = !view.help; refresh(); },
+  "p-blank": () => { view.blank = !view.blank; refresh(); },
+  "p-exit": () => exit(),
+  "p-toggle": el => {
+    const id = el.dataset.id;
+    state.deckHidden = state.deckHidden.includes(id) ? state.deckHidden.filter(x => x !== id) : [...state.deckHidden, id];
+    refresh();
+  },
+  "p-unhide-all": () => { state.deckHidden = []; refresh(); },
+};
+
+// 한글 입력 상태에서도 동작하도록 문자 키는 e.code 로 판별
+const CODE_ACT = { KeyB: "p-blank", Period: "p-blank", KeyO: "p-overview", KeyG: "p-overview", KeyN: "p-notes", KeyT: "p-stage" };
+export function onKey(e) {
+  const t = e.target;
+  if (e.ctrlKey || e.metaKey || e.altKey || t?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  if (e.key === "Enter" && t?.matches?.("[role='button'][data-act]")) { e.preventDefault(); t.click(); return; }
+  if ((e.key === " " || e.key === "Enter") && t?.matches?.("button") && !view.digits) return; // 포커스된 버튼은 기본 동작
+  const total = visibleSlides().length;
+  const digit = /^(Digit|Numpad)([0-9])$/.exec(e.code);
+  let handled = true;
+  if (digit) { view.digits = (view.digits + digit[2]).slice(-3); showJump(); }
+  else if (e.key === "Enter" && view.digits) { const n = Math.min(total, Math.max(1, Number(view.digits))); view.digits = ""; showJump(); view.overview = false; goN(n); }
+  else if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(e.key)) step(1);
+  else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) step(-1);
+  else if (e.key === "Home") goN(1);
+  else if (e.key === "End") goN(total);
+  else if (CODE_ACT[e.code]) actions[CODE_ACT[e.code]]();
+  else if (e.code === "KeyF") toggleFullscreen();
+  else if (e.code === "KeyP") window.print();
+  else if (e.key === "?") actions["p-help"]();
+  else if (e.key === "Escape") {
+    if (view.digits) { view.digits = ""; showJump(); }
+    else if (view.overview || view.help || view.blank) { view.overview = view.help = view.blank = false; refresh(); }
+    else if (!document.fullscreenElement) exit();
+  } else handled = false;
+  if (handled) e.preventDefault();
+}
+
+let bound = false, clockTimer = 0, idleTimer = 0;
+function poke() {
+  const root = document.getElementById("present");
+  if (!root) return;
+  root.classList.remove("idle");
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { if (!view.overview && !view.help) document.getElementById("present")?.classList.add("idle"); }, 2800);
+}
+
+/** 화면에 붙은 뒤 호출: 포커스·타이머·전역 이벤트(한 번만 연결) */
+export function mount() {
+  const root = document.getElementById("present");
+  if (!root) return;
+  if (!view.startedAt) view.startedAt = Date.now();
+  if (!root.contains(document.activeElement)) root.focus({ preventScroll: true });
+  poke();
+  clearInterval(clockTimer);
+  clockTimer = setInterval(() => { const c = document.getElementById("pClock"); if (c) c.textContent = clock(); }, 1000);
+  if (bound) return;
+  bound = true;
+  const active = () => !!document.getElementById("present");
+  document.addEventListener("pointermove", () => { if (active()) poke(); }, { passive: true });
+  document.addEventListener("fullscreenchange", () => { if (active()) refresh(); });
+  addEventListener("beforeprint", () => { if (active() && !view.printing) { view.printing = true; refresh(); } });
+  addEventListener("afterprint", () => { if (view.printing) { view.printing = false; if (active()) refresh(); } });
+  // 터치 스와이프
+  let sx = null;
+  document.addEventListener("pointerdown", e => { sx = e.pointerType !== "mouse" && e.target.closest?.(".p-stage") ? e.clientX : null; }, { passive: true });
+  document.addEventListener("pointerup", e => {
+    if (sx === null) return;
+    const dx = e.clientX - sx;
+    sx = null;
+    if (Math.abs(dx) > 60 && active()) step(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
+export function unmount() {
+  clearInterval(clockTimer);
+  clearTimeout(idleTimer);
+  Object.assign(view, { overview: false, blank: false, help: false, digits: "" });
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+}

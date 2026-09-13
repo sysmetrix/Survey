@@ -1,4 +1,5 @@
-// 브라우저 E2E (Edge/Chrome 헤드리스 + CDP): 샘플 불러오기 → 화면 캡처 → 브라우저에서 HWPX 생성
+// 브라우저 E2E (Edge/Chrome 헤드리스 + CDP): 샘플 불러오기 → 화면 캡처 → 브라우저 HWPX 생성
+//   → 어두운 화면·툴팁 → 발표 모드(키보드·개요·노트·PDF) → 모바일 폭 → PWA(서비스워커·오프라인)
 // 사전 조건: python -m http.server 8000 (저장소 루트)
 // 사용: node tools/browser-e2e.mjs [샘플파일명]
 import { spawn } from "node:child_process";
@@ -33,16 +34,18 @@ const ws = new WebSocket(wsUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 let seq = 0;
 const pending = new Map(), problems = [];
+let offlinePhase = false;
 ws.onmessage = ev => {
   const msg = JSON.parse(ev.data);
   if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id); return; }
   if (msg.method === "Runtime.exceptionThrown") problems.push(`예외: ${msg.params.exceptionDetails.exception?.description || msg.params.exceptionDetails.text}`);
   if (msg.method === "Runtime.consoleAPICalled" && ["error", "warning"].includes(msg.params.type)) problems.push(`console.${msg.params.type}: ${msg.params.args.map(a => a.value ?? a.description).join(" ")}`);
-  if (msg.method === "Log.entryAdded" && msg.params.entry.level === "error") problems.push(`로그: ${msg.params.entry.text} ${msg.params.entry.url || ""}`);
+  if (msg.method === "Log.entryAdded" && msg.params.entry.level === "error" && !offlinePhase) problems.push(`로그: ${msg.params.entry.text} ${msg.params.entry.url || ""}`);
 };
-const cdp = (method, params = {}) => new Promise((res, rej) => {
+const cdp = (method, params = {}, ms = 60000) => new Promise((res, rej) => {
   const id = ++seq;
-  pending.set(id, m => (m.error ? rej(new Error(`${method}: ${m.error.message}`)) : res(m.result)));
+  const timer = setTimeout(() => { pending.delete(id); rej(new Error(`${method}: CDP 응답 시간 초과`)); }, ms);
+  pending.set(id, m => { clearTimeout(timer); if (m.error) rej(new Error(`${method}: ${m.error.message}`)); else res(m.result); });
   ws.send(JSON.stringify({ id, method, params }));
 });
 const evaluate = async (expression, awaitPromise = false) => {
@@ -50,21 +53,37 @@ const evaluate = async (expression, awaitPromise = false) => {
   if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
   return r.result.value;
 };
+// 페이지 새로고침 중에는 실행 컨텍스트가 사라져 평가가 실패·지연될 수 있으므로 짧은 제한시간으로 재시도
 const waitFor = async (expr, ms = 20000) => {
   const t0 = Date.now();
-  while (Date.now() - t0 < ms) { if (await evaluate(expr)) return true; await sleep(200); }
+  while (Date.now() - t0 < ms) {
+    try {
+      const r = await cdp("Runtime.evaluate", { expression: expr, returnByValue: true }, 3000);
+      if (!r.exceptionDetails && r.result.value) return true;
+    } catch { /* 이동 중 — 재시도 */ }
+    await sleep(200);
+  }
   throw new Error(`대기 시간 초과: ${expr}`);
 };
 const shot = async name => {
   const { data } = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   await writeFile(`out/browser/${name}.png`, Buffer.from(data, "base64"));
 };
+const KEYS = { ArrowRight: 39, ArrowLeft: 37, Enter: 13, Escape: 27, Digit4: 52, KeyO: 79, KeyN: 78, KeyT: 84 };
+const press = async code => {
+  const key = code.startsWith("Digit") ? code.slice(5) : code.startsWith("Key") ? code.slice(3).toLowerCase() : code;
+  const base = { key, code, windowsVirtualKeyCode: KEYS[code] };
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", ...base, ...(key.length === 1 ? { text: key } : {}) });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", ...base });
+};
+const results = [];
 
 try {
   await cdp("Runtime.enable"); await cdp("Page.enable"); await cdp("Log.enable");
   await cdp("Emulation.setDeviceMetricsOverride", { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false });
-  await cdp("Page.navigate", { url: `${BASE}#/load` });
-  await waitFor(`!!document.querySelector('.sample')`);
+  await cdp("Page.navigate", { url: `${BASE}?sw=1#/load` });
+  await waitFor(`!!document.querySelector('.sample') && document.fonts.status === 'loaded'`);
+  await sleep(300);
   await shot("1-load");
 
   await evaluate(`document.querySelector('[data-file="${SAMPLE}"]').click()`);
@@ -100,9 +119,113 @@ try {
   })()`, true);
   const out = `out/browser/e2e_${SAMPLE.replace(/\.[^.]+$/, "")}.hwpx`;
   await writeFile(out, Buffer.from(b64, "base64"));
-  console.log(`OK 화면 5종 캡처, 문장 편집=${edited}, 브라우저 HWPX ${Math.round(b64.length * 0.75 / 1024)}KB (${((Date.now() - t0) / 1000).toFixed(1)}s) → ${out}`);
+  results.push(`화면 5종 캡처, 문장 편집=${edited}, 브라우저 HWPX ${Math.round(b64.length * 0.75 / 1024)}KB (${((Date.now() - t0) / 1000).toFixed(1)}s) → ${out}`);
+
+  // 어두운 화면: 테마 버튼(시스템 → 밝게 → 어둡게)
+  await evaluate(`document.getElementById('themeBtn').click()`);
+  await evaluate(`document.getElementById('themeBtn').click()`);
+  await waitFor(`document.documentElement.dataset.theme === 'dark'`);
+  await evaluate(`location.hash = '#/dash/사전·사후 성과 변화'`);
+  await waitFor(`!!document.querySelector('.paper.view svg')`);
+  const darkSvg = await evaluate(`document.querySelector('.paper.view svg').innerHTML.includes('#1a1a19')`);
+  if (!darkSvg) throw new Error("어두운 화면에서 차트가 어두운 테마로 그려지지 않음");
+  // 툴팁: 첫 표시 요소 위로 포인터 이동
+  const pt = await evaluate(`(() => { const g = document.querySelector('.paper.view .viz-mark'); g.scrollIntoView({ block: 'center' }); const r = g.getBoundingClientRect(); return { x: r.x + r.width * 0.6, y: r.y + r.height / 2 }; })()`);
+  await sleep(150);
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: pt.x, y: pt.y });
+  await waitFor(`!!document.querySelector('.viz-tip') && !document.querySelector('.viz-tip').hidden && document.querySelector('.viz-tip strong').textContent.length > 0`, 5000)
+    .catch(async e => { throw new Error(`${e.message} / 좌표 ${JSON.stringify(pt)} 아래 요소: ${await evaluate(`(document.elementFromPoint(${pt.x}, ${pt.y})?.outerHTML || '없음').slice(0, 160)`)}`); });
+  await shot("6-dash-dark-tooltip");
+  results.push(`어두운 화면 차트·툴팁 OK ("${(await evaluate(`document.querySelector('.viz-tip').textContent`)).slice(0, 40)}")`);
+
+  // 발표 모드
+  await evaluate(`document.getElementById('presentBtn').click()`);
+  await waitFor(`location.hash === '#/present/1' && !!document.querySelector('.p-stage .slide.t-cover')`);
+  await sleep(700);
+  await shot("7a-present-cover");
+  await press("ArrowRight");
+  await waitFor(`location.hash === '#/present/2' && !!document.querySelector('.p-stage .slide.t-stats')`);
+  await sleep(700);
+  await shot("7b-present-stats");
+  await press("Digit4"); await press("Enter");
+  await waitFor(`location.hash === '#/present/4'`);
+  await sleep(900);
+  await shot("7c-present-slide4-dark");
+  await press("KeyT"); // 무대: 화면 테마 따름 → 밝은 무대
+  await waitFor(`!!document.querySelector('.p-stage .slide.light')`);
+  await sleep(900);
+  await shot("7d-present-slide4-light");
+  const total = await evaluate(`Number(document.querySelector('.p-count').textContent.split('/')[1])`);
+  for (let i = 5; i <= total; i++) {
+    await press("ArrowRight");
+    await waitFor(`location.hash === '#/present/${i}'`);
+    await sleep(850);
+    await shot(`7e-present-${String(i).padStart(2, "0")}`);
+  }
+  await press("KeyN");
+  await waitFor(`!!document.querySelector('.p-notes')`);
+  await shot("7f-present-notes");
+  await press("KeyN");
+  await press("KeyO");
+  await waitFor(`!!document.querySelector('.p-ov-grid')`);
+  await sleep(300);
+  await shot("7g-present-overview");
+  await press("Escape");
+  await waitFor(`!document.querySelector('.p-overview')`);
+  // PDF 인쇄: beforeprint → 인쇄용 전체 슬라이드 → Page.printToPDF(16:9 쪽 크기)
+  await evaluate(`window.dispatchEvent(new Event('beforeprint'))`);
+  await waitFor(`!!document.querySelector('.p-print .slide')`);
+  const nPrint = await evaluate(`document.querySelectorAll('.p-print .slide').length`);
+  const { data: pdf } = await cdp("Page.printToPDF", { preferCSSPageSize: true, printBackground: true });
+  const pdfBuf = Buffer.from(pdf, "base64");
+  await writeFile("out/browser/present-deck.pdf", pdfBuf);
+  const pages = (pdfBuf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) || []).length;
+  await evaluate(`window.dispatchEvent(new Event('afterprint'))`);
+  if (pages !== nPrint) throw new Error(`발표 PDF 쪽수 ${pages} ≠ 슬라이드 ${nPrint}`);
+  results.push(`발표 모드 ${total}장: 키보드 이동·숫자 이동·무대 전환·노트·개요 OK, PDF ${pages}쪽 → out/browser/present-deck.pdf`);
+
+  // 모바일 폭(400px)
+  await cdp("Emulation.setDeviceMetricsOverride", { width: 400, height: 860, deviceScaleFactor: 2, mobile: true });
+  await sleep(500);
+  await shot("8a-mobile-present");
+  await press("Escape");
+  await waitFor(`location.hash === '#/dash'`);
+  await evaluate(`location.hash = '#/load'`);
+  await waitFor(`!!document.querySelector('.sample')`);
+  await sleep(300);
+  const overflow = await evaluate(`document.documentElement.scrollWidth - window.innerWidth`);
+  await shot("8b-mobile-load");
+  if (overflow > 1) throw new Error(`모바일 폭에서 가로 스크롤 ${overflow}px`);
+  await cdp("Emulation.setDeviceMetricsOverride", { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false });
+
+  // PWA: 매니페스트·서비스워커·오프라인 동작
+  const pwa = await evaluate(`(async () => {
+    const m = await (await fetch(document.querySelector('link[rel=manifest]').href)).json();
+    const reg = await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(() => r(null), 20000))]);
+    const keys = await caches.keys();
+    const shell = keys.find(k => k.startsWith('survey-shell-'));
+    const n = shell ? (await (await caches.open(shell)).keys()).length : 0;
+    return { icons: m.icons.length, active: !!reg?.active, controlled: !!navigator.serviceWorker.controller, shell, n };
+  })()`, true);
+  if (!pwa.active || !pwa.shell || pwa.n < 50) throw new Error(`서비스워커 준비 안 됨: ${JSON.stringify(pwa)}`);
+  offlinePhase = true;
+  await cdp("Network.enable");
+  await cdp("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await cdp("Page.navigate", { url: `${BASE}?sw=1#/load` }, 20000).catch(e => { throw new Error(`오프라인 이동 실패: ${e.message}`); });
+  await sleep(1000);
+  await waitFor(`document.readyState === 'complete' && !!document.querySelector('.sample')`, 20000);
+  await waitFor(`!document.getElementById('net').hidden`, 5000);
+  await evaluate(`document.querySelector('[data-file="${SAMPLE}"]').click()`);
+  await waitFor(`location.hash === '#/setup' && !!document.querySelector('.tbl.setup')`, 15000);
+  await shot("9-offline-setup");
+  await cdp("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  offlinePhase = false;
+  results.push(`PWA: 아이콘 ${pwa.icons}개, 서비스워커 활성=${pwa.active}, 사전 캐시 ${pwa.n}개(${pwa.shell}), 오프라인 새로고침 후 샘플 분석 OK`);
+
+  console.log(results.map(r => `OK ${r}`).join("\n"));
 } catch (e) {
   await shot("error").catch(() => {});
+  if (results.length) console.log(results.map(r => `OK ${r}`).join("\n"));
   console.error("E2E 실패:", e.message);
   process.exitCode = 1;
 } finally {
