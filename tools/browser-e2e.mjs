@@ -80,6 +80,7 @@ const results = [];
 
 try {
   await cdp("Runtime.enable"); await cdp("Page.enable"); await cdp("Log.enable");
+  await cdp("Emulation.setFocusEmulationEnabled", { enabled: true }); // 헤드리스에서도 focus/blur 이벤트 발생
   await cdp("Emulation.setDeviceMetricsOverride", { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false });
   await cdp("Page.navigate", { url: `${BASE}?sw=1#/load` });
   await waitFor(`!!document.querySelector('.sample') && document.fonts.status === 'loaded'`);
@@ -106,14 +107,58 @@ try {
 
   // 문장 직접 편집 흐름: 요약 첫 문장 수정
   const edited = await evaluate(`(() => { const el = document.querySelector('#reportPaper [data-edit]'); el.focus(); el.textContent = '브라우저에서 고친 요약 문장'; el.blur(); return true; })()`);
+  await waitFor(`document.querySelector('.side').textContent.includes('수정 1건')`, 8000).catch(() => { throw new Error('문장 수정이 저장되지 않음(수정 1건 표시 없음)'); });
   await waitFor(`document.querySelector('#reportPaper').textContent.includes('브라우저에서 고친 요약 문장')`);
+
+  // 되돌리기(Ctrl+Z)·다시 실행(Ctrl+Y)
+  const ctrlKey = async (code, key, vk) => {
+    await cdp("Input.dispatchKeyEvent", { type: "keyDown", key, code, windowsVirtualKeyCode: vk, modifiers: 2 });
+    await cdp("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: vk, modifiers: 2 });
+  };
+  await evaluate(`document.activeElement?.blur(); document.body.focus()`);
+  await waitFor(`!document.getElementById('undoBtn').disabled`, 8000).catch(async e => {
+    const diag = await evaluate(`(async () => { const [m, s] = await Promise.all([import('./js/ui/history/manager.js'), import('./js/ui/store.js')]); return JSON.stringify({ canUndo: m.canUndo(), overrides: Object.keys(s.state.overrides).length, codebook: !!s.state.codebook, disabled: document.getElementById('undoBtn').disabled, track: m.trackChange() }); })()`, true);
+    throw new Error(`${e.message} / 진단: ${diag}`);
+  });
+  await ctrlKey("KeyZ", "z", 90);
+  await waitFor(`!document.querySelector('#reportPaper').textContent.includes('브라우저에서 고친 요약 문장')`);
+  await ctrlKey("KeyY", "y", 89);
+  await waitFor(`document.querySelector('#reportPaper').textContent.includes('브라우저에서 고친 요약 문장')`);
+
+  // 한글 문서 서식: 글꼴 프리셋 → 미리보기 반영
+  await evaluate(`(() => { const s = document.querySelector('[data-field="fontPreset"]'); s.value = 'gov'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await waitFor(`(document.getElementById('reportPaper').getAttribute('style') || '').includes('HY헤드라인M')`);
+  await sleep(300);
+  await shot("5b-report-font");
+
+  // 작업 내역: 불러오기·자동 저장 기록 → 비교
+  await sleep(3500);
+  await evaluate(`location.hash = '#/history'`);
+  await waitFor(`document.querySelectorAll('.timeline .tl-item').length >= 2`, 15000);
+  await evaluate(`document.querySelector('[data-act="hist-diff"]').click()`);
+  await waitFor(`!!document.querySelector('.diff')`);
+  await sleep(200);
+  await shot("5c-history");
+  const nVersions = await evaluate(`document.querySelectorAll('.timeline .tl-item').length`);
+
+  // 성과지표(선택): 빠른 추가·사업정보 선택 섹션
+  await evaluate(`location.hash = '#/business'`);
+  await waitFor(`!!document.querySelector('.quick-kpis') && !!document.querySelector('.card.optional')`);
+  await shot("3b-business-optional");
+  await evaluate(`location.hash = '#/report'`);
+  await waitFor(`!!document.querySelector('#reportPaper')`);
+  results.push(`되돌리기·다시 실행 OK, 글꼴 프리셋 미리보기 OK, 작업 내역 버전 ${nVersions}개·비교 OK, 성과지표 선택 화면 OK`);
 
   // 브라우저에서 HWPX 생성 (canvas 래스터화 경로)
   const t0 = Date.now();
   const b64 = await evaluate(`(async () => {
     const [m, s, t, r] = await Promise.all([import('./js/report/render-hwpx.js'), import('./js/ui/store.js'), import('./js/report/hwpx/template-parts.js'), import('./js/charts/rasterize.js')]);
     const blocks = s.reportBlocks();
-    const bytes = await m.renderHwpx(blocks, { parts: t.TEMPLATE_PARTS, JSZip: window.JSZip, title: blocks[0].text, rasterize: (svg, w, h) => r.svgToPng(svg, w, h, 2.5) });
+    const bytes = await m.renderHwpx(blocks, { parts: t.TEMPLATE_PARTS, JSZip: window.JSZip, title: blocks[0].text, doc: { fontPreset: 'gov', baseSize: 11, lineSpacing: 160 }, rasterize: (svg, w, h) => r.svgToPng(svg, w, h, 2.5) });
+    const z = await window.JSZip.loadAsync(bytes);
+    const header = await z.file('Contents/header.xml').async('string'), section = await z.file('Contents/section0.xml').async('string');
+    if (!header.includes('face="HY헤드라인M"') || !header.includes('face="휴먼명조"')) throw new Error('HWPX 글꼴 설정 누락');
+    if (!/<hp:tbl [^>]*pageBreak="TABLE"/.test(section) || /<hp:tbl [\\s\\S]*?<hp:pos treatAsChar="1"/.test(section.replace(/<hp:pic [\\s\\S]*?<\\/hp:pic>/g, ''))) throw new Error('HWPX 표가 여러 쪽 나눔 설정이 아님');
     let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
     return btoa(bin);
   })()`, true);

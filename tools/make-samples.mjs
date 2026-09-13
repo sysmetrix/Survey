@@ -102,4 +102,53 @@ const WISH = ["활동 시간이 짧아서 아쉬웠고 더 길게 했으면 좋�
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["2026 청소년 참여위원회 활동 평가 (회고식)"], [], header, ...rows]), "응답");
   await writeFile("samples/2026_참여위원회_회고식.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 }
-console.log("samples/ 3종 생성 완료");
+// ───── 4) 네이버폼 원본 형식 (제목 행, 응답일시, 긴 문항, 문자 척도, 복수응답, 이모지 의견) ─────
+{
+  const L = ["매우 불만족", "불만족", "보통", "만족", "매우 만족"];
+  const Q = [
+    "1. 프로그램에서 제공한 체험 활동이 나의 진로를 탐색하고 결정하는 데 실질적인 도움이 되었다고 생각하십니까?",
+    "2. 활동 장소(청소년수련관)의 시설과 안전 관리 상태에 대해 얼마나 만족하십니까?",
+    "3. 담당 청소년지도사 선생님의 안내와 진행 방식에 대해 얼마나 만족하십니까?",
+    "4. 프로그램 일정(요일·시간)과 전체 운영 기간이 참여하기에 적절했습니까?",
+  ];
+  const header = ["응답일시", "성별(필수)", "연령대", ...Q, "5. 프로그램에 전반적으로 만족하셨나요?", "6. 알게 된 경로를 모두 선택해 주세요", "7. 좋았던 점이나 바라는 점을 자유롭게 적어 주세요"];
+  const OPIN = ["너무 재밌었어요😊👍", "선생님이 친절하셨어요 ❤️", "시간이 좀 짧았어요 😢", "✅ 다음에도 꼭 참여할게요!", "주차 공간이 부족해요 ⚠️", "좋았습니다", "", "", "간식이 맛있었어요🍪", "진로 고민이 많이 풀렸어요 🙏"];
+  const csv = v => (v === null || v === undefined ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  const rows = [["2026 청소년 진로체험 만족도 조사 응답 결과"], [], header];
+  for (let i = 0; i < 90; i++) {
+    const base = 3.4 + rnd() * 1.1;
+    const vals = Q.map((_, k) => lik(base + [0.3, -0.3, 0.4, -0.5][k], 0.8));
+    const overall = lik(vals.reduce((a, b) => a + b, 0) / vals.length + 0.1, 0.5);
+    const route = [...new Set(Array.from({ length: 1 + Math.floor(rnd() * 2) }, () => pick(["학교 안내문", "SNS", "친구 소개", "홈페이지"])))].join(", ");
+    rows.push([`2026.06.${String(1 + (i % 28)).padStart(2, "0")} ${String(10 + (i % 8)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}`, rnd() < 0.5 ? "여성" : "남성", pick(["14~16세", "17~19세"]), ...vals.map(v => L[v - 1]), L[overall - 1], route, pick(OPIN)]);
+  }
+  await writeFile("samples/2026_진로체험_네이버폼.csv", "﻿" + rows.map(r => r.map(csv).join(",")).join("\r\n"), "utf8");
+}
+
+// ───── 5) 단일 시트 사전·사후 (사전_/사후_ 접두어, 동일 응답자) ─────
+{
+  const Q = ["자기효능감", "문제해결력", "의사소통 능력", "공동체 의식"];
+  const header = ["ID", "학교급", ...Q.map(q => `사전_${q}`), ...Q.map(q => `사후_${q}`), "전반적 만족도"];
+  const rows = Array.from({ length: 64 }, (_, i) => {
+    const b = 2.7 + rnd() * 1.1, pre = Q.map(() => lik(b)), post = pre.map((v, k) => Math.max(1, Math.min(5, v + (rnd() < [0.6, 0.5, 0.45, 0.2][k] ? 1 : 0))));
+    return [`S${String(i + 1).padStart(3, "0")}`, pick(["중학생", "고등학생"]), ...pre, ...post, lik(4.1, 0.6)];
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), "응답");
+  await writeFile("samples/2026_리더십캠프_사전사후_한시트.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
+}
+
+// ───── 6) 7점 척도 + 역문항 + NPS ─────
+{
+  const Q = ["활동 내용이 흥미로웠다", "새로운 것을 배울 수 있었다", "활동이 지루하다고 느꼈다(역문항)", "지도자가 나의 의견을 존중해 주었다", "다른 친구들과 협력할 기회가 충분했다"];
+  const header = ["번호", "성별", "학년", ...Q, "이 활동을 친구에게 추천할 의향(0~10점)", "하고 싶은 말"];
+  const rows = Array.from({ length: 80 }, (_, i) => {
+    const b = 4.6 + rnd() * 1.6;
+    const vals = Q.map((q, k) => (q.includes("역문항") ? Math.max(1, Math.min(7, Math.round(8 - b + norm() * 0.9))) : lik(b + [0.3, 0.2, 0, 0.1, -0.2][k], 1, 1, 7)));
+    return [i + 1, rnd() < 0.5 ? "남" : "여", pick(["중1", "중2", "중3"]), ...vals, Math.max(0, Math.min(10, Math.round(b * 1.45 + 0.2 + norm()))), rnd() < 0.5 ? pick(GOOD) : null];
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), "응답");
+  await writeFile("samples/2026_생태탐험_7점척도_NPS.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
+}
+console.log("samples/ 6종 생성 완료");

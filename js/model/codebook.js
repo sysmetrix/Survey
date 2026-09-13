@@ -73,7 +73,8 @@ export function buildCodebook(dataset) {
         key: `s${si}c${ci}`, sheet: si, index: ci, header: String(header), label: shortLabel(header),
         role: det.role, scale: det.scale || null, labelMap: det.labelMap || null, labelSetId: det.labelSetId || null, labelAmbiguous: !!det.labelAmbiguous,
         options: det.options || null, delimiter: det.delimiter || null,
-        reverse: false, missingCodes: [], valueLabels: null,
+        // 헤더에 역문항 표시가 있으면 역채점 (예: "…지루했다(역문항)", "(R)")
+        reverse: det.role === "likert" && /역\s*문항|역\s*채점|\(R\)|\[R\]/i.test(header), missingCodes: [], valueLabels: null,
         domain: gridParent(header), competency: null,
         time: ["likert", "nps", "numeric"].includes(det.role) && t ? t.time : null,
         pairKey: ["likert", "nps", "numeric"].includes(det.role) && t ? t.pairKey : null,

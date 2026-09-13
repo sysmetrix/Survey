@@ -26,7 +26,7 @@ test("인라인 이벤트 핸들러·javascript: URL 없음 (v5 화면)", async 
 });
 
 test("순수 모듈은 DOM·브라우저 전역에 의존하지 않음", async () => {
-  const dirs = ["js/core", "js/stats", "js/model", "js/analysis", "js/evaluation", "js/narrative", "js/report", "js/io", "js/present", "js/charts"];
+  const dirs = ["js/core", "js/stats", "js/model", "js/analysis", "js/evaluation", "js/narrative", "js/report", "js/io", "js/present", "js/charts", "js/history"];
   const allow = new Set(["js/report/render-hwpx.js", "js/charts/rasterize.js"].map(p => p.replace(/\//g, "\\")));
   for (const d of dirs) {
     for (const f of await walk(d)) {

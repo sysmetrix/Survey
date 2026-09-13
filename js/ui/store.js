@@ -11,15 +11,30 @@ import { finalizeBlocks } from "../report/model.js";
 import { buildDeck } from "../present/deck.js";
 import { DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { koDate } from "../core/util.js";
+import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, cleanFontName } from "../report/hwpx/fonts.js";
 
 const LS_KEY = "survey-v5-settings";
 function loadSettings() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { /* 비공개 모드 등 */ }
-  return { orgName: saved.orgName || "부천여성청소년재단", reportTitle: "", date: koDate(), thresholds: { ...DEFAULT_THRESHOLDS, ...(saved.thresholds || {}) } };
+  return {
+    orgName: saved.orgName || "부천여성청소년재단", reportTitle: "", date: koDate(), thresholds: { ...DEFAULT_THRESHOLDS, ...(saved.thresholds || {}) },
+    ...pickDocSettings(saved),
+  };
 }
+/** 한글 문서 서식 설정 (글꼴·크기·줄 간격) — 값 검증 후 기본값 */
+export function pickDocSettings(o = {}) {
+  const num = (v, ok, d) => (ok.includes(Number(v)) ? Number(v) : d);
+  return {
+    fontPreset: FONT_PRESETS.some(p => p.id === o.fontPreset) ? o.fontPreset : "hancom",
+    fontBody: cleanFontName(o.fontBody), fontHeading: cleanFontName(o.fontHeading),
+    baseSize: num(o.baseSize, FONT_SIZES, 11), lineSpacing: num(o.lineSpacing, LINE_SPACINGS, 160),
+  };
+}
+const DOC_KEYS = ["fontPreset", "fontBody", "fontHeading", "baseSize", "lineSpacing"];
 export function persistSettings() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ orgName: state.settings.orgName, thresholds: state.settings.thresholds })); return true; } catch { return false; }
+  const s = state.settings;
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ orgName: s.orgName, thresholds: s.thresholds, ...Object.fromEntries(DOC_KEYS.map(k => [k, s[k]])) })); return true; } catch { return false; }
 }
 
 export const state = {
@@ -27,7 +42,7 @@ export const state = {
   logicModel: emptyLogicModel(), kpis: [],
   settings: loadSettings(),
   overrides: {}, hidden: [], hiddenChapters: [],
-  deckHidden: [],
+  deckHidden: [], overrideBase: {},
   excludeStraight: false,
   businessFound: null,
   results: null, dirty: true,
@@ -54,11 +69,35 @@ export function loadDataset(dataset, project = null) {
   if (!project) {
     state.logicModel = biz.logicModel || emptyLogicModel();
     state.kpis = biz.kpis || [];
-    state.overrides = {}; state.hidden = []; state.hiddenChapters = []; state.deckHidden = [];
+    state.overrides = {}; state.hidden = []; state.hiddenChapters = []; state.deckHidden = []; state.overrideBase = {};
     state.settings.reportTitle = "";
   }
   invalidate();
   return note;
+}
+
+/** 외부(프로젝트 파일·내역)에서 온 설정은 알려진 항목만 검증해 반영 */
+function applySettingsFrom(s) {
+  if (!s || typeof s !== "object") return;
+  ["orgName", "reportTitle", "date"].forEach(k => { if (typeof s[k] === "string") state.settings[k] = s[k].slice(0, 200); });
+  if (s.thresholds && typeof s.thresholds === "object" && !Array.isArray(s.thresholds)) state.settings.thresholds = { ...DEFAULT_THRESHOLDS, ...s.thresholds };
+  Object.assign(state.settings, pickDocSettings({ ...state.settings, ...s }));
+}
+
+/** 편집 가능한 값 적용 (되돌리기·버전 복원) — 같은 설문일 때만 코드북 교체 */
+export function applyEditable(e) {
+  if (!e || typeof e !== "object") return;
+  if (e.codebook && state.codebook && e.codebook.headersHash === state.codebook.headersHash) state.codebook = e.codebook;
+  state.logicModel = normalizeLogicModel(e.logicModel || {});
+  state.kpis = Array.isArray(e.kpis) ? e.kpis : [];
+  state.overrides = e.overrides && typeof e.overrides === "object" ? e.overrides : {};
+  state.hidden = Array.isArray(e.hidden) ? e.hidden : [];
+  state.hiddenChapters = Array.isArray(e.hiddenChapters) ? e.hiddenChapters : [];
+  state.deckHidden = Array.isArray(e.deckHidden) ? e.deckHidden : [];
+  state.overrideBase = e.overrideBase && typeof e.overrideBase === "object" ? e.overrideBase : {};
+  state.excludeStraight = !!e.excludeStraight;
+  applySettingsFrom(e.settings);
+  invalidate();
 }
 
 /** 프로젝트 적용 (원자료 포함 시 데이터도 복원) */
@@ -69,8 +108,9 @@ export function applyProject(p) {
   state.hidden = p.report?.hidden || [];
   state.hiddenChapters = p.report?.hiddenChapters || [];
   state.deckHidden = p.present?.hidden || [];
+  state.overrideBase = p.report?.overrideBase || {};
   state.excludeStraight = !!p.excludeStraight;
-  Object.assign(state.settings, p.settings || {});
+  applySettingsFrom(p.settings);
   state.pendingProject = p;
   if (p.dataset) return loadDataset(p.dataset, p);
   invalidate();
@@ -116,5 +156,5 @@ export function deckSlides() {
 export function reportBlocks() {
   const r = compute();
   if (!r) return [];
-  return finalizeBlocks(r.blocksRaw, { overrides: state.overrides, hidden: new Set(state.hidden), hiddenChapters: new Set(state.hiddenChapters) });
+  return finalizeBlocks(r.blocksRaw, { overrides: state.overrides, hidden: new Set(state.hidden), hiddenChapters: new Set(state.hiddenChapters), overrideBase: state.overrideBase || {} });
 }

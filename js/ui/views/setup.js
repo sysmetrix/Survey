@@ -97,7 +97,7 @@ export function render() {
   <section class="card">
     <div class="row between wrap">
       <div><h2>데이터 설정</h2><p class="muted">자동 판별 결과를 확인하고 필요한 부분만 고치세요. 변경 사항은 분석·보고서에 바로 반영됩니다.</p></div>
-      <div class="row gap"><button class="btn" data-act="goto" data-to="business">다음: 사업정보·성과지표 →</button><button class="btn ghost" data-act="goto" data-to="dash">분석 결과 보기</button></div>
+      <div class="row gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button><button class="btn ghost" data-act="goto" data-to="dash">건너뛰고 분석 결과 보기</button></div>
     </div>
     <div class="facts">
       <div><span>파일</span><b>${esc(state.dataset.fileName)}</b></div>
@@ -139,7 +139,7 @@ export function render() {
       <thead><tr><th>#</th><th>원래 열 이름 · 응답 예</th><th>표시 이름</th><th>역할</th><th>척도 범위</th><th>역문항</th><th>영역</th><th>시점</th><th>전반 만족</th></tr></thead>
       <tbody>${colRows}</tbody>
     </table></div>
-    <div class="row end gap"><button class="btn" data-act="goto" data-to="business">다음: 사업정보·성과지표 →</button></div>
+    <div class="row end gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button></div>
   </section>`;
 }
 

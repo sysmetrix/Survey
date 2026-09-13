@@ -57,7 +57,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       type: "chart", section: "성과지표",
       title: `성과지표 ${s.total}개 중 ${s.achieved}개 달성${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}`,
       subtitle: `종합 평가 ${s.grade} · 평균 달성률 ${f1(s.avgRate)}%`,
-      chart: measured.length ? { kind: "kpiBullet", data: measured.map(r => ({ label: short(r.name, 20), rate: r.rate })), opts: { mostly: t.kpiMostly, width: 900 } } : null,
+      chart: measured.length ? { kind: "kpiBullet", data: measured.map(r => ({ label: r.name, rate: r.rate })), opts: { mostly: t.kpiMostly, width: 900 } } : null,
       aside: miss.length ? { title: "미달성 지표", items: miss.map(r => `${r.name} — ${f1(r.rate)}%`) } : { title: "모든 지표 목표 근접", items: E.results.map(r => `${r.name} ${f1(r.rate)}%`).slice(0, 4) },
       notes: E.results.map(r => `${r.name}: 목표 ${r.targetValue}${r.unit || ""}, 실적 ${Number.isFinite(r.actualValue) ? r.actualValue.toFixed(2).replace(/\.00$/, "") : "-"}${r.unit || ""}, ${r.judgment}${r.facts ? ` (${r.facts})` : ""}`),
       source: `달성률 = 실적 ÷ 목표 × 100 · 판정: ${t.kpiAchieved}% 이상 달성, ${t.kpiMostly}% 이상 대체로 달성`,
@@ -68,7 +68,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   if (ALLP) {
     const sig = ALLP.primary.p < 0.05;
     const doms = P.domains.filter(d => d.id !== "ALL");
-    const rowsFrom = list => list.slice(0, 8).map(d => ({ label: short(d.name || d.label, 22), pre: d.mPre, post: d.mPost, sig: d.primary.p < 0.05 }));
+    const rowsFrom = list => list.slice(0, 8).map(d => ({ label: d.name || d.label, pre: d.mPre, post: d.mPost, sig: d.primary.p < 0.05 }));
     const scale = P.items[0].scale;
     // 발표용: 변화가 보이도록 가로축을 값 범위(정수 단위)로 확대 — 각주에 명시
     const zoom = rows => {

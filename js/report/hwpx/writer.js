@@ -2,21 +2,26 @@
 // 한글이 저장한 빈 문서의 header.xml 을 기반으로, 필요한 글자모양(charPr)·문단모양(paraPr)·
 // 테두리/배경(borderFill)을 레지스트리로 추가하고 itemCnt 를 갱신한다.
 // 본문 XML 패턴(hp:tbl, hp:pic, hh:bold)은 한글 2024 저장본에서 추출한 구조를 따른다.
-import { escText, escAttr } from "./xml.js";
+import { escText } from "./xml.js";
+import { toHwpText } from "./symbols.js";
+import { resolveFonts, applyFontsToHeader } from "./fonts.js";
 
 export const HWPUNIT_PER_MM = 7200 / 25.4;
 export const mm = v => Math.round(v * HWPUNIT_PER_MM);
 
 const HNC_UNIT_NS = "http://www.hancom.co.kr/hwpml/2016/HwpUnitChar";
+// 글꼴 id 약속 (fonts.js applyFontsToHeader 와 동일)
+const FONT_ID = { dotum: 0, batang: 1, bold: 2 };
 
 // ─────────────────────────── 헤더 레지스트리 ───────────────────────────
-function createRegistry(headerXml, fonts) {
+function createRegistry(headerXml, { boldFace = false } = {}) {
   const count = tag => +headerXml.match(new RegExp(`<hh:${tag} itemCnt="(\\d+)"`))[1];
   const state = {
     borderFill: { next: count("borderFills") + 1, xml: [], map: new Map() }, // borderFill id 는 1부터
     charPr: { next: count("charProperties"), xml: [], map: new Map() },
     paraPr: { next: count("paraProperties"), xml: [], map: new Map() },
   };
+  // 새 항목은 템플릿 마지막 id 다음부터 오름차순으로 붙인다 (한글은 목록의 등장 순서를 따르므로 순서 유지 필수)
   const intern = (kind, spec, build) => {
     const key = JSON.stringify(spec);
     const s = state[kind];
@@ -29,17 +34,19 @@ function createRegistry(headerXml, fonts) {
 
   const charPr = ({ font = "batang", size = 11, bold = false, color = "#000000", spacing = 0 }) =>
     intern("charPr", { font, size, bold, color, spacing }, (id, s) => {
-      const f = fonts[s.font] ?? 0;
+      // 별도 Bold 글꼴(KoPub 등)이 있으면 굵게는 그 글꼴로, 없으면 <hh:bold/>
+      const useBoldFace = s.bold && boldFace;
+      const f = useBoldFace ? FONT_ID.bold : FONT_ID[s.font] ?? FONT_ID.batang;
       const all = v => `hangul="${v}" latin="${v}" hanja="${v}" japanese="${v}" other="${v}" symbol="${v}" user="${v}"`;
       return `<hh:charPr id="${id}" height="${Math.round(s.size * 100)}" textColor="${s.color}" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">` +
         `<hh:fontRef ${all(f)}/><hh:ratio ${all(100)}/><hh:spacing ${all(s.spacing)}/><hh:relSz ${all(100)}/><hh:offset ${all(0)}/>` +
-        (s.bold ? "<hh:bold/>" : "") +
+        (s.bold && !useBoldFace ? "<hh:bold/>" : "") +
         `<hh:underline type="NONE" shape="SOLID" color="#000000"/><hh:strikeout shape="NONE" color="#000000"/><hh:outline type="NONE"/><hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/></hh:charPr>`;
     });
 
   /** 단위: HWPUNIT (1pt = 100) */
   const paraPr = ({ align = "JUSTIFY", left = 0, intent = 0, before = 0, after = 0, line = 160, keepNext = false }) =>
-    intent === undefined ? 0 : intern("paraPr", { align, left, intent, before, after, line, keepNext }, (id, s) => {
+    intern("paraPr", { align, left, intent, before, after, line, keepNext }, (id, s) => {
       const margin = h => `<hh:margin><hc:intent value="${Math.round(s.intent * h)}" unit="HWPUNIT"/><hc:left value="${Math.round(s.left * h)}" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="${Math.round(s.before * h)}" unit="HWPUNIT"/><hc:next value="${Math.round(s.after * h)}" unit="HWPUNIT"/></hh:margin><hh:lineSpacing type="PERCENT" value="${s.line}" unit="HWPUNIT"/>`;
       return `<hh:paraPr id="${id}" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">` +
         `<hh:align horizontal="${s.align}" vertical="BASELINE"/><hh:heading type="NONE" idRef="0" level="0"/>` +
@@ -61,16 +68,16 @@ function createRegistry(headerXml, fonts) {
         `</hh:borderFill>`;
     });
 
-  const buildHeader = () => {
-    let h = headerXml;
-    const inject = (listTag, itemTag, s) => {
+  const buildHeader = baseHeader => {
+    let h = baseHeader;
+    const inject = (listTag, s) => {
       if (!s.xml.length) return;
       h = h.replace(new RegExp(`<hh:${listTag} itemCnt="\\d+"`), `<hh:${listTag} itemCnt="${(listTag === "borderFills" ? s.next - 1 : s.next)}"`);
       h = h.replace(`</hh:${listTag}>`, s.xml.join("") + `</hh:${listTag}>`);
     };
-    inject("borderFills", "borderFill", state.borderFill);
-    inject("charProperties", "charPr", state.charPr);
-    inject("paraProperties", "paraPr", state.paraPr);
+    inject("borderFills", state.borderFill);
+    inject("charProperties", state.charPr);
+    inject("paraProperties", state.paraPr);
     return h;
   };
   return { charPr, paraPr, borderFill, buildHeader };
@@ -100,26 +107,39 @@ export const stripBold = t => String(t ?? "").split(BOLD_SPLIT).map(s => (BOLD_W
  * @param {string} o.title   문서 제목(메타데이터)
  * @param {object} [o.margins] mm 단위 {left,right,top,bottom,header,footer}
  * @param {number} [o.baseSize] 본문 글자 크기(pt)
+ * @param {number} [o.lineSpacing] 본문 줄 간격(%)
+ * @param {object} [o.fontSettings] {fontPreset, fontBody, fontHeading} — fonts.js resolveFonts
  */
-export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, baseSize = 11, pageNumber = true } = {}) {
+export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, baseSize = 11, lineSpacing = 160, fontSettings = {}, pageNumber = true } = {}) {
   const M = { left: 20, right: 20, top: 15, bottom: 15, header: 10, footer: 10, ...margins };
-  const reg = createRegistry(parts.HEADER_XML, parts.FONTS);
+  if (parts.FONTS && (parts.FONTS.dotum !== FONT_ID.dotum || parts.FONTS.batang !== FONT_ID.batang)) throw new Error("템플릿 글꼴 순서가 예상과 다릅니다(0=돋움, 1=바탕)");
+  const fonts = resolveFonts(fontSettings);
+  const reg = createRegistry(parts.HEADER_XML, { boldFace: !!fonts.boldFace });
   const pageW = +parts.SEC_PR.match(/<hp:pagePr[^>]*\bwidth="(\d+)"/)[1];
   const bodyWidth = pageW - mm(M.left) - mm(M.right);
   const B = baseSize;
+  const LS = Math.max(100, Math.min(250, Math.round(lineSpacing)));
 
   const paras = [];          // 본문 문단 XML
   const images = [];         // {id, path, data}
   const preview = [];        // 미리보기 텍스트
   let objId = 1900000000;
   let pendingPageBreak = false;
+  let emojiReplaced = 0;
 
   const cp = spec => reg.charPr(spec);
   const pp = spec => reg.paraPr(spec);
+  /** HWPX 로 쓰는 모든 글자: 이모지 → 한글 지원 기호 */
+  const hwpText = t => {
+    const s = String(t ?? "");
+    const r = toHwpText(s);
+    if (r !== s) emojiReplaced++;
+    return r;
+  };
 
   /** "**굵게**" 마크업 → run 배열 (별표 연속 "***"·"** p" 는 굵게로 해석하지 않음) */
   const runs = (text, charSpec) => {
-    const parts2 = String(text ?? "").split(BOLD_SPLIT).filter(s => s !== "");
+    const parts2 = hwpText(text).split(BOLD_SPLIT).filter(s => s !== "");
     if (!parts2.length) return `<hp:run charPrIDRef="${cp(charSpec)}"/>`;
     return parts2.map(seg => {
       const bold = BOLD_WHOLE.test(seg);
@@ -127,7 +147,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
       return `<hp:run charPrIDRef="${cp({ ...charSpec, bold: charSpec.bold || bold })}"><hp:t>${escText(t)}</hp:t></hp:run>`;
     }).join("");
   };
-  const stripMarks = stripBold;
+  const stripMarks = t => stripBold(hwpText(t));
 
   const pOpen = paraId => {
     const pb = pendingPageBreak ? 1 : 0;
@@ -143,6 +163,8 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
   const api = {
     bodyWidth,
     bodyWidthMm: bodyWidth / HWPUNIT_PER_MM,
+    fonts,
+    get emojiReplaced() { return emojiReplaced; },
 
     /** 보고서 제목 */
     title(text, subtitle) {
@@ -163,16 +185,16 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
       const size = lv === 1 ? B + 1 : B;
       const symbolW = Math.round(size * 100 * (lv >= 3 ? 1.1 : 1.6));
       const left = [0, 0, 1100, 2400, 3500][lv];
-      addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "JUSTIFY", left: left + symbolW, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: 160 });
+      addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "JUSTIFY", left: left + symbolW, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: LS });
       return api;
     },
     paragraph(text, { size = B, align = "JUSTIFY", color = "#000000", bold = false, before = 100, after = 100, font = "batang" } = {}) {
-      addPara(text, { font, size, bold, color }, { align, before, after, line: 160 });
+      addPara(text, { font, size, bold, color }, { align, before, after, line: LS });
       return api;
     },
     /** 표/그림 제목, 단위, 주석, 출처 */
-    caption(text, { align = "CENTER", before = 500, after = 150 } = {}) {
-      addPara(text, { font: "dotum", size: B - 1, bold: true }, { align, before, after, line: 140, keepNext: true });
+    caption(text, { align = "CENTER", before = 500, after = 150, keepNext = true } = {}) {
+      addPara(text, { font: "dotum", size: B - 1, bold: true }, { align, before, after, line: 140, keepNext });
       return api;
     },
     note(text, { align = "LEFT", before = 60, after = 60, keepNext = false } = {}) {
@@ -183,7 +205,8 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     blank(size = B) { addPara("", { font: "batang", size }, { line: 100 }); return api; },
 
     /**
-     * 표
+     * 표 — 여러 쪽 지원: 글자처럼 취급하지 않고(treatAsChar=0) 쪽 경계에서 나누며(pageBreak=TABLE),
+     * 제목 줄은 쪽마다 반복(repeatHeader=1)
      * @param {object} spec
      * @param {{weight:number, align?:'LEFT'|'CENTER'|'RIGHT'}[]} spec.columns
      * @param {Array<Array<string|{text, colSpan?, rowSpan?, shade?, bold?, align?}>>} spec.rows  (머리행 포함)
@@ -248,12 +271,12 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
       });
       const tblBf = reg.borderFill({ left: NOLINE, right: NOLINE, top: NOLINE, bottom: NOLINE, fill: null });
       const id = objId++;
-      const tbl = `<hp:tbl id="${id}" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="${headerRows > 0 ? 1 : 0}" rowCnt="${nRows}" colCnt="${nCols}" cellSpacing="0" borderFillIDRef="${tblBf}" noAdjust="0">` +
+      const tbl = `<hp:tbl id="${id}" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="TABLE" repeatHeader="${headerRows > 0 ? 1 : 0}" rowCnt="${nRows}" colCnt="${nCols}" cellSpacing="0" borderFillIDRef="${tblBf}" noAdjust="0">` +
         `<hp:sz width="${totalW}" widthRelTo="ABSOLUTE" height="${cellH * nRows}" heightRelTo="ABSOLUTE" protect="0"/>` +
-        `<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>` +
-        `<hp:outMargin left="0" right="0" top="0" bottom="0"/><hp:inMargin left="340" right="340" top="120" bottom="120"/>` +
+        `<hp:pos treatAsChar="0" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="${align === "CENTER" ? "CENTER" : "LEFT"}" vertOffset="0" horzOffset="0"/>` +
+        `<hp:outMargin left="0" right="0" top="0" bottom="${mm(1.5)}"/><hp:inMargin left="340" right="340" top="120" bottom="120"/>` +
         trs.map(cells => `<hp:tr>${cells.join("")}</hp:tr>`).join("") + `</hp:tbl>`;
-      paras.push(pOpen(pp({ align, line: 100, before: 0, after: 100 })) + `<hp:run charPrIDRef="${cp({ font: "dotum", size: fontSize })}">${tbl}<hp:t/></hp:run></hp:p>`);
+      paras.push(pOpen(pp({ align: "LEFT", line: 100, before: 0, after: 0 })) + `<hp:run charPrIDRef="${cp({ font: "dotum", size: fontSize })}">${tbl}<hp:t/></hp:run></hp:p>`);
       return api;
     },
 
@@ -265,7 +288,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     },
 
     /**
-     * 그림 (PNG) — 글자처럼 취급, 가운데 정렬
+     * 그림 (PNG) — 한 덩어리로 옮겨지도록 글자처럼 취급, 가운데 정렬
      * @param {{png: Uint8Array, wPx: number, hPx: number, widthMm?: number}} o
      */
     figure({ png, wPx, hPx, widthMm = 150 }) {
@@ -301,12 +324,12 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
       const secRun = `<hp:run charPrIDRef="${cp({ font: "batang", size: B })}">${secPr}${parts.COL_PR}${pageNum}</hp:run>`;
       const first = paras[0].replace(/^(<hp:p [^>]*>)/, `$1${secRun}`);
       const sectionXml = parts.SECTION_OPEN + first + paras.slice(1).join("") + `</hs:sec>`;
-      const headerXml = reg.buildHeader();
+      const headerXml = reg.buildHeader(applyFontsToHeader(parts.HEADER_XML, fonts));
 
       const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
       let hpf = parts.CONTENT_HPF
-        .replace(/<opf:title\/>|<opf:title>[\s\S]*?<\/opf:title>/, `<opf:title>${escText(title)}</opf:title>`)
-        .replace(/(<opf:meta name="(?:creator|lastsaveby)" content="text")(?:\/>|>[\s\S]*?<\/opf:meta>)/g, `$1>${escText(creator)}</opf:meta>`)
+        .replace(/<opf:title\/>|<opf:title>[\s\S]*?<\/opf:title>/, `<opf:title>${escText(hwpText(title))}</opf:title>`)
+        .replace(/(<opf:meta name="(?:creator|lastsaveby)" content="text")(?:\/>|>[\s\S]*?<\/opf:meta>)/g, `$1>${escText(hwpText(creator))}</opf:meta>`)
         .replace(/(<opf:meta name="(?:CreatedDate|ModifiedDate)" content="text")(?:\/>|>[\s\S]*?<\/opf:meta>)/g, `$1>${now}</opf:meta>`)
         .replace(/(<opf:meta name="date" content="text")(?:\/>|>[\s\S]*?<\/opf:meta>)/, `$1>${now}</opf:meta>`)
         .replace(/<opf:item id="image\d+"[^>]*\/>/g, "");

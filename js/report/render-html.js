@@ -6,9 +6,11 @@ import { BOLD_SPLIT, BOLD_WHOLE } from "./hwpx/writer.js";
 const SYM = { 1: "□", 2: "○", 3: "-", 4: "·" };
 export const inlineHtml = t => String(t ?? "").split(BOLD_SPLIT).map(s => (BOLD_WHOLE.test(s) ? `<strong>${esc(s.slice(2, -2))}</strong>` : esc(s))).join("").replace(/\n/g, "<br>");
 
-function editableText(key, text, editable, edited) {
+function editableText(it, editable) {
+  const { key, text, edited, stale, auto } = it;
   if (!editable || !key) return `<span class="r-txt">${inlineHtml(text)}</span>`;
-  return `<span class="r-txt" contenteditable="true" spellcheck="false" data-edit="${esc(key)}" data-raw="${esc(text)}">${inlineHtml(text)}</span>` +
+  return `<span class="r-txt" contenteditable="true" spellcheck="false" data-edit="${esc(key)}" data-raw="${esc(text)}" data-auto="${esc(auto ?? text)}">${inlineHtml(text)}</span>` +
+    (stale ? `<span class="r-stale no-print" title="직접 고친 뒤 분석 결과(근거 수치)가 바뀌었습니다. 새 자동 문장: ${esc(auto)}">근거 변경</span>` : "") +
     `<span class="r-tools">${edited ? `<button class="r-tool" data-act="reset-item" data-key="${esc(key)}" title="자동 문장으로 되돌리기">↺</button>` : ""}<button class="r-tool" data-act="hide-item" data-key="${esc(key)}" title="이 문장 빼기">✕</button></span>`;
 }
 
@@ -50,9 +52,9 @@ export function blocksToHtml(blocks, { editable = false, figureHtml = null, them
     switch (b.type) {
       case "title": return `<h1 class="r-title">${esc(b.text)}</h1>${b.subtitle ? `<p class="r-sub">${esc(b.subtitle)}</p>` : ""}`;
       case "heading": return b.level === 1 ? `<h2 class="r-h1">${esc(b.display)}</h2>` : `<h3 class="r-h2">${esc(b.display)}</h3>`;
-      case "bullets": return b.items.map(it => `<p class="r-b r-b${it.level}${it.edited ? " edited" : ""}"><span class="r-sym">${SYM[it.level]}</span>${editableText(it.key, it.text, editable, it.edited)}</p>`).join("");
-      case "box": return `<div class="r-box">${b.lines.map(l => `<p class="r-boxline${l.edited ? " edited" : ""}">${editableText(l.key, l.text, editable, l.edited)}</p>`).join("")}</div>`;
-      case "paragraph": return `<p class="r-p${b.style === "note" ? " r-note" : ""}">${editableText(b.key, b.text, editable, b.edited)}</p>`;
+      case "bullets": return b.items.map(it => `<p class="r-b r-b${it.level}${it.edited ? " edited" : ""}"><span class="r-sym">${SYM[it.level]}</span>${editableText(it, editable)}</p>`).join("");
+      case "box": return `<div class="r-box">${b.lines.map(l => `<p class="r-boxline${l.edited ? " edited" : ""}">${editableText(l, editable)}</p>`).join("")}</div>`;
+      case "paragraph": return `<p class="r-p${b.style === "note" ? " r-note" : ""}">${editableText(b, editable)}</p>`;
       case "table": return tableHtml(b);
       case "figure": {
         let inner;

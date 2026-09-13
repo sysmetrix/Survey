@@ -8,11 +8,19 @@ import { stripBold } from "./hwpx/writer.js";
 const ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "Ⅺ", "Ⅻ"];
 const GANADA = "가나다라마바사아자차카타파하";
 
-/** 장·절 번호, 표·그림 번호 부여 + 사용자 수정문(overrides) 적용 */
-export function finalizeBlocks(blocks, { overrides = {}, hidden = new Set(), hiddenChapters = new Set() } = {}) {
+/**
+ * 장·절 번호, 표·그림 번호 부여 + 사용자 수정문(overrides) 적용
+ * overrideBase: 문장을 고칠 당시의 자동 문장 — 지금 자동 문장과 다르면 근거 수치가 바뀐 것(stale)
+ */
+export function finalizeBlocks(blocks, { overrides = {}, hidden = new Set(), hiddenChapters = new Set(), overrideBase = {} } = {}) {
   let ch = 0, sec = 0, tbl = 0, fig = 0;
   const out = [];
   let skipping = false;
+  const applyOverride = it => {
+    if (!it.key || overrides[it.key] === undefined) return it;
+    const base = overrideBase[it.key];
+    return { ...it, text: overrides[it.key], edited: true, auto: it.text, stale: base !== undefined && base !== it.text };
+  };
   for (const b0 of blocks) {
     const b = { ...b0 };
     if (b.type === "heading" && b.level === 1) skipping = hiddenChapters.has(b.text);
@@ -24,9 +32,9 @@ export function finalizeBlocks(blocks, { overrides = {}, hidden = new Set(), hid
       else { b.number = `${GANADA[(b.index ?? 1) - 1] || ""}.`; }
       b.display = b.number ? `${b.number} ${b.text}` : b.text;
     }
-    if (b.type === "bullets") b.items = b.items.filter(it => !hidden.has(it.key)).map(it => (it.key && overrides[it.key] !== undefined ? { ...it, text: overrides[it.key], edited: true } : it));
-    if (b.type === "box") b.lines = b.lines.filter(it => !hidden.has(it.key)).map(it => (it.key && overrides[it.key] !== undefined ? { ...it, text: overrides[it.key], edited: true } : it));
-    if (b.type === "paragraph" && b.key && overrides[b.key] !== undefined) { b.text = overrides[b.key]; b.edited = true; }
+    if (b.type === "bullets") b.items = b.items.filter(it => !hidden.has(it.key)).map(applyOverride);
+    if (b.type === "box") b.lines = b.lines.filter(it => !hidden.has(it.key)).map(applyOverride);
+    if (b.type === "paragraph") Object.assign(b, applyOverride(b));
     if (b.type === "table") { tbl++; b.number = tbl; b.display = `<표 ${tbl}> ${b.caption}`; }
     if (b.type === "figure") { fig++; b.number = fig; b.display = `<그림 ${fig}> ${b.caption}`; }
     if ((b.type === "bullets" && !b.items.length) || (b.type === "box" && !b.lines.length)) continue;

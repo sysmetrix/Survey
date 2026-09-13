@@ -1,15 +1,58 @@
-// ⑤ 보고서 화면: 편집 가능한 미리보기 + HWPX/인쇄/복사/프로젝트 저장
+// ⑤ 보고서 화면: 편집 가능한 미리보기 + 한글 문서 서식(글꼴·크기·줄 간격) + HWPX/인쇄/복사/프로젝트 저장
 import { state, compute, reportBlocks, invalidate, persistSettings } from "../store.js";
 import { finalizeBlocks, blocksToText, chartSvg } from "../../report/model.js";
 import { blocksToHtml, splitChapters } from "../../report/render-html.js";
 import { renderHwpx } from "../../report/render-hwpx.js";
+import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, resolveFonts, cleanFontName } from "../../report/hwpx/fonts.js";
 import { svgToPng } from "../../charts/rasterize.js";
 import { projectToJson } from "../../io/project.js";
-import { esc, toast, busy, download, safeFileName, nextFrame } from "../util.js";
+import { esc, toast, busy, download, safeFileName, nextFrame, option } from "../util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
+import { isFontInstalled } from "../fontcheck.js";
 
 let includeData = false;
+let fontStatus = {}; // 글꼴 이름 → true/false/null (설치 확인 결과)
+
+const docOptions = () => {
+  const s = state.settings;
+  return { fontPreset: s.fontPreset, fontBody: s.fontBody, fontHeading: s.fontHeading, baseSize: s.baseSize, lineSpacing: s.lineSpacing };
+};
+
+/** 미리보기 용지에 서식 반영 (CSS 변수) */
+function paperStyle() {
+  const f = resolveFonts(state.settings);
+  const q = n => `"${cleanFontName(n)}"`;
+  const size = (Number(state.settings.baseSize) || 11) * 1.36;
+  const lh = ((Number(state.settings.lineSpacing) || 160) / 100 * 1.09).toFixed(2);
+  return `--paper-body:${q(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${q(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-lh:${lh}`;
+}
+
+function fontBadge(name) {
+  const st = fontStatus[name];
+  if (st === undefined) return "";
+  return st ? `<span class="badge ok">이 PC에 설치됨</span>` : st === false ? `<span class="badge warn">이 PC에 없음</span>` : `<span class="badge muted">확인 불가</span>`;
+}
+
+function formatPanel() {
+  const s = state.settings;
+  const p = FONT_PRESETS.find(x => x.id === s.fontPreset) || FONT_PRESETS[0];
+  const f = resolveFonts(s);
+  const names = [...new Set([f.body, f.heading, f.boldFace].filter(Boolean))];
+  return `
+      <label class="field">글꼴<select class="in" data-change="doc" data-field="fontPreset">${FONT_PRESETS.map(x => option(x.id, x.name, x.id === p.id)).join("")}</select></label>
+      ${p.id === "custom" ? `<div class="grid-2in">
+        <label class="field">본문 글꼴<input class="in" value="${esc(s.fontBody)}" placeholder="예: 휴먼명조" maxlength="40" data-change="doc" data-field="fontBody"></label>
+        <label class="field">제목 글꼴<input class="in" value="${esc(s.fontHeading)}" placeholder="비우면 본문과 같음" maxlength="40" data-change="doc" data-field="fontHeading"></label></div>` : ""}
+      <p class="small muted">${esc(p.note)}${p.url ? ` · <a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">내려받기 안내</a>` : ""}</p>
+      <div class="font-names">${names.map(n => `<div class="row gap wrap small"><span>${esc(n)}</span>${fontBadge(n)}</div>`).join("")}</div>
+      <div class="row gap wrap">
+        <label class="field compact">글자 크기<select class="in" data-change="doc" data-field="baseSize">${FONT_SIZES.map(v => option(v, `${v}pt`, Number(s.baseSize) === v)).join("")}</select></label>
+        <label class="field compact">줄 간격<select class="in" data-change="doc" data-field="lineSpacing">${LINE_SPACINGS.map(v => option(v, `${v}%`, Number(s.lineSpacing) === v)).join("")}</select></label>
+      </div>
+      <button class="btn sm ghost" data-act="font-check">${icon("check", 15)}이 PC에 글꼴이 있는지 확인</button>
+      <p class="small muted">한글 파일에는 글꼴 이름만 들어갑니다. 받는 PC에 글꼴이 없으면 함초롬 글꼴로 대신 표시됩니다. 웹 이모지는 한글에서 보이는 기호로 바뀝니다(예: ✅→√, 😊→^^).</p>`;
+}
 
 export function render() {
   const r = compute();
@@ -30,6 +73,8 @@ export function render() {
       <p class="small muted">미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
       <p class="small">수정 ${nEdited}건 · 숨김 ${nHidden}건</p>
       <div class="row gap wrap">${nEdited ? `<button class="btn sm ghost" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm ghost" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>
+      <h3>한글 문서 서식</h3>
+      ${formatPanel()}
       <h3>내보내기</h3>
       <button class="btn primary block" data-act="export-hwpx">${icon("download", 17)}한글(HWPX) 내려받기</button>
       <button class="btn block" data-act="print">${icon("printer", 17)}인쇄 / PDF 저장</button>
@@ -38,9 +83,9 @@ export function render() {
       <hr>
       <label class="check small"><input type="checkbox" ${includeData ? "checked" : ""} data-change="include-data"> 원자료 포함 (개인정보 주의)</label>
       <button class="btn block ghost" data-act="save-project">프로젝트 파일 저장</button>
-      <p class="small muted">프로젝트 파일에는 문항 설정·사업정보·성과지표·문장 수정이 저장되어 다음에 같은 설문을 올리면 그대로 적용됩니다.</p>
+      <p class="small muted">프로젝트 파일에는 문항 설정·사업정보·성과지표·문장 수정·문서 서식이 저장되어 다음에 같은 설문을 올리면 그대로 적용됩니다.</p>
     </aside>
-    <div class="paper edit" id="reportPaper">${blocksToHtml(blocks, { editable: true })}</div>
+    <div class="paper edit" id="reportPaper" style="${esc(paperStyle())}">${blocksToHtml(blocks, { editable: true })}</div>
   </div>`;
 }
 
@@ -58,14 +103,28 @@ async function figureImages(blocks) {
 
 export const actions = {
   setting: el => { state.settings[el.dataset.field] = el.value.trim(); persistSettings(); invalidate(); refresh(); },
+  doc: el => {
+    const f = el.dataset.field;
+    state.settings[f] = ["baseSize", "lineSpacing"].includes(f) ? Number(el.value) : f === "fontPreset" ? el.value : cleanFontName(el.value);
+    fontStatus = {};
+    persistSettings(); refresh();
+  },
+  "font-check": async () => {
+    const f = resolveFonts(state.settings);
+    const names = [...new Set([f.body, f.heading, f.boldFace].filter(Boolean))];
+    for (const n of names) fontStatus[n] = await isFontInstalled(n, { allowPermissionPrompt: true });
+    const missing = names.filter(n => fontStatus[n] === false);
+    toast(missing.length ? `이 PC에 없는 글꼴: ${missing.join(", ")} — 한글에서는 함초롬 글꼴로 표시됩니다` : "선택한 글꼴이 이 PC에 설치돼 있습니다", missing.length ? "bad" : "ok", 6000);
+    refresh();
+  },
   chapter: el => {
     const k = el.dataset.key;
     state.hiddenChapters = el.checked ? state.hiddenChapters.filter(x => x !== k) : [...new Set([...state.hiddenChapters, k])];
     refresh();
   },
   "hide-item": el => { state.hidden = [...new Set([...state.hidden, el.dataset.key])]; refresh(); },
-  "reset-item": el => { delete state.overrides[el.dataset.key]; refresh(); },
-  "reset-all": () => { state.overrides = {}; refresh(); },
+  "reset-item": el => { delete state.overrides[el.dataset.key]; delete state.overrideBase[el.dataset.key]; refresh(); },
+  "reset-all": () => { state.overrides = {}; state.overrideBase = {}; refresh(); },
   "unhide-all": () => { state.hidden = []; refresh(); },
   "include-data": el => { includeData = el.checked; },
   print: () => window.print(),
@@ -74,15 +133,19 @@ export const actions = {
     const title = blocks.find(b => b.type === "title")?.text || "보고서";
     busy(true, "HWPX 생성 준비 중…");
     await nextFrame();
+    let stats = null;
     try {
       const { TEMPLATE_PARTS } = await import("../../report/hwpx/template-parts.js");
       const bytes = await renderHwpx(blocks, {
-        parts: TEMPLATE_PARTS, JSZip: window.JSZip, title, creator: state.settings.orgName,
+        parts: TEMPLATE_PARTS, JSZip: window.JSZip, title, creator: state.settings.orgName, doc: docOptions(),
         rasterize: (svg, w, h) => svgToPng(svg, w, h, 2.5),
         onProgress: (i, n) => busy(true, `그래프 변환 ${i}/${n}`),
+        onStats: s => { stats = s; },
       });
       download(new Blob([bytes], { type: "application/hwp+zip" }), `${safeFileName(title)}.hwpx`);
-      toast("HWPX 파일을 내려받았습니다. 한글에서 열어 붙임 문서로 사용하세요.", "ok", 5000);
+      const extra = [stats?.emojiReplaced ? `이모지 ${stats.emojiReplaced}곳을 한글 기호로 바꿈` : "", stats?.fonts?.id !== "hancom" ? `글꼴: ${stats.fonts.body}` : ""].filter(Boolean).join(" · ");
+      toast(`HWPX 파일을 내려받았습니다.${extra ? ` (${extra})` : ""}`, "ok", 6000);
+      document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "hwpx", title } }));
     } catch (e) {
       console.error(e);
       toast(`HWPX 생성 실패: ${e.message}`, "bad", 7000);
