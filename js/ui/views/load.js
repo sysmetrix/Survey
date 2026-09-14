@@ -21,16 +21,15 @@ export const SAMPLES = [
 ];
 
 function recentCard() {
-  const list = historyCache.projects.slice(0, 4);
+  const list = historyCache.projects.slice(0, 2);
   if (!list.length) return "";
   return `<section class="card recent">
     <div class="row between wrap"><h2 class="flush">최근 작업</h2><button class="btn sm ghost" data-act="goto" data-to="history">${icon("history", 15)}전체 작업 내역</button></div>
     <div class="recent-list">${list.map(p => `<button class="recent-item" data-act="open-project" data-id="${esc(p.id)}">
-      <b>${esc(p.name)}</b>
-      <span class="small muted">${esc(p.summary?.fileName || "")}</span>
-      <span class="small muted">${relTime(p.updatedAt)} · 버전 ${p.snapshotCount ?? "-"}개${p.summary?.n ? ` · 응답 ${p.summary.n}명` : ""}</span>
+      <b class="recent-name">${esc(p.name)}</b>
+      <span class="small muted recent-meta">${relTime(p.updatedAt)} · 버전 ${p.snapshotCount ?? "-"}개${p.summary?.n ? ` · 응답 ${p.summary.n}명` : ""}</span>
+      ${icon("right", 16, "recent-go")}
     </button>`).join("")}</div>
-    <p class="small muted">작업 내역은 이 브라우저에만 저장됩니다. 이어서 작업하려면 같은 설문 파일을 다시 올리거나, 원자료를 암호화 보관한 버전을 복원하세요.</p>
   </section>`;
 }
 
