@@ -6,7 +6,7 @@ import { createHwpxDoc } from "../../js/report/hwpx/writer.js";
 import { validateHwpx } from "../../js/report/hwpx/validate.js";
 import { TEMPLATE_PARTS } from "../../js/report/hwpx/template-parts.js";
 import { toHwpText, hasEmoji } from "../../js/report/hwpx/symbols.js";
-import { resolveFonts, FONT_PRESETS } from "../../js/report/hwpx/fonts.js";
+import { resolveFonts, FONT_PRESETS, FONT_SIZES } from "../../js/report/hwpx/fonts.js";
 import { splitWideTable } from "../../js/report/render-hwpx.js";
 
 const dec = new TextDecoder();
@@ -61,6 +61,7 @@ test("글꼴 설정: 프리셋·직접 입력·대체 글꼴·별도 Bold 글꼴
   assert.equal(custom.heading, custom.body);
   assert.equal(custom.substBody, "함초롬바탕");
   assert.ok(FONT_PRESETS.every(p => p.id && p.name));
+  assert.equal(Math.max(...FONT_SIZES), 15);
 
   const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, fontSettings: { fontPreset: "kopub" }, baseSize: 12, lineSpacing: 180 });
   doc.heading(1, "제목").bullet(1, "본문 **굵게**");
@@ -80,6 +81,12 @@ test("글꼴 설정: 프리셋·직접 입력·대체 글꼴·별도 Bold 글꼴
   assert.match(charPrOf(header, runIdFor(sec, "□ 본문 ")), /hangul="1"/, "본문은 본문 글꼴(id 1)");
   assert.match(header, /<hh:lineSpacing type="PERCENT" value="180"/);
   assert.deepEqual(validateHwpx(entries, DOMParser), []);
+});
+
+test("문서 기본 위아래 여백은 10mm", () => {
+  const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "여백 확인" });
+  const sec = part(doc.finish(), "Contents/section0.xml");
+  assert.match(sec, /<hp:margin[^>]*top="2835"[^>]*bottom="2835"/);
 });
 
 test("열이 12개를 넘는 표는 첫 열을 유지하며 나눔(병합 표는 그대로)", () => {

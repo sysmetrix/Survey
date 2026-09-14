@@ -12,6 +12,8 @@ import * as dash from "../../js/ui/views/dash.js";
 import * as report from "../../js/ui/views/report.js";
 import * as present from "../../js/ui/views/present.js";
 import * as historyView from "../../js/ui/views/history.js";
+import * as settingsView from "../../js/ui/views/settings.js";
+import * as updatesView from "../../js/ui/views/updates.js";
 import { splitChapters } from "../../js/report/render-html.js";
 import { makeTemplate } from "../../js/io/template-xlsx.js";
 import { projectToJson, parseProject } from "../../js/io/project.js";
@@ -125,6 +127,15 @@ test("작업 내역 화면: 저장소가 없는 환경에서도 안내 표시", 
   const html = historyView.render({ sub: "" });
   assert.ok(html.includes("작업 내역"));
   assert.equal(bad(html), null);
+});
+
+test("로컬 설정과 업데이트 내역 화면 렌더링", () => {
+  const settings = settingsView.render({ sub: "" });
+  assert.ok(settings.includes("로컬 설정") && settings.includes("Ctrl") && settings.includes("F5"));
+  assert.equal(bad(settings), null);
+  const updates = updatesView.render({ sub: "" });
+  assert.ok(updates.includes("업데이트 내역") && updates.includes("v5.3.2") && updates.includes("v5.0.0"));
+  assert.equal(bad(updates), null);
 });
 
 test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {

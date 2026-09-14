@@ -13,6 +13,7 @@ import { isFontInstalled } from "../fontcheck.js";
 
 let includeData = false;
 let fontStatus = {}; // 글꼴 이름 → true/false/null (설치 확인 결과)
+let checkingFonts = false;
 
 const docOptions = () => {
   const s = state.settings;
@@ -23,9 +24,11 @@ const docOptions = () => {
 function paperStyle() {
   const f = resolveFonts(state.settings);
   const q = n => `"${cleanFontName(n)}"`;
-  const size = (Number(state.settings.baseSize) || 11) * 1.36;
+  const baseSize = Number(state.settings.baseSize) || 11;
+  const size = baseSize * 1.36;
   const lh = ((Number(state.settings.lineSpacing) || 160) / 100 * 1.09).toFixed(2);
-  return `--paper-body:${q(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${q(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-lh:${lh}`;
+  const scaled = px => `${(px * baseSize / 11).toFixed(1)}px`;
+  return `--paper-body:${q(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${q(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-size-print:${baseSize}pt; --paper-title-size:${scaled(26)}; --paper-h1-size:${scaled(20)}; --paper-h2-size:${scaled(17)}; --paper-small-size:${scaled(14)}; --paper-table-size:${scaled(12.5)}; --paper-compact-size:${scaled(11.5)}; --paper-note-size:${scaled(12)}; --paper-lh:${lh}`;
 }
 
 function fontBadge(name) {
@@ -50,7 +53,11 @@ function formatPanel() {
         <label class="field compact">글자 크기<select class="in" data-change="doc" data-field="baseSize">${FONT_SIZES.map(v => option(v, `${v}pt`, Number(s.baseSize) === v)).join("")}</select></label>
         <label class="field compact">줄 간격<select class="in" data-change="doc" data-field="lineSpacing">${LINE_SPACINGS.map(v => option(v, `${v}%`, Number(s.lineSpacing) === v)).join("")}</select></label>
       </div>
-      <button class="btn sm ghost" data-act="font-check">${icon("check", 15)}이 PC에 글꼴이 있는지 확인</button>
+      <div class="row gap wrap format-actions">
+        <button class="btn sm ghost" data-act="font-check" ${checkingFonts ? "disabled aria-busy=\"true\"" : ""}>${icon("check", 15)}${checkingFonts ? "글꼴 확인 중…" : "이 PC의 글꼴 확인"}</button>
+        <button class="btn sm ghost" data-act="reset-doc">기본 서식으로</button>
+      </div>
+      <p class="small muted format-help">선택 즉시 오른쪽 미리보기에 반영됩니다. 글꼴 확인 시 브라우저가 로컬 글꼴 접근 권한을 물을 수 있습니다.</p>
       <p class="small muted">한글 파일에는 글꼴 이름만 들어갑니다. 받는 PC에 글꼴이 없으면 함초롬 글꼴로 대신 표시됩니다. 웹 이모지는 한글에서 보이는 기호로 바뀝니다(예: ✅→√, 😊→^^).</p>`;
 }
 
@@ -110,11 +117,29 @@ export const actions = {
     persistSettings(); refresh();
   },
   "font-check": async () => {
+    if (checkingFonts) return;
+    checkingFonts = true;
+    refresh();
     const f = resolveFonts(state.settings);
     const names = [...new Set([f.body, f.heading, f.boldFace].filter(Boolean))];
-    for (const n of names) fontStatus[n] = await isFontInstalled(n, { allowPermissionPrompt: true });
-    const missing = names.filter(n => fontStatus[n] === false);
-    toast(missing.length ? `이 PC에 없는 글꼴: ${missing.join(", ")} — 한글에서는 함초롬 글꼴로 표시됩니다` : "선택한 글꼴이 이 PC에 설치돼 있습니다", missing.length ? "bad" : "ok", 6000);
+    try {
+      for (const n of names) fontStatus[n] = await isFontInstalled(n, { allowPermissionPrompt: true });
+      const missing = names.filter(n => fontStatus[n] === false);
+      const unknown = names.filter(n => fontStatus[n] == null);
+      const message = missing.length
+        ? `확인되지 않은 글꼴: ${missing.join(", ")} — 한글에서는 함초롬 글꼴로 대체됩니다`
+        : unknown.length ? "브라우저 권한 제한으로 설치 여부를 확인할 수 없습니다" : "선택한 글꼴이 이 PC에 설치돼 있습니다";
+      toast(message, missing.length ? "bad" : unknown.length ? "info" : "ok", 6000);
+    } finally {
+      checkingFonts = false;
+      refresh();
+    }
+  },
+  "reset-doc": () => {
+    Object.assign(state.settings, { fontPreset: "hancom", fontBody: "", fontHeading: "", baseSize: 11, lineSpacing: 160 });
+    fontStatus = {};
+    persistSettings();
+    toast("한글 문서 서식을 기본값으로 되돌렸습니다", "ok");
     refresh();
   },
   chapter: el => {

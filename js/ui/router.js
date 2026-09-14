@@ -7,9 +7,9 @@ export const STEPS = [
   { id: "report", label: "보고서", n: 5 },
 ];
 /** 단계 표시줄에 없는 화면 */
-export const EXTRA_VIEWS = ["present", "history"];
+export const EXTRA_VIEWS = ["present", "history", "settings", "updates"];
 /** 데이터 없이 열 수 있는 화면 */
-export const NO_DATA_VIEWS = ["load", "history"];
+export const NO_DATA_VIEWS = ["load", "history", "settings", "updates"];
 
 export function parseHash() {
   const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);

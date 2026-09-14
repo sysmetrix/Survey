@@ -1,23 +1,51 @@
-// 이 PC에 글꼴이 설치돼 있는지 확인 (브라우저)
-// 1) FontFace local() 로드 — 권한 요청 없음  2) 사용자가 허용하면 queryLocalFonts() 로 정확한 등록명 대조
-// HWPX 에는 글꼴 이름만 기록되므로, 받는 사람 PC에도 같은 글꼴이 있어야 같은 모양으로 보인다.
+// Check whether a document font is installed on this computer.
+// Local font names vary between Windows, Hancom, and individual font releases.
 
 const norm = s => String(s || "").toLowerCase().replace(/[\s_\-()]+/g, "");
+const familyNorm = s => norm(s).replace(/(variable|regular|medium|semibold|bold|light|thin|extrabold|black)$/g, "");
 
-/** @returns {Promise<boolean|null>} true 설치됨, false 없음, null 판별 불가 */
+const KNOWN_ALIASES = {
+  "함초롬바탕": ["HCR Batang", "HCRBatang"],
+  "함초롬돋움": ["HCR Dotum", "HCRDotum"],
+  "휴먼명조": ["Human Myeongjo", "HumanMyeongjo"],
+  "HY헤드라인M": ["HYHeadLine-M", "HY HeadLine M"],
+  "맑은 고딕": ["Malgun Gothic"],
+  "나눔고딕": ["NanumGothic", "Nanum Gothic"],
+  "KoPub돋움체 Medium": ["KoPub돋움체", "KoPub Dotum Medium", "KoPubWorldDotum Medium", "KoPubWorld Dotum"],
+  "KoPub돋움체 Bold": ["KoPub Dotum Bold", "KoPubWorldDotum Bold"],
+  "Pretendard GOV Variable": ["Pretendard GOV", "PretendardGOV Variable", "PretendardGOVVariable"],
+  "Pretendard GOV": ["Pretendard GOV Variable", "PretendardGOV"],
+};
+
+export function fontNameCandidates(name) {
+  return [...new Set([name, ...(KNOWN_ALIASES[name] || [])].map(x => String(x || "").trim()).filter(Boolean))];
+}
+
+function localFontMatches(font, candidates) {
+  const values = [font?.family, font?.fullName, font?.postscriptName].filter(Boolean);
+  return candidates.some(candidate => values.some(value =>
+    norm(value) === norm(candidate) ||
+    (familyNorm(value).length >= 5 && familyNorm(value) === familyNorm(candidate))
+  ));
+}
+
+/** @returns {Promise<boolean|null>} true: installed, false: missing, null: unavailable */
 export async function isFontInstalled(name, { allowPermissionPrompt = false } = {}) {
   if (!name || typeof FontFace === "undefined") return null;
-  if (allowPermissionPrompt && "queryLocalFonts" in window) {
+  const candidates = fontNameCandidates(name);
+
+  if (allowPermissionPrompt && typeof window !== "undefined" && "queryLocalFonts" in window) {
     try {
       const list = await window.queryLocalFonts();
-      const target = norm(name);
-      return list.some(f => [f.family, f.fullName, f.postscriptName].some(v => norm(v) === target));
-    } catch { /* 권한 거부 — local() 로 확인 */ }
+      return list.some(font => localFontMatches(font, candidates));
+    } catch { /* Permission denied or unsupported: fall back to local(). */ }
   }
-  try {
-    await new FontFace("__survey_font_probe__", `local("${String(name).replace(/["\\]/g, "")}")`).load();
-    return true;
-  } catch {
-    return false;
+
+  for (const candidate of candidates) {
+    try {
+      await new FontFace("__survey_font_probe__", `local("${candidate.replace(/["\\]/g, "")}")`).load();
+      return true;
+    } catch { /* Try the next known local name. */ }
   }
+  return false;
 }

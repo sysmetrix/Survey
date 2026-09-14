@@ -13,7 +13,7 @@ export const FONT_PRESETS = [
   { id: "custom", name: "직접 입력", body: "", heading: "", note: "PC에 설치된 글꼴 이름을 정확히 입력(한글 글꼴 목록에 보이는 이름)" },
 ];
 
-export const FONT_SIZES = [10, 10.5, 11, 12];
+export const FONT_SIZES = [10, 10.5, 11, 12, 13, 14, 15];
 export const LINE_SPACINGS = [150, 160, 170, 180];
 
 const HANCOM = { body: "함초롬바탕", heading: "함초롬돋움" };

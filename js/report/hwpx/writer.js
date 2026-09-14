@@ -111,7 +111,7 @@ export const stripBold = t => String(t ?? "").split(BOLD_SPLIT).map(s => (BOLD_W
  * @param {object} [o.fontSettings] {fontPreset, fontBody, fontHeading} — fonts.js resolveFonts
  */
 export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, baseSize = 11, lineSpacing = 160, fontSettings = {}, pageNumber = true } = {}) {
-  const M = { left: 20, right: 20, top: 15, bottom: 15, header: 10, footer: 10, ...margins };
+  const M = { left: 20, right: 20, top: 10, bottom: 10, header: 10, footer: 10, ...margins };
   if (parts.FONTS && (parts.FONTS.dotum !== FONT_ID.dotum || parts.FONTS.batang !== FONT_ID.batang)) throw new Error("템플릿 글꼴 순서가 예상과 다릅니다(0=돋움, 1=바탕)");
   const fonts = resolveFonts(fontSettings);
   const reg = createRegistry(parts.HEADER_XML, { boldFace: !!fonts.boldFace });

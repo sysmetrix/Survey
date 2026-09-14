@@ -1,7 +1,7 @@
 // 앱 진입점: 화면 전환·이벤트 위임 (인라인 핸들러 없음 — CSP script-src 'self')
 import { state } from "./ui/store.js";
 import { STEPS, NO_DATA_VIEWS, parseHash, go, setRenderer, refresh } from "./ui/router.js";
-import { toast, esc, notify } from "./ui/util.js";
+import { toast, esc } from "./ui/util.js";
 import { icon } from "./ui/icons.js";
 import { cycleTheme, themePref, THEME_LABEL, watchSystemTheme } from "./ui/theme.js";
 import { initPwa, installApp } from "./ui/pwa.js";
@@ -14,12 +14,14 @@ import * as dash from "./ui/views/dash.js";
 import * as report from "./ui/views/report.js";
 import * as present from "./ui/views/present.js";
 import * as history from "./ui/views/history.js";
+import * as settings from "./ui/views/settings.js";
+import * as updates from "./ui/views/updates.js";
+import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 
-export const APP_VERSION = "5.3.0";
-const VIEWS = { load, setup, business, dash, report, present, history };
+export const APP_VERSION = "5.3.2";
+const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
-
-const WHATS_NEW = "v5.3.0 새 기능 — 작업 내역(자동 저장·되돌리기 Ctrl+Z·버전 비교·복원·암호화 보관·백업), 한글 표 여러 쪽 나눔(제목 줄 반복), 한글 글꼴·크기·줄 간격 설정, 이모지를 한글 기호로 자동 변환, 긴 문항명 잘림 해결, 성과지표 빠른 추가(사업정보·논리모형은 선택).";
+let versionTaps = 0, versionTapTimer = 0;
 
 function renderChrome(id) {
   const curIdx = STEPS.findIndex(s => s.id === id);
@@ -33,6 +35,8 @@ function renderChrome(id) {
   document.getElementById("redoBtn").disabled = !canRedo();
   const hb = document.getElementById("historyBtn");
   if (id === "history") hb.setAttribute("aria-current", "page"); else hb.removeAttribute("aria-current");
+  const sb = document.getElementById("settingsBtn");
+  if (id === "settings") sb.setAttribute("aria-current", "page"); else sb.removeAttribute("aria-current");
   const pref = themePref(), tb = document.getElementById("themeBtn");
   tb.innerHTML = icon(pref === "dark" ? "moon" : pref === "light" ? "sun" : "monitor", 18);
   tb.title = `화면 테마: ${THEME_LABEL[pref]} (눌러서 바꾸기)`;
@@ -41,7 +45,8 @@ function renderChrome(id) {
 
 function render({ keepScroll = false } = {}) {
   const { view, sub } = parseHash();
-  const id = !NO_DATA_VIEWS.includes(view) && !state.dataset ? "load" : view;
+  const allowedView = view === "updates" && !hasReleaseAccess() ? "load" : view;
+  const id = !NO_DATA_VIEWS.includes(allowedView) && !state.dataset ? "load" : allowedView;
   const changed = id !== currentId;
   if (changed && currentId === "present") present.unmount();
   current = VIEWS[id]; currentId = id;
@@ -73,7 +78,17 @@ const GLOBAL = {
   skip: () => document.getElementById("main").focus(),
   undo: () => { if (undoChange()) { toast("되돌렸습니다", "info", 1800); refresh(); } },
   redo: () => { if (redoChange()) { toast("다시 실행했습니다", "info", 1800); refresh(); } },
-  "whats-new": () => notify(WHATS_NEW, { sticky: true }),
+  "whats-new": () => {
+    versionTaps += 1;
+    clearTimeout(versionTapTimer);
+    if (versionTaps >= RELEASE_TAP_COUNT) {
+      versionTaps = 0;
+      grantReleaseAccess();
+      go("updates");
+      return;
+    }
+    versionTapTimer = setTimeout(() => { versionTaps = 0; }, 1800);
+  },
 };
 
 document.addEventListener("click", e => {
@@ -162,6 +177,7 @@ document.getElementById("net").innerHTML = `${icon("offline", 14)}<span>오프�
 document.getElementById("undoBtn").innerHTML = icon("undo", 18);
 document.getElementById("redoBtn").innerHTML = icon("redo", 18);
 document.getElementById("historyBtn").innerHTML = icon("history", 18);
+document.getElementById("settingsBtn").innerHTML = icon("settings", 18);
 watchSystemTheme(() => refresh());
 installTooltips();
 initPwa({ onFile: f => load.actions["drop-data"](f), hasUnsavedWork: () => !!state.dataset });

@@ -15,13 +15,13 @@
   <meta name="apple-mobile-web-app-title" content="설문분석">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="vendor/fonts/pretendard-gov/pretendard-gov-dynamic-subset.css">
-  <link rel="stylesheet" href="css/app.css?v=5.3.0">
-  <link rel="stylesheet" href="css/present.css?v=5.3.0">
+  <link rel="stylesheet" href="css/app.css?v=5.3.2">
+  <link rel="stylesheet" href="css/present.css?v=5.3.2">
   <script src="js/boot-check.js"></script>
   <script src="vendor/papaparse-5.4.1.min.js"></script>
   <script src="vendor/xlsx-0.20.3.full.min.js"></script>
   <script src="vendor/jszip-3.10.1.min.js"></script>
-  <script type="module" src="js/main.js?v=5.3.0"></script>
+  <script type="module" src="js/main.js?v=5.3.2"></script>
 </head>
 <body>
   <button class="skip no-print" data-act="skip">본문 바로가기</button>
@@ -33,13 +33,14 @@
     <nav id="steps" class="stepper" aria-label="진행 단계"></nav>
     <div class="top-actions">
       <span id="net" class="chip warn" role="status" hidden></span>
+      <button id="settingsBtn" class="icon-btn" data-act="goto" data-to="settings" title="로컬 설정" aria-label="로컬 설정"></button>
       <button id="undoBtn" class="icon-btn" data-act="undo" title="되돌리기 (Ctrl+Z)" aria-label="되돌리기" disabled></button>
       <button id="redoBtn" class="icon-btn" data-act="redo" title="다시 실행 (Ctrl+Y)" aria-label="다시 실행" disabled></button>
       <button id="historyBtn" class="icon-btn" data-act="goto" data-to="history" title="작업 내역" aria-label="작업 내역"></button>
       <button id="presentBtn" class="btn sm" data-act="goto" data-to="present" data-sub="1" title="분석 결과 발표 모드" disabled></button>
       <button id="installBtn" class="btn sm ghost" data-act="install" hidden></button>
       <button id="themeBtn" class="icon-btn" data-act="theme"></button>
-      <button id="ver" class="ver" data-act="whats-new" title="이번 버전 새 기능"></button>
+      <button id="ver" class="ver" data-act="whats-new" title="앱 버전"></button>
     </div>
   </header>
   <main id="main" class="container" tabindex="-1"></main>

@@ -22,6 +22,14 @@ export function cycleTheme() {
   return next;
 }
 
+export function setTheme(pref) {
+  const next = ["system", "light", "dark"].includes(pref) ? pref : "system";
+  try { if (next === "system") localStorage.removeItem(KEY); else localStorage.setItem(KEY, next); }
+  catch { document.documentElement.dataset.theme = next === "system" ? "" : next; }
+  apply();
+  return next;
+}
+
 export const THEME_LABEL = { system: "시스템 설정", light: "밝은 화면", dark: "어두운 화면" };
 
 /** 시스템 설정 변경 시 다시 그리기 */

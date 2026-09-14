@@ -39,4 +39,6 @@ test("버전 표기 일치 (main.js · package.json · index.html ?v=)", async (
   assert.equal(JSON.parse(await readFile("package.json", "utf8")).version, v);
   const html = await readFile("index.html", "utf8");
   for (const m of html.matchAll(/\?v=([\d.]+)/g)) assert.equal(m[1], v, "index.html ?v=");
+  const releases = await readFile("js/admin/releases.js", "utf8");
+  assert.equal(/version: "([^"]+)"/.exec(releases)[1], v, "최신 업데이트 내역 버전");
 });
