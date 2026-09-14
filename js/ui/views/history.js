@@ -1,7 +1,7 @@
 // 작업 내역 화면: 프로젝트별 버전 타임라인 · 변경 내용 비교 · 복원 · 고정 · 백업 · 보관 규칙 · 저장 공간
 import { state } from "../store.js";
 import {
-  cache, prefs, savePrefs, listSnapshots, saveSnapshot, restoreSnapshot, deleteSnapshots, updateSnapshot, renameProject, deleteProject,
+  cache, prefs, savePrefs, listSnapshots, saveSnapshot, restoreSnapshot, resumeProject, deleteSnapshots, updateSnapshot, renameProject, deleteProject,
   diffFor, exportBackup, importBackup, clearAllHistory, requestPersist, canUndo, canRedo, relTime, fmtDateTime, fmtBytes, v4Legacy, v4Export, v4Delete,
 } from "../history/manager.js";
 import { projectIdOf, KIND_LABEL, diffCount } from "../../history/snapshot.js";
@@ -45,7 +45,7 @@ function storageCard() {
       <label class="btn sm">${icon("upload", 15)}백업 가져오기<input type="file" accept=".json" data-change="hist-import" hidden></label>
       <button class="btn sm ghost danger" data-act="hist-clear">모든 내역 삭제</button>
     </div>
-    <p class="small muted">원자료(응답 데이터)는 저장하지 않습니다. 버전을 직접 저장할 때 선택하면 비밀번호로 암호화(AES-256)해 함께 보관할 수 있으며, 비밀번호는 어디에도 저장되지 않습니다. 공용 PC에서는 작업 후 내역을 삭제하세요.</p>
+    <p class="small muted">원자료는 서버로 전송하지 않고 이 브라우저 전용 키로 암호화(AES-256)해 보관합니다. 브라우저 데이터나 암호화 키를 지우면 복원할 수 없습니다. 직접 저장한 비밀번호 보호 버전은 별도로 유지됩니다. 공용 PC에서는 작업 후 내역을 삭제하세요.</p>
     ${legacy ? `<div class="hint warn-hint"><b>이전 버전(v4.3) 분석 이력 ${legacy.count}건</b>이 이 브라우저에 남아 있습니다. 원자료가 들어 있을 수 있으니 필요하면 내려받은 뒤 삭제하세요.
       <div class="row gap wrap"><button class="btn sm" data-act="hist-v4-export">내려받기</button><button class="btn sm ghost danger" data-act="hist-v4-delete">이전 이력 삭제</button></div></div>` : ""}
   </section>`;
@@ -91,7 +91,7 @@ export function render() {
 
   return `
   <div class="page-head">
-    <div><h2>작업 내역</h2><p class="small muted">문항 설정·성과지표·문장 수정·서식이 자동으로 버전 저장됩니다. 언제든 이전 버전과 비교하고 되돌릴 수 있습니다. <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기 · <kbd>Ctrl</kbd>+<kbd>Y</kbd> 다시 실행</p></div>
+      <div><h2>작업·발표 보관함</h2><p class="small muted">원자료와 최신 분석 상태가 이 브라우저에 암호화 보관됩니다. 작업을 이어가거나 발표를 바로 시작할 수 있습니다. <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기 · <kbd>Ctrl</kbd>+<kbd>Y</kbd> 다시 실행</p></div>
     <div class="row gap wrap">
       <button class="btn" data-act="undo" ${canUndo() ? "" : "disabled"}>${icon("undo", 16)}되돌리기</button>
       <button class="btn" data-act="redo" ${canRedo() ? "" : "disabled"}>${icon("redo", 16)}다시 실행</button>
@@ -112,16 +112,16 @@ export function render() {
     <aside class="card">
       <input class="in" type="search" placeholder="작업 검색 (사업명·파일명)" value="${esc(view.query)}" data-change="hist-query" aria-label="작업 검색">
       <div class="proj-list">${projects.length ? projects.map(p => `<button class="proj${p.id === view.selected ? " on" : ""}" data-act="hist-select" data-id="${esc(p.id)}" aria-current="${p.id === view.selected}">
-        <b>${esc(p.name)}</b>${p.id === currentPid ? ` <span class="badge ok">지금 작업</span>` : ""}
+        <b>${esc(p.name)}</b>${p.id === currentPid ? ` <span class="badge ok">지금 작업</span>` : ""}${p.hasData ? ` <span class="badge info">원자료 보관</span>` : ` <span class="badge warn">파일 필요</span>`}
         <span class="small muted">${esc(p.summary?.fileName || "")}</span>
         <span class="small muted">${relTime(p.updatedAt)} · 버전 ${p.snapshotCount ?? "-"}개</span></button>`).join("") : `<p class="small muted">${cache.projects.length ? "검색 결과가 없습니다." : "아직 저장된 작업이 없습니다. 설문 파일을 불러오면 자동으로 기록됩니다."}</p>`}</div>
     </aside>
     <section class="card">
       ${sel ? `<div class="row between wrap gap">
           <div><h3 class="flush">${esc(sel.name)}</h3><p class="small muted">${esc(summaryLine(sel.summary))}</p></div>
-          <div class="row gap wrap"><button class="btn sm ghost" data-act="hist-rename" data-id="${esc(sel.id)}">이름 바꾸기</button><button class="btn sm ghost danger" data-act="hist-del-project" data-id="${esc(sel.id)}">작업 삭제</button></div>
+          <div class="row gap wrap"><button class="btn sm" data-act="hist-resume" data-id="${esc(sel.id)}">분석 계속</button><button class="btn sm primary" data-act="hist-present" data-id="${esc(sel.id)}" ${sel.hasData ? "" : "disabled"}>${icon("play", 14)}발표 시작</button><button class="btn sm ghost" data-act="hist-rename" data-id="${esc(sel.id)}">이름 바꾸기</button><button class="btn sm ghost danger" data-act="hist-del-project" data-id="${esc(sel.id)}">작업 삭제</button></div>
         </div>
-        ${sel.id !== currentPid ? `<p class="hint small">${state.dataset ? "지금 열린 설문과 다른 작업입니다." : "설문 파일이 열려 있지 않습니다."} 복원하면 설정이 준비되고, 같은 설문 파일을 올리면 그대로 적용됩니다(원자료를 암호화 보관한 버전은 비밀번호로 바로 복원).</p>` : ""}
+        ${sel.id !== currentPid ? `<p class="hint small">${state.dataset ? "지금 열린 설문과 다른 작업입니다." : "설문 파일이 열려 있지 않습니다."} ${sel.hasData ? "원자료와 최신 설정을 바로 복원할 수 있습니다." : "같은 설문 파일을 다시 연결하면 저장된 설정이 적용됩니다."}</p>` : ""}
         ${timelineHtml(sel)}` : `<p class="muted">왼쪽에서 작업을 선택하세요.</p>`}
     </section>
   </div>
@@ -150,6 +150,8 @@ async function doRestore(id, passphrase = "") {
 
 export const actions = {
   "hist-select": el => { selectProject(el.dataset.id); refresh(); },
+  "hist-resume": async el => openProject(el.dataset.id, "dash"),
+  "hist-present": async el => openProject(el.dataset.id, "present"),
   "hist-query": el => { view.query = el.value; refresh(); },
   "hist-data-toggle": el => { const p = document.getElementById("versionPass"); if (p) { p.hidden = !el.checked; if (el.checked) p.focus(); } },
   "hist-save": async () => {
@@ -174,7 +176,7 @@ export const actions = {
     const s = snapById(el.dataset.id);
     if (!s) return;
     const sameData = state.codebook && state.codebook.headersHash === s.data?.codebook?.headersHash;
-    if (!sameData && s.hasData) { view.askPass = s.id; refresh(); setTimeout(() => document.getElementById("restorePass")?.focus(), 0); return; }
+    if (!sameData && s.hasData && s.dataEnc?.v !== 2) { view.askPass = s.id; refresh(); setTimeout(() => document.getElementById("restorePass")?.focus(), 0); return; }
     if (state.dataset && !sameData && !confirm("지금 열린 설문과 다른 작업입니다. 현재 설정을 이 버전으로 바꿀까요? (현재 작업은 자동 저장된 내역에 남아 있습니다)")) return;
     await doRestore(s.id);
   },
@@ -228,3 +230,14 @@ export const actions = {
   "hist-v4-export": () => download(v4Export(), "이전버전_v4_분석이력.json", "application/json"),
   "hist-v4-delete": () => { if (confirm("이전 버전(v4.3) 분석 이력을 이 브라우저에서 삭제할까요?")) { v4Delete(); toast("이전 이력을 삭제했습니다", "ok"); refresh(); } },
 };
+
+async function openProject(id, target) {
+  busy(true, target === "present" ? "발표 자료 준비 중…" : "원자료 복원 중…");
+  try {
+    const r = await resumeProject(id);
+    if (r.mode === "ready") { go(target, target === "present" ? "1" : ""); return; }
+    if (r.mode === "needPassword") toast("기존 비밀번호로 보관한 원자료입니다. 아래 버전에서 복원해 주세요.", "info", 6000);
+    else { toast(`‘${r.fileName || "같은 설문"}’ 파일을 다시 연결해 주세요.`, "info", 6000); go("load"); }
+  } catch (e) { toast(`작업을 열지 못했습니다: ${e.message}`, "bad", 6000); }
+  finally { busy(false); refresh(); }
+}

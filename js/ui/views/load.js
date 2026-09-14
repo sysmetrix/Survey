@@ -6,7 +6,7 @@ import { parseProject } from "../../io/project.js";
 import { toast, busy, download, readFileBytes, readFileText, nextFrame, esc } from "../util.js";
 import { go } from "../router.js";
 import { icon } from "../icons.js";
-import { cache as historyCache, relTime } from "../history/manager.js";
+import { cache as historyCache, relTime, resumeProject } from "../history/manager.js";
 import { selectProject } from "./history.js";
 
 export const MAX_FILE_MB = 50;
@@ -25,11 +25,10 @@ function recentCard() {
   if (!list.length) return "";
   return `<section class="card recent">
     <div class="row between wrap"><h2 class="flush">최근 작업</h2><button class="btn sm ghost" data-act="goto" data-to="history">${icon("history", 15)}전체 작업 내역</button></div>
-    <div class="recent-list">${list.map(p => `<button class="recent-item" data-act="open-project" data-id="${esc(p.id)}">
-      <b class="recent-name">${esc(p.name)}</b>
-      <span class="small muted recent-meta">${relTime(p.updatedAt)} · 버전 ${p.snapshotCount ?? "-"}개${p.summary?.n ? ` · 응답 ${p.summary.n}명` : ""}</span>
-      ${icon("right", 16, "recent-go")}
-    </button>`).join("")}</div>
+    <div class="recent-list">${list.map(p => `<article class="recent-item">
+      <div class="recent-copy"><b class="recent-name">${esc(p.name)}</b><span class="small muted recent-meta">${relTime(p.updatedAt)} · 버전 ${p.snapshotCount ?? "-"}개${p.summary?.n ? ` · 응답 ${p.summary.n}명` : ""} · ${p.hasData ? "원자료 보관됨" : "파일 연결 필요"}</span></div>
+      <div class="recent-actions"><button class="btn sm" data-act="resume-project" data-id="${esc(p.id)}">분석 계속</button><button class="btn sm primary" data-act="present-project" data-id="${esc(p.id)}" ${p.hasData ? "" : "disabled"}>${icon("play", 14)}발표</button><button class="icon-btn sm" data-act="open-project" data-id="${esc(p.id)}" aria-label="작업 이력">${icon("history", 15)}</button></div>
+    </article>`).join("")}</div>
   </section>`;
 }
 
@@ -147,8 +146,23 @@ export const actions = {
     } catch (e) { busy(false); toast(`샘플을 불러오지 못했습니다(${e.message}). 웹 주소(https://…)로 접속했는지 확인하세요.`, "bad", 6000); }
   },
   "open-project": el => { selectProject(el.dataset.id); go("history"); },
+  "resume-project": async el => openStoredProject(el.dataset.id, "dash"),
+  "present-project": async el => openStoredProject(el.dataset.id, "present"),
   template: el => {
     const kind = el.dataset.kind;
     download(makeTemplate(kind, window.XLSX), kind === "prepost" ? "설문입력템플릿_사전사후.xlsx" : "설문입력템플릿_만족도.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   },
 };
+
+async function openStoredProject(id, target) {
+  busy(true, target === "present" ? "발표 자료 준비 중…" : "원자료 복원 중…");
+  try {
+    const r = await resumeProject(id);
+    if (r.mode === "ready") { go(target, target === "present" ? "1" : ""); return; }
+    selectProject(id);
+    if (r.mode === "needPassword") toast("비밀번호로 보관한 원자료입니다. 작업 이력에서 복원해 주세요.", "info", 6000);
+    else toast(`‘${r.fileName || "같은 설문"}’ 파일을 다시 연결해 주세요.`, "info", 6000);
+    go(r.mode === "needPassword" ? "history" : "load");
+  } catch (e) { toast(`작업을 열지 못했습니다: ${e.message}`, "bad", 6000); }
+  finally { busy(false); }
+}

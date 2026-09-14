@@ -3,6 +3,7 @@
 const te = new TextEncoder(), td = new TextDecoder();
 export const KDF_ITERATIONS = 310000;
 export const MIN_PASSPHRASE = 8;
+const DEVICE_KEY = "survey-v5-device-key";
 
 const b64 = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -30,5 +31,31 @@ export async function decryptJson(box, passphrase) {
     return JSON.parse(td.decode(pt));
   } catch {
     throw new Error("비밀번호가 맞지 않거나 자료가 손상되었습니다");
+  }
+}
+
+/** 이 브라우저에서만 자동 복원할 수 있는 AES 키. 키와 암호문은 모두 로컬에만 남는다. */
+async function deviceKey() {
+  let raw = localStorage.getItem(DEVICE_KEY);
+  if (!raw) {
+    raw = b64(crypto.getRandomValues(new Uint8Array(32)));
+    localStorage.setItem(DEVICE_KEY, raw);
+  }
+  return crypto.subtle.importKey("raw", unb64(raw), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+
+export async function encryptLocalJson(obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await deviceKey(), te.encode(JSON.stringify(obj))));
+  return { v: 2, alg: "AES-GCM-256", key: "device", iv: b64(iv), data: b64(ct) };
+}
+
+export async function decryptLocalJson(box) {
+  if (!box || box.v !== 2 || box.key !== "device" || !box.data) throw new Error("이 브라우저용 암호화 자료가 아닙니다");
+  try {
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, await deviceKey(), unb64(box.data));
+    return JSON.parse(td.decode(pt));
+  } catch {
+    throw new Error("브라우저 암호화 키가 없거나 자료가 손상되었습니다");
   }
 }

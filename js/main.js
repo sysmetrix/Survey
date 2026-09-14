@@ -19,7 +19,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.4.0";
+export const APP_VERSION = "5.5.0";
 const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -154,7 +154,7 @@ window.addEventListener("beforeunload", e => { if (state.dataset && (Object.keys
 // 작업 내역 연동
 document.addEventListener("survey:loaded", () => {
   resetTracking();
-  saveSnapshot("load").catch(err => console.warn("내역 저장 실패:", err));
+  saveSnapshot("load", { includeData: true, localData: true }).catch(err => console.warn("원자료 로컬 저장 실패:", err));
   renderChrome(currentId);
 });
 document.addEventListener("survey:exported", e => {

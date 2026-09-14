@@ -4,7 +4,7 @@ import { historyDb, idbAvailable } from "./db.js";
 import { state, compute, applyEditable, applyProject } from "../store.js";
 import { captureEditable, stableStringify, contentHash, projectIdOf, summarize, planRetention, diffEditable } from "../../history/snapshot.js";
 import { createUndoStack } from "../../history/undo.js";
-import { encryptJson, decryptJson } from "../../history/crypto.js";
+import { encryptJson, decryptJson, encryptLocalJson, decryptLocalJson } from "../../history/crypto.js";
 import { APP_VERSION_HISTORY } from "./version.js";
 
 const PREF_KEY = "survey-v5-history-prefs";
@@ -81,16 +81,16 @@ const newId = () => `s${Date.now().toString(36)}${Math.random().toString(36).sli
 
 /**
  * @param {'auto'|'manual'|'load'|'export'|'restore'} kind
- * @param {{label?:string, includeData?:boolean, passphrase?:string}} opts
+ * @param {{label?:string, includeData?:boolean, passphrase?:string, localData?:boolean}} opts
  */
-export async function saveSnapshot(kind = "auto", { label = "", includeData = false, passphrase = "" } = {}) {
+export async function saveSnapshot(kind = "auto", { label = "", includeData = false, passphrase = "", localData = false } = {}) {
   if (!cache.available || !state.codebook) return null;
   clearTimeout(timer); timer = 0;
   const editable = captureEditable(state);
   const hash = contentHash(stableStringify(editable));
   const pid = projectIdOf(state.codebook);
   if (!pid || (kind === "auto" && hash === lastSavedHash)) return null;
-  const dataEnc = includeData && state.dataset ? await encryptJson(state.dataset, passphrase) : null;
+  const dataEnc = includeData && state.dataset ? (localData ? await encryptLocalJson(state.dataset) : await encryptJson(state.dataset, passphrase)) : null;
   const summary = summarize(state, compute());
   cache.saving = true;
   try {
@@ -99,6 +99,7 @@ export async function saveSnapshot(kind = "auto", { label = "", includeData = fa
       const project = (await historyDb.getProject(pid)) || { id: pid, createdAt: now, pinned: false, customName: "" };
       Object.assign(project, {
         updatedAt: now, headersHash: state.codebook.headersHash, summary,
+        hasData: !!dataEnc || !!project.hasData,
         name: project.customName || summary.programName || summary.reportTitle || summary.fileName.replace(/\.[^.]+$/, "") || "이름 없는 작업",
       });
       const coalesce = kind === "auto" && lastAuto.project === pid && lastAuto.id && now - lastAuto.at < 5 * 60000;
@@ -114,7 +115,10 @@ export async function saveSnapshot(kind = "auto", { label = "", includeData = fa
       const snaps = await historyDb.listSnapshots(pid);
       const remove = planRetention(snaps, prefs);
       if (remove.length) await historyDb.deleteSnapshots(remove);
-      project.snapshotCount = snaps.length - remove.length;
+      const removed = new Set(remove);
+      const remaining = snaps.filter(s => !removed.has(s.id));
+      project.snapshotCount = remaining.length;
+      project.hasData = remaining.some(s => s.hasData && s.dataEnc);
       await historyDb.putProject(project);
       cache.lastSavedAt = now;
       await refreshCache();
@@ -126,6 +130,31 @@ export async function saveSnapshot(kind = "auto", { label = "", includeData = fa
 }
 
 export const listSnapshots = id => historyDb.listSnapshots(id);
+
+/** 프로젝트의 최신 편집 상태와 보관된 원자료를 함께 복원한다. */
+export async function resumeProject(projectId) {
+  const snaps = await historyDb.listSnapshots(projectId);
+  const latest = snaps.find(s => s.data);
+  if (!latest) throw new Error("복원할 작업 버전이 없습니다");
+  if (state.codebook?.headersHash === latest.data.codebook?.headersHash && state.dataset) {
+    applying = true;
+    try { applyEditable(latest.data); } finally { applying = false; }
+    resetTracking();
+    return { mode: "ready" };
+  }
+  const raw = snaps.find(s => s.hasData && s.dataEnc);
+  if (!raw) {
+    applyProject(toProject(latest));
+    return { mode: "needFile", fileName: latest.summary?.fileName || "" };
+  }
+  if (raw.dataEnc.v !== 2) return { mode: "needPassword", snapshotId: raw.id };
+  const dataset = await decryptLocalJson(raw.dataEnc);
+  applyProject({ ...toProject(latest), dataset });
+  applying = true;
+  try { applyEditable(latest.data); } finally { applying = false; }
+  resetTracking();
+  return { mode: "ready" };
+}
 export async function updateSnapshot(id, patch) {
   const s = await historyDb.getSnapshot(id);
   if (!s) return;
@@ -169,7 +198,7 @@ export async function restoreSnapshot(id, { passphrase = "" } = {}) {
     return { mode: "applied" };
   }
   if (snap.hasData) {
-    const dataset = await decryptJson(snap.dataEnc, passphrase);
+    const dataset = snap.dataEnc?.v === 2 ? await decryptLocalJson(snap.dataEnc) : await decryptJson(snap.dataEnc, passphrase);
     applyProject({ ...toProject(snap), dataset });
     applying = true;
     try { applyEditable(snap.data); } finally { applying = false; }
