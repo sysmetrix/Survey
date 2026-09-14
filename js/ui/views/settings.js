@@ -11,6 +11,7 @@ export function render() {
     <section class="card"><h2>화면</h2>
       <label class="field">화면 테마<select class="in" data-change="local-theme">${Object.entries(THEME_LABEL).map(([v, label]) => option(v, label, themePref() === v)).join("")}</select></label>
       <p class="small muted">시스템 설정은 Windows 또는 브라우저의 밝은·어두운 화면 설정을 따릅니다.</p>
+      <button class="btn sm" data-act="tutorial">3분 화면 가이드 다시 보기</button>
     </section>
     <section class="card"><h2>자동 저장과 보관</h2>
       <label class="check"><input type="checkbox" ${prefs.autosave ? "checked" : ""} data-change="local-autosave"> 변경 사항 자동 저장</label>

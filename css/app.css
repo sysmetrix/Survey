@@ -107,6 +107,19 @@ h3 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; letter-spacing: -.
 .btn.sm { min-height: 32px; padding: 0 11px; font-size: 13px; border-radius: 8px; gap: 5px; }
 .btn.block { width: 100%; margin: 5px 0; }
 .btn.lg { min-height: 48px; padding: 0 22px; font-size: 16px; border-radius: 12px; }
+.hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+.tutorial-focus { position: relative; z-index: 42 !important; border-radius: 12px; outline: 4px solid color-mix(in srgb, var(--accent) 85%, white); outline-offset: 5px; box-shadow: 0 0 0 9999px rgba(5, 12, 8, .58), 0 12px 36px rgba(0,0,0,.24) !important; }
+.tutorial-bar { position: fixed; z-index: 50; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(860px, calc(100% - 28px)); display: grid; grid-template-columns: 1fr auto; gap: 14px 22px; padding: 20px 22px 18px; border: 1px solid rgba(255,255,255,.25); border-radius: 16px; background: rgba(16,24,21,.96); color: #fff; box-shadow: 0 20px 70px rgba(0,0,0,.42); backdrop-filter: blur(16px); }
+.tutorial-progress { position: absolute; inset: 0 0 auto; height: 4px; overflow: hidden; border-radius: 16px 16px 0 0; background: rgba(255,255,255,.16); }
+.tutorial-progress i { display: block; height: 100%; background: #54D497; transition: width .25s ease; }
+.tutorial-copy h2 { color: #fff; font-size: 18px; margin: 2px 0 4px; }
+.tutorial-copy p { color: #E3ECE7; font-size: 15px; line-height: 1.55; margin: 0; }
+.tutorial-kicker { color: #8DE6B9; font-size: 12px; font-weight: 750; }
+.tutorial-controls { display: flex; align-items: end; gap: 7px; }
+.tutorial-bar .btn.ghost { color: #D7E2DC; }
+.tutorial-bar .icon-btn { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); color: #fff; }
+@media (max-width: 640px) { .tutorial-bar { grid-template-columns: 1fr; padding: 18px 16px 14px; } .tutorial-controls { justify-content: flex-end; } .tutorial-copy p { font-size: 14px; } }
+@media (prefers-reduced-motion: reduce) { .tutorial-progress i { transition: none; } }
 
 .in { font: inherit; font-size: 14px; color: var(--text); border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 10px; min-height: 36px; background: var(--surface); width: 100%; min-width: 0; transition: border-color .15s, box-shadow .15s; }
 .in:hover { border-color: var(--text-3); }

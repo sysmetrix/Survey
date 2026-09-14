@@ -47,6 +47,7 @@ export function render() {
       <li>${icon("history", 17)}작업 내역 자동 저장</li>
       <li>${icon("install", 17)}앱 설치 · 오프라인 사용</li>
     </ul>
+    <div class="hero-actions"><button class="btn primary lg" data-act="tutorial">${icon("play", 17)}3분 화면 가이드</button><span class="small muted">샘플 화면과 자막을 따라 첫 보고서까지 체험합니다.</span></div>
   </section>
   ${recentCard()}
   <div class="grid2">
@@ -67,7 +68,7 @@ export function render() {
     <section class="card">
       <h2>샘플로 체험하기</h2>
       <div class="samples">
-        ${SAMPLES.map(s => `<button class="sample" data-act="sample" data-file="${esc(s.file)}"><span class="sample-ico">${icon(s.file.endsWith(".csv") ? "file" : "table", 20)}</span><b>${esc(s.title)}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 18, "go")}</button>`).join("")}
+        ${SAMPLES.map(s => `<button class="sample" data-act="sample" data-file="${esc(s.file)}"><span class="sample-ico">${icon(s.file.endsWith(".csv") ? "file" : "table", 20)}</span><b>${esc(s.title)}${s.file.includes("문화의집") ? ` <span class="badge ok">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 18, "go")}</button>`).join("")}
       </div>
       <h3>입력 템플릿</h3>
       <p class="muted small">처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다(선택).</p>

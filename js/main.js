@@ -17,8 +17,9 @@ import * as history from "./ui/views/history.js";
 import * as settings from "./ui/views/settings.js";
 import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
+import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.3.3";
+export const APP_VERSION = "5.4.0";
 const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -61,6 +62,7 @@ function render({ keepScroll = false } = {}) {
     console.error(e);
     main.innerHTML = `<section class="card"><h2>화면을 표시하지 못했습니다</h2><p class="bad-text">${esc(e.message)}</p><p class="muted small">데이터 설정(열 역할·척도)을 확인하거나 파일을 다시 불러오세요. 직전 상태로 돌아가려면 <b>되돌리기(Ctrl+Z)</b> 또는 <b>작업 내역</b>을 이용하세요.</p><div class="row gap"><button class="btn" data-act="goto" data-to="setup">데이터 설정으로</button><button class="btn" data-act="goto" data-to="history">작업 내역</button></div></section>`;
   }
+  syncGuide();
   if (keepScroll && !changed) window.scrollTo(0, y);
   else if (changed) window.scrollTo(0, 0);
 }
@@ -89,6 +91,7 @@ const GLOBAL = {
     }
     versionTapTimer = setTimeout(() => { versionTaps = 0; }, 1800);
   },
+  tutorial: () => startGuide(),
 };
 
 document.addEventListener("click", e => {
@@ -183,3 +186,4 @@ installTooltips();
 initPwa({ onFile: f => load.actions["drop-data"](f), hasUnsavedWork: () => !!state.dataset });
 initHistory({ onUpdate: () => { if (currentId === "history" || currentId === "load") refresh(); else renderChrome(currentId); } });
 render();
+offerFirstRun();
