@@ -134,7 +134,7 @@ test("로컬 설정과 업데이트 내역 화면 렌더링", () => {
   assert.ok(settings.includes("로컬 설정") && settings.includes("Ctrl") && settings.includes("F5"));
   assert.equal(bad(settings), null);
   const updates = updatesView.render({ sub: "" });
-  assert.ok(updates.includes("업데이트 내역") && updates.includes("v5.3.2") && updates.includes("v5.0.0"));
+  assert.ok(updates.includes("업데이트 내역") && updates.includes("v5.3.3") && updates.includes("v5.0.0") && updates.includes("v4.3.1") && updates.includes("v2.0.0"));
   assert.equal(bad(updates), null);
 });
 

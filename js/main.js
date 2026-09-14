@@ -18,7 +18,7 @@ import * as settings from "./ui/views/settings.js";
 import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 
-export const APP_VERSION = "5.3.2";
+export const APP_VERSION = "5.3.3";
 const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
