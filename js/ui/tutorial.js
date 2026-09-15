@@ -1,5 +1,6 @@
 // 처음 사용자를 위한 자막형 화면 가이드. 진행 상태는 현재 브라우저에만 저장합니다.
 import { go } from "./router.js";
+import { icon } from "./icons.js";
 
 const DONE_KEY = "survey-v5-tutorial-complete";
 const SAMPLE = "2026_문화의집_만족도_구글폼.csv";
@@ -19,7 +20,7 @@ const STEPS = [
   { view: "report", target: "[data-change='doc'][data-field='fontPreset']", title: "한글 문서 서식 고르기", text: "글꼴·글자 크기·줄 간격을 바꾸면 오른쪽 미리보기에 바로 반영됩니다. 기본값은 공문서형(휴먼명조)입니다." },
   { view: "report", target: "#reportPaper", title: "문장 직접 고치기", text: "자동으로 작성된 문장을 눌러 그 자리에서 고칠 수 있습니다. Enter로 확정, ✕로 문장 빼기, ↺로 자동 문장 복원입니다." },
   { view: "report", target: "[data-act='export-hwpx']", title: "한글 파일로 내려받기", text: "표와 그래프까지 들어간 한글(HWPX) 문서로 저장합니다. 바로 아래에 인쇄·PDF 저장과 워드 붙여넣기용 복사도 있습니다." },
-  { view: "report", target: "#presentBtn", title: "발표 자료도 자동으로", text: "같은 분석 결과로 발표용 슬라이드가 함께 만들어집니다. 상단 발표 버튼을 누르면 전체 화면으로 시작합니다." },
+  { view: "report", target: "#presentBtn", title: "발표 자료도 자동으로", text: "같은 분석 결과로 발표용 슬라이드가 함께 만들어집니다. 발표 화면에서 자료를 PDF나 HTML 파일로 내려받을 수도 있습니다." },
   { view: "report", target: "#historyBtn", title: "되돌리기와 작업 내역", text: "잘못 고쳤다면 Ctrl+Z로 되돌릴 수 있고, 작업 내역에서는 이전 버전으로 되돌아가거나 예전 작업을 다시 열 수 있습니다." },
   { view: "report", target: "#settingsBtn", title: "가이드를 마칩니다", text: "상단 설정에서 기관·담당자 정보를 저장하거나 이 가이드를 다시 볼 수 있습니다. 이제 내 설문 파일로 시작해 보세요.", done: true },
 ];
@@ -45,13 +46,13 @@ const ensureUi = () => {
   document.body.insertAdjacentHTML("beforeend", `<section id="tutorialBar" class="tutorial-bar no-print" role="dialog" aria-modal="false" aria-labelledby="tutorialTitle" hidden>
     <div class="tutorial-progress" aria-hidden="true"><i></i></div>
     <div class="tutorial-copy"><div class="tutorial-meta"><span class="tutorial-kicker">화면 가이드 <b id="tutorialCount"></b></span><span class="tutorial-left" id="tutorialLeft"></span><span class="tutorial-timer" id="tutorialTimer" aria-hidden="true"></span></div><h2 id="tutorialTitle"></h2><p id="tutorialText"></p></div>
-    <div class="tutorial-controls"><button class="btn sm ghost" data-tutorial="stop">끝내기</button><button class="icon-btn" data-tutorial="pause" aria-label="자동 재생 일시정지">Ⅱ</button><button class="btn sm primary" data-tutorial="next">다음</button></div>
+    <div class="tutorial-controls"><button class="btn sm ghost" data-tutorial="stop">끝내기</button><button class="btn sm sub" id="tutorialPause" data-tutorial="pause"></button><button class="btn sm primary" data-tutorial="next">다음</button></div>
   </section>`);
   document.addEventListener("click", e => {
     const button = e.target.closest("[data-tutorial]");
     if (!button) return;
     if (button.dataset.tutorial === "stop") stopGuide(false);
-    if (button.dataset.tutorial === "pause") togglePause(button);
+    if (button.dataset.tutorial === "pause") togglePause();
     if (button.dataset.tutorial === "next") advance();
   });
   // 사용자가 직접 화면을 조작하면 가이드를 접는다 (가이드가 화면을 자기 단계로 되돌리지 않도록)
@@ -62,6 +63,16 @@ const ensureUi = () => {
 };
 
 const clearHighlight = () => document.querySelectorAll(".tutorial-focus").forEach(el => el.classList.remove("tutorial-focus"));
+
+/** 일시정지 버튼: 아이콘 + 지금 누르면 무슨 일이 생기는지 글로 표시 */
+function paintPause() {
+  const el = document.getElementById("tutorialPause");
+  if (!el) return;
+  const label = paused ? "이어보기" : "일시정지";
+  el.innerHTML = `${icon(paused ? "play" : "pause", 14)}<span>${label}</span>`;
+  el.setAttribute("aria-label", paused ? "자동 재생 이어보기" : "자동 재생 일시정지");
+  el.title = paused ? "멈춘 가이드를 이어서 봅니다" : "가이드를 잠시 멈춥니다";
+}
 
 /** 진행 막대·타이머는 매 프레임 갱신 (단계가 바뀌어도 끊기지 않게 경과 시간 기준) */
 function paint() {
@@ -131,10 +142,9 @@ function advance() {
   paint();
 }
 
-function togglePause(button) {
+function togglePause() {
   paused = !paused;
-  button.textContent = paused ? "▶" : "Ⅱ";
-  button.setAttribute("aria-label", paused ? "자동 재생 계속" : "자동 재생 일시정지");
+  paintPause();
   paint();
 }
 
@@ -142,8 +152,7 @@ export function startGuide() {
   ensureUi();
   lastFocus = document.activeElement;
   active = true; index = 0; paused = false; shown = -1; navFor = -1; stepMs = 0; lastTs = 0; awaitApp = false;
-  const pause = document.querySelector("[data-tutorial='pause']");
-  if (pause) { pause.textContent = "Ⅱ"; pause.setAttribute("aria-label", "자동 재생 일시정지"); }
+  paintPause();
   if (!timer) timer = setInterval(tick, TICK_MS);
   tick();
 }

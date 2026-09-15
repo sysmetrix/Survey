@@ -50,6 +50,8 @@ body.presenting .container { max-width: none; padding: 0; }
 .p-save-note { margin: 2px 0 0; font-size: 12px; line-height: 1.55; color: #C9D6CF; }
 .p-help dt, .p-help dd { margin: 0; }
 .p-help kbd, .p-ov-head kbd { font: 600 12px/1 var(--font); padding: 4px 7px; border-radius: 6px; background: rgba(255,255,255,.14); white-space: pre; }
+/* 어두운 패널 위의 키 표기 — app.css 의 kbd 색(밝은 화면용)을 그대로 두면 글씨가 보이지 않는다 */
+.p-help kbd { color: #fff; border-color: rgba(255,255,255,.3); }
 .p-ov-head kbd { background: var(--surface-2); color: var(--text-2); margin-left: 4px; }
 
 .p-notes { width: min(360px, 34vw); background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; padding: 18px 18px 22px; overflow: auto; }

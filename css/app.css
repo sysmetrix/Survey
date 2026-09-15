@@ -125,9 +125,16 @@ h3 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; letter-spacing: -.
 .tutorial-left { background: rgba(84, 212, 151, .2); color: #A9F0CB; font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tutorial-left.paused { background: rgba(255,255,255,.14); color: #E3ECE7; }
 .tutorial-timer { margin-left: auto; color: #99A9A1; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 조작 버튼 세 개는 같은 높이·같은 모양으로, 어두운 바 위에서도 버튼으로 보이게 */
 .tutorial-controls { display: flex; align-items: end; gap: 7px; }
-.tutorial-bar .btn.ghost { color: #D7E2DC; }
-.tutorial-bar .icon-btn { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); color: #fff; }
+.tutorial-controls .btn { min-height: 34px; padding: 0 13px; border-radius: 999px; font-size: 13.5px; }
+.tutorial-bar .btn.ghost { background: transparent; border-color: rgba(255,255,255,.24); color: #D7E2DC; }
+.tutorial-bar .btn.ghost:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.45); color: #fff; }
+.tutorial-bar .btn.sub { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.32); color: #fff; }
+.tutorial-bar .btn.sub:hover { background: rgba(255,255,255,.27); border-color: rgba(255,255,255,.55); color: #fff; }
+.tutorial-bar .btn.primary { background: #34B27A; border-color: #34B27A; color: #04130B; }
+.tutorial-bar .btn.primary:hover { background: #48C58C; border-color: #48C58C; }
+.tutorial-bar .btn:focus-visible { box-shadow: 0 0 0 3px rgba(84, 212, 151, .55); }
 @media (max-width: 640px) { .tutorial-bar { grid-template-columns: 1fr; padding: 18px 16px 14px; } .tutorial-controls { justify-content: flex-end; } .tutorial-copy p { font-size: 14px; } }
 
 .in { font: inherit; font-size: 14px; color: var(--text); border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 10px; min-height: 36px; background: var(--surface); width: 100%; min-width: 0; transition: border-color .15s, box-shadow .15s; }

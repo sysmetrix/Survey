@@ -2,6 +2,13 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.7.1", date: "2026-09-15", title: "가이드 조작 버튼과 단축키 표기 정리",
+    groups: {
+      "화면 가이드": ["일시정지 버튼을 아이콘과 글자가 함께 있는 버튼으로 교체(‘Ⅱ’ 기호 제거)", "멈춘 뒤에는 ‘이어보기’로 바뀌어 다음 동작이 분명하게", "끝내기·일시정지·다음 세 버튼의 높이와 모양을 통일"],
+      "발표": ["밝은 화면에서 단축키 안내의 키 글씨가 보이지 않던 문제 해결", "진행 순서 안내에 발표 자료 HTML 내려받기 추가"],
+    },
+  },
+  {
     version: "5.7.0", date: "2026-09-15", title: "발표 자료 내려받기(PDF·HTML)",
     groups: {
       "발표": [
