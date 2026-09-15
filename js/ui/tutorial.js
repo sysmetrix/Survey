@@ -44,7 +44,7 @@ const ensureUi = () => {
   if (document.getElementById("tutorialBar")) return;
   document.body.insertAdjacentHTML("beforeend", `<section id="tutorialBar" class="tutorial-bar no-print" role="dialog" aria-modal="false" aria-labelledby="tutorialTitle" hidden>
     <div class="tutorial-progress" aria-hidden="true"><i></i></div>
-    <div class="tutorial-copy"><div class="tutorial-meta"><span class="tutorial-kicker">화면 가이드 <b id="tutorialCount"></b></span><span class="tutorial-timer" id="tutorialTimer" aria-hidden="true"></span></div><h2 id="tutorialTitle"></h2><p id="tutorialText"></p></div>
+    <div class="tutorial-copy"><div class="tutorial-meta"><span class="tutorial-kicker">화면 가이드 <b id="tutorialCount"></b></span><span class="tutorial-left" id="tutorialLeft"></span><span class="tutorial-timer" id="tutorialTimer" aria-hidden="true"></span></div><h2 id="tutorialTitle"></h2><p id="tutorialText"></p></div>
     <div class="tutorial-controls"><button class="btn sm ghost" data-tutorial="stop">끝내기</button><button class="icon-btn" data-tutorial="pause" aria-label="자동 재생 일시정지">Ⅱ</button><button class="btn sm primary" data-tutorial="next">다음</button></div>
   </section>`);
   document.addEventListener("click", e => {
@@ -70,7 +70,12 @@ function paint() {
   const step = STEPS[index];
   const done = Math.min(TOTAL_MS, (BEFORE_MS[index] ?? TOTAL_MS) + (step ? Math.min(stepMs, stepMsOf(step)) : 0));
   bar.querySelector(".tutorial-progress i").style.width = `${(done / TOTAL_MS * 100).toFixed(2)}%`;
-  document.getElementById("tutorialTimer").textContent = `${mmss(done)} / ${mmss(TOTAL_MS)}`;
+  document.getElementById("tutorialTimer").textContent = `전체 ${mmss(done)} / ${mmss(TOTAL_MS)}`;
+  // 이 단계에 남은 시간을 눈에 띄게 (다음 화면으로 언제 넘어가는지 알 수 있도록)
+  const left = step ? Math.max(0, Math.ceil((stepMsOf(step) - stepMs) / 1000)) : 0;
+  const leftEl = document.getElementById("tutorialLeft");
+  leftEl.textContent = paused ? "일시정지" : `${left}초 뒤 ${step?.done ? "마침" : "다음"}`;
+  leftEl.classList.toggle("paused", paused);
 }
 
 function tick() {
@@ -130,6 +135,7 @@ function togglePause(button) {
   paused = !paused;
   button.textContent = paused ? "▶" : "Ⅱ";
   button.setAttribute("aria-label", paused ? "자동 재생 계속" : "자동 재생 일시정지");
+  paint();
 }
 
 export function startGuide() {

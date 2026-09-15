@@ -43,6 +43,11 @@ body.presenting .container { max-width: none; padding: 0; }
 .p-div { width: 1px; height: 22px; background: rgba(255,255,255,.2); margin: 0 4px; }
 .p-help { position: absolute; left: 50%; bottom: 80px; transform: translateX(-50%); z-index: 6; background: var(--p-chrome); color: #fff; border-radius: 14px; padding: 14px 18px; backdrop-filter: blur(12px); min-width: 300px; }
 .p-help dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 10px 0 0; font-size: 13px; }
+/* 발표 자료 내려받기: PDF·HTML 두 가지만 고르는 작은 패널 */
+.p-save { min-width: 300px; max-width: min(360px, calc(100vw - 32px)); display: grid; gap: 8px; }
+.p-save .btn { justify-content: flex-start; background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.28); color: #fff; margin: 0; }
+.p-save .btn:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.45); }
+.p-save-note { margin: 2px 0 0; font-size: 12px; line-height: 1.55; color: #C9D6CF; }
 .p-help dt, .p-help dd { margin: 0; }
 .p-help kbd, .p-ov-head kbd { font: 600 12px/1 var(--font); padding: 4px 7px; border-radius: 6px; background: rgba(255,255,255,.14); white-space: pre; }
 .p-ov-head kbd { background: var(--surface-2); color: var(--text-2); margin-left: 4px; }

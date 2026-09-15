@@ -9,7 +9,7 @@ export function render() {
   const st = cache.storage;
   const usage = st ? `${fmtBytes(st.usage)} / ${fmtBytes(st.quota)}` : "확인 불가";
   const backTo = viewLabel(prevView());
-  return `<div class="page-head"><div><span class="eyebrow">이 브라우저에만 적용</span><h1>로컬 설정</h1><p class="muted">여기서 바꾼 값은 서버로 전송되지 않으며 현재 브라우저에만 저장됩니다.</p></div><button class="btn" data-act="back">${icon("left", 16)}${esc(backTo)} 화면으로</button></div>
+  return `<div class="page-head"><div><span class="eyebrow">이 브라우저에만 적용</span><h1>로컬 설정</h1><p class="muted">여기서 바꾼 값은 서버로 전송되지 않으며 현재 브라우저에만 저장됩니다.</p></div><button class="btn" data-act="back">${icon("left", 16)}저장 확인·${esc(backTo)} 화면으로</button></div>
   <div class="settings-grid">
     <section class="card"><h2>보고서 기본 정보</h2>
       <p class="small muted">새 보고서와 발표 자료의 표지에 자동으로 들어갑니다.</p>

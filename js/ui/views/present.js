@@ -2,7 +2,8 @@
 import { state, deckSlides } from "../store.js";
 import { chartSvg } from "../../report/model.js";
 import { maskPII } from "../../core/util.js";
-import { esc } from "../util.js";
+import { buildPresentHtml, EXPORT_ICONS } from "../../present/export-html.js";
+import { esc, busy, download, safeFileName, toast, nextFrame } from "../util.js";
 import { go, refresh, parseHash } from "../router.js";
 import { icon } from "../icons.js";
 import { resolvedTheme } from "../theme.js";
@@ -14,11 +15,11 @@ const ui = (() => {
   return { stage: ["auto", "light", "dark"].includes(p.stage) ? p.stage : "auto", notes: !!p.notes };
 })();
 const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(ui)); } catch { /* 무시 */ } };
-const view = { overview: false, blank: false, help: false, printing: false, digits: "", startedAt: 0 };
+const view = { overview: false, blank: false, help: false, save: false, printing: false, digits: "", startedAt: 0 };
 
 const TONE = { good: ["✓", "양호"], warning: ["△", "주의"], critical: ["✕", "보완 필요"] };
 const STAGE_LABEL = { auto: "화면 테마 따름", light: "밝은 무대", dark: "어두운 무대" };
-const KEYS = [["→  Space  PgDn", "다음"], ["←  PgUp", "이전"], ["Home / End", "처음 / 마지막"], ["숫자 + Enter", "해당 번호로 이동"], ["O", "슬라이드 개요"], ["N", "발표자 노트"], ["F", "전체화면"], ["B", "화면 가리기"], ["T", "무대 밝기"], ["P", "PDF 인쇄"], ["Esc", "닫기 · 발표 끝내기"]];
+const KEYS = [["→  Space  PgDn", "다음"], ["←  PgUp", "이전"], ["Home / End", "처음 / 마지막"], ["숫자 + Enter", "해당 번호로 이동"], ["O", "슬라이드 개요"], ["N", "발표자 노트"], ["F", "전체화면"], ["B", "화면 가리기"], ["T", "무대 밝기"], ["P", "발표 자료 내려받기"], ["Esc", "닫기 · 발표 끝내기"]];
 
 export const visibleSlides = () => { const hidden = new Set(state.deckHidden); return deckSlides().filter(s => !hidden.has(s.id)); };
 const stageTheme = () => (ui.stage === "auto" ? resolvedTheme() : ui.stage);
@@ -76,7 +77,7 @@ function bar(idx, total, fs) {
     ${btn("p-overview", "grid", "슬라이드 개요 (O)", `aria-pressed="${view.overview}"`)}
     ${btn("p-notes", "notes", "발표자 노트 (N)", `aria-pressed="${ui.notes}"`)}
     ${btn("p-stage", ui.stage === "dark" ? "moon" : ui.stage === "light" ? "sun" : "monitor", `무대: ${STAGE_LABEL[ui.stage]} (T)`)}
-    ${btn("p-print", "printer", "PDF로 인쇄 (P)")}
+    ${btn("p-save", "download", "발표 자료 내려받기 (P)", `aria-pressed="${view.save}"`)}
     ${btn("p-fullscreen", fs ? "shrink" : "expand", fs ? "전체화면 끝내기 (F)" : "전체화면 (F)")}
     <button class="p-btn p-key" data-act="p-help" aria-label="단축키 (?)" title="단축키 (?)" aria-pressed="${view.help}">?</button>
     <span class="p-div" aria-hidden="true"></span>
@@ -133,6 +134,10 @@ export function render({ sub }) {
       <output class="p-jump" id="pJump" hidden></output>
       ${bar(idx, total, fs)}
       ${view.help ? `<div class="p-help" role="dialog" aria-label="단축키"><b>단축키</b><dl>${KEYS.map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join("")}</dl></div>` : ""}
+      ${view.save ? `<div class="p-help p-save" role="dialog" aria-label="발표 자료 내려받기"><b>발표 자료 내려받기</b>
+        <button class="btn block" data-act="p-save-pdf">${icon("printer", 16)}PDF로 저장 (인쇄)</button>
+        <button class="btn block" data-act="p-save-html">${icon("doc", 16)}HTML 파일로 저장</button>
+        <p class="p-save-note">PDF는 종이·메일용, HTML은 발표용입니다. HTML 파일은 인터넷 없이 열어도 지금 이 화면 그대로 넘기며 발표할 수 있습니다.</p></div>` : ""}
     </div>
     ${ui.notes ? notesHtml(slides[idx], idx, slides) : ""}
     ${view.overview ? overviewHtml(idx, theme) : ""}
@@ -166,12 +171,44 @@ export const actions = {
   "p-prev": () => step(-1),
   "p-next": () => step(1),
   "p-goto": el => { view.overview = false; goN(el.dataset.n); },
-  "p-overview": () => { view.overview = !view.overview; view.help = false; refresh(); },
+  "p-overview": () => { view.overview = !view.overview; view.help = view.save = false; refresh(); },
   "p-notes": () => { ui.notes = !ui.notes; savePrefs(); refresh(); },
   "p-stage": () => { ui.stage = { auto: "light", light: "dark", dark: "auto" }[ui.stage]; savePrefs(); refresh(); },
-  "p-print": () => window.print(),
+  "p-save": () => { view.save = !view.save; view.help = false; refresh(); },
+  "p-save-pdf": () => { view.save = false; refresh(); window.print(); },
+  "p-save-html": async () => {
+    view.save = false;
+    refresh();
+    busy(true, "발표용 HTML 만드는 중…");
+    await nextFrame();
+    try {
+      const slides = visibleSlides();
+      const total = slides.length;
+      const css = (await Promise.all(["css/app.css", "css/present.css"].map(async u => {
+        const res = await fetch(u);
+        if (!res.ok) throw new Error(`${u} (HTTP ${res.status})`);
+        return res.text();
+      }))).join("\n");
+      const title = state.settings.reportTitle || slides[0]?.title || "발표 자료";
+      const html = buildPresentHtml({
+        title, css, dark: stageTheme() === "dark",
+        icons: Object.fromEntries(EXPORT_ICONS.map(n => [n, icon(n, 20)])),
+        slides: slides.map((s, i) => ({
+          light: slideHtml(s, i, total, "light"),
+          dark: slideHtml(s, i, total, "dark"),
+          title: s.title, section: s.section, notes: s.notes || [],
+        })),
+      });
+      download(new Blob([html], { type: "text/html;charset=utf-8" }), `${safeFileName(title)}_발표자료.html`);
+      toast("발표용 HTML을 내려받았습니다. 파일을 두 번 눌러 열면 지금 화면 그대로 발표할 수 있습니다.", "ok", 7000);
+      document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "present-html", title } }));
+    } catch (e) {
+      console.error(e);
+      toast(`HTML 만들기 실패: ${e.message}`, "bad", 7000);
+    } finally { busy(false); }
+  },
   "p-fullscreen": () => toggleFullscreen(),
-  "p-help": () => { view.help = !view.help; refresh(); },
+  "p-help": () => { view.help = !view.help; view.save = false; refresh(); },
   "p-blank": () => { view.blank = !view.blank; refresh(); },
   "p-exit": () => exit(),
   "p-toggle": el => {
@@ -200,11 +237,11 @@ export function onKey(e) {
   else if (e.key === "End") goN(total);
   else if (CODE_ACT[e.code]) actions[CODE_ACT[e.code]]();
   else if (e.code === "KeyF") toggleFullscreen();
-  else if (e.code === "KeyP") window.print();
+  else if (e.code === "KeyP") actions["p-save"]();
   else if (e.key === "?") actions["p-help"]();
   else if (e.key === "Escape") {
     if (view.digits) { view.digits = ""; showJump(); }
-    else if (view.overview || view.help || view.blank) { view.overview = view.help = view.blank = false; refresh(); }
+    else if (view.overview || view.help || view.save || view.blank) { view.overview = view.help = view.save = view.blank = false; refresh(); }
     else if (!document.fullscreenElement) exit();
   } else handled = false;
   if (handled) e.preventDefault();
@@ -216,7 +253,7 @@ function poke() {
   if (!root) return;
   root.classList.remove("idle");
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => { if (!view.overview && !view.help) document.getElementById("present")?.classList.add("idle"); }, 2800);
+  idleTimer = setTimeout(() => { if (!view.overview && !view.help && !view.save) document.getElementById("present")?.classList.add("idle"); }, 2800);
 }
 
 /** 화면에 붙은 뒤 호출: 포커스·타이머·전역 이벤트(한 번만 연결) */
@@ -249,6 +286,6 @@ export function mount() {
 export function unmount() {
   clearInterval(clockTimer);
   clearTimeout(idleTimer);
-  Object.assign(view, { overview: false, blank: false, help: false, digits: "" });
+  Object.assign(view, { overview: false, blank: false, help: false, save: false, digits: "" });
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }

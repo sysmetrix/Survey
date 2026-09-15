@@ -119,9 +119,12 @@ h3 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; letter-spacing: -.
 .tutorial-progress i { display: block; height: 100%; background: #54D497; transition: width .15s linear; }
 .tutorial-copy h2 { color: #fff; font-size: 18px; margin: 2px 0 4px; }
 .tutorial-copy p { color: #E3ECE7; font-size: 15px; line-height: 1.55; margin: 0; }
-.tutorial-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.tutorial-meta { display: flex; align-items: center; gap: 8px; }
 .tutorial-kicker { color: #8DE6B9; font-size: 12px; font-weight: 750; }
-.tutorial-timer { color: #B7C7BF; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* 이 단계에 남은 시간 — 다음 화면으로 언제 넘어가는지 바로 보이게 강조 */
+.tutorial-left { background: rgba(84, 212, 151, .2); color: #A9F0CB; font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tutorial-left.paused { background: rgba(255,255,255,.14); color: #E3ECE7; }
+.tutorial-timer { margin-left: auto; color: #99A9A1; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tutorial-controls { display: flex; align-items: end; gap: 7px; }
 .tutorial-bar .btn.ghost { color: #D7E2DC; }
 .tutorial-bar .icon-btn { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); color: #fff; }
