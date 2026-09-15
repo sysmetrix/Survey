@@ -52,8 +52,10 @@ test("이모지 → 한글에서 표시되는 기호·글자", () => {
 });
 
 test("글꼴 설정: 프리셋·직접 입력·대체 글꼴·별도 Bold 글꼴", () => {
-  const hancom = resolveFonts({});
-  assert.deepEqual([hancom.body, hancom.heading, hancom.substBody], ["함초롬바탕", "함초롬돋움", null]);
+  const def = resolveFonts({});
+  assert.deepEqual([def.body, def.heading, def.headingOnly], ["휴먼명조", "HY헤드라인M", true], "기본은 공문서형");
+  const hancom = resolveFonts({ fontPreset: "hancom" });
+  assert.deepEqual([hancom.body, hancom.heading, hancom.substBody, hancom.headingOnly], ["함초롬바탕", "함초롬돋움", null, false]);
   const pre = resolveFonts({ fontPreset: "pretendard" });
   assert.equal(pre.substBody, "Pretendard GOV");
   const custom = resolveFonts({ fontPreset: "custom", fontBody: "나눔명조<script>", fontHeading: "" });
@@ -80,6 +82,21 @@ test("글꼴 설정: 프리셋·직접 입력·대체 글꼴·별도 Bold 글꼴
   assert.ok(/hangul="2"/.test(headPr) && !headPr.includes("<hh:bold/>"), "굵은 제목은 Bold 글꼴(id 2) 사용");
   assert.match(charPrOf(header, runIdFor(sec, "□ 본문 ")), /hangul="1"/, "본문은 본문 글꼴(id 1)");
   assert.match(header, /<hh:lineSpacing type="PERCENT" value="180"/);
+  assert.deepEqual(validateHwpx(entries, DOMParser), []);
+});
+
+test("공문서형: 제목 글꼴은 큰 제목에만, 굵은 글씨·표는 본문 글꼴(휴먼명조)", () => {
+  const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, fontSettings: { fontPreset: "gov" } });
+  doc.heading(1, "제목").bullet(1, "본문 **굵게**").table({ columns: [{ weight: 1 }], rows: [["표머리"], ["표값"]] });
+  const entries = doc.finish();
+  const header = part(entries, "Contents/header.xml");
+  const sec = part(entries, "Contents/section0.xml");
+  assert.match(header, /id="0" face="HY헤드라인M"/);
+  assert.match(header, /id="1" face="휴먼명조"/);
+  assert.match(charPrOf(header, runIdFor(sec, "제목")), /hangul="0"/, "장 제목은 제목 글꼴");
+  assert.match(charPrOf(header, runIdFor(sec, "표머리")), /hangul="1"/, "표는 본문 글꼴");
+  const boldPr = charPrOf(header, runIdFor(sec, "굵게"));
+  assert.ok(/hangul="1"/.test(boldPr) && boldPr.includes("<hh:bold/>"), "굵은 글씨는 본문 글꼴 + 굵게");
   assert.deepEqual(validateHwpx(entries, DOMParser), []);
 });
 

@@ -31,7 +31,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   // 1. 표지
   add({ id: "cover",
     type: "cover", section: "결과 보고", title,
-    subtitle: [S.orgName, S.date || koDate()].filter(Boolean).join(" · "),
+    subtitle: [S.orgName, S.author, S.date || koDate()].filter(Boolean).join(" · "),
     chips: [LM?.period, LM?.target, `응답자 ${n}명`, DESIGN_LABELS[A.meta.design]].filter(Boolean),
     notes: [LM?.purpose ? `사업목적: ${LM.purpose}` : "", `분석 대상 ${n}명, ${DESIGN_LABELS[A.meta.design]}`].filter(Boolean),
   });

@@ -11,11 +11,20 @@ export const EXTRA_VIEWS = ["present", "history", "settings", "updates"];
 /** 데이터 없이 열 수 있는 화면 */
 export const NO_DATA_VIEWS = ["load", "history", "settings", "updates"];
 
+const EXTRA_LABELS = { present: "발표 모드", history: "작업 내역", settings: "로컬 설정", updates: "업데이트 내역" };
+/** 화면 이름 (돌아가기 버튼 등 안내 문구용) */
+export const viewLabel = id => STEPS.find(s => s.id === id)?.label || EXTRA_LABELS[id] || "처음";
+
 export function parseHash() {
   const parts = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
   const view = STEPS.some(s => s.id === parts[0]) || EXTRA_VIEWS.includes(parts[0]) ? parts[0] : "load";
   return { view, sub: parts[1] || "" };
 }
+
+// 직전에 머물던 화면 (설정·작업 내역에서 "돌아가기"에 사용)
+let previous = "";
+export const setPrevView = id => { if (id) previous = id; };
+export const prevView = () => previous;
 
 let renderer = null;
 export const setRenderer = fn => { renderer = fn; };

@@ -14,7 +14,10 @@ const HNC_UNIT_NS = "http://www.hancom.co.kr/hwpml/2016/HwpUnitChar";
 const FONT_ID = { dotum: 0, batang: 1, bold: 2 };
 
 // ─────────────────────────── 헤더 레지스트리 ───────────────────────────
-function createRegistry(headerXml, { boldFace = false } = {}) {
+function createRegistry(headerXml, { boldFace = false, headingOnly = false } = {}) {
+  // font 역할 "sub"(표·캡션 등 제목이 아닌 강조): 기본은 제목 글꼴, 공문서형처럼
+  // 제목 글꼴을 큰 제목에만 쓰는 조합에서는 본문 글꼴을 쓴다
+  const FONT_ROLE = { ...FONT_ID, sub: headingOnly ? FONT_ID.batang : FONT_ID.dotum };
   const count = tag => +headerXml.match(new RegExp(`<hh:${tag} itemCnt="(\\d+)"`))[1];
   const state = {
     borderFill: { next: count("borderFills") + 1, xml: [], map: new Map() }, // borderFill id 는 1부터
@@ -36,7 +39,7 @@ function createRegistry(headerXml, { boldFace = false } = {}) {
     intern("charPr", { font, size, bold, color, spacing }, (id, s) => {
       // 별도 Bold 글꼴(KoPub 등)이 있으면 굵게는 그 글꼴로, 없으면 <hh:bold/>
       const useBoldFace = s.bold && boldFace;
-      const f = useBoldFace ? FONT_ID.bold : FONT_ID[s.font] ?? FONT_ID.batang;
+      const f = useBoldFace ? FONT_ID.bold : FONT_ROLE[s.font] ?? FONT_ID.batang;
       const all = v => `hangul="${v}" latin="${v}" hanja="${v}" japanese="${v}" other="${v}" symbol="${v}" user="${v}"`;
       return `<hh:charPr id="${id}" height="${Math.round(s.size * 100)}" textColor="${s.color}" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">` +
         `<hh:fontRef ${all(f)}/><hh:ratio ${all(100)}/><hh:spacing ${all(s.spacing)}/><hh:relSz ${all(100)}/><hh:offset ${all(0)}/>` +
@@ -114,7 +117,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
   const M = { left: 20, right: 20, top: 10, bottom: 10, header: 10, footer: 10, ...margins };
   if (parts.FONTS && (parts.FONTS.dotum !== FONT_ID.dotum || parts.FONTS.batang !== FONT_ID.batang)) throw new Error("템플릿 글꼴 순서가 예상과 다릅니다(0=돋움, 1=바탕)");
   const fonts = resolveFonts(fontSettings);
-  const reg = createRegistry(parts.HEADER_XML, { boldFace: !!fonts.boldFace });
+  const reg = createRegistry(parts.HEADER_XML, { boldFace: !!fonts.boldFace, headingOnly: fonts.headingOnly });
   const pageW = +parts.SEC_PR.match(/<hp:pagePr[^>]*\bwidth="(\d+)"/)[1];
   const bodyWidth = pageW - mm(M.left) - mm(M.right);
   const B = baseSize;
@@ -194,7 +197,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     },
     /** 표/그림 제목, 단위, 주석, 출처 */
     caption(text, { align = "CENTER", before = 500, after = 150, keepNext = true } = {}) {
-      addPara(text, { font: "dotum", size: B - 1, bold: true }, { align, before, after, line: 140, keepNext });
+      addPara(text, { font: "sub", size: B - 1, bold: true }, { align, before, after, line: 140, keepNext });
       return api;
     },
     note(text, { align = "LEFT", before = 60, after = 60, keepNext = false } = {}) {
@@ -261,7 +264,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
         const lines = String(cell.text ?? "").split("\n");
         const cellParas = lines.map(line =>
           `<hp:p id="0" paraPrIDRef="${pp({ align: al, line: 130 })}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
-          runs(line, { font: "dotum", size: fontSize, bold: cell.bold ?? isHeader }) + `</hp:p>`).join("");
+          runs(line, { font: "sub", size: fontSize, bold: cell.bold ?? isHeader }) + `</hp:p>`).join("");
         trs[r].push(
           `<hp:tc name="" header="${isHeader ? 1 : 0}" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="${bf}">` +
           `<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${cellParas}</hp:subList>` +
@@ -276,7 +279,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
         `<hp:pos treatAsChar="0" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="${align === "CENTER" ? "CENTER" : "LEFT"}" vertOffset="0" horzOffset="0"/>` +
         `<hp:outMargin left="0" right="0" top="0" bottom="${mm(1.5)}"/><hp:inMargin left="340" right="340" top="120" bottom="120"/>` +
         trs.map(cells => `<hp:tr>${cells.join("")}</hp:tr>`).join("") + `</hp:tbl>`;
-      paras.push(pOpen(pp({ align: "LEFT", line: 100, before: 0, after: 0 })) + `<hp:run charPrIDRef="${cp({ font: "dotum", size: fontSize })}">${tbl}<hp:t/></hp:run></hp:p>`);
+      paras.push(pOpen(pp({ align: "LEFT", line: 100, before: 0, after: 0 })) + `<hp:run charPrIDRef="${cp({ font: "sub", size: fontSize })}">${tbl}<hp:t/></hp:run></hp:p>`);
       return api;
     },
 

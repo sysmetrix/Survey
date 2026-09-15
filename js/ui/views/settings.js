@@ -1,13 +1,21 @@
 import { prefs, savePrefs, cache, requestPersist, fmtBytes } from "../history/manager.js";
 import { themePref, setTheme, THEME_LABEL } from "../theme.js";
+import { state, persistSettings, invalidate } from "../store.js";
 import { esc, toast, option } from "../util.js";
-import { refresh } from "../router.js";
+import { refresh, prevView, viewLabel } from "../router.js";
+import { icon } from "../icons.js";
 
 export function render() {
   const st = cache.storage;
   const usage = st ? `${fmtBytes(st.usage)} / ${fmtBytes(st.quota)}` : "확인 불가";
-  return `<div class="page-head"><div><span class="eyebrow">이 브라우저에만 적용</span><h1>로컬 설정</h1><p class="muted">여기서 바꾼 값은 서버로 전송되지 않으며 현재 브라우저에만 저장됩니다.</p></div></div>
+  const backTo = viewLabel(prevView());
+  return `<div class="page-head"><div><span class="eyebrow">이 브라우저에만 적용</span><h1>로컬 설정</h1><p class="muted">여기서 바꾼 값은 서버로 전송되지 않으며 현재 브라우저에만 저장됩니다.</p></div><button class="btn" data-act="back">${icon("left", 16)}${esc(backTo)} 화면으로</button></div>
   <div class="settings-grid">
+    <section class="card"><h2>보고서 기본 정보</h2>
+      <p class="small muted">새 보고서와 발표 자료의 표지에 자동으로 들어갑니다.</p>
+      <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" placeholder="예: 부천여성청소년재단 청소년팀" data-change="local-org"></label>
+      <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="예: 홍길동" data-change="local-author"></label>
+    </section>
     <section class="card"><h2>화면</h2>
       <label class="field">화면 테마<select class="in" data-change="local-theme">${Object.entries(THEME_LABEL).map(([v, label]) => option(v, label, themePref() === v)).join("")}</select></label>
       <p class="small muted">시스템 설정은 Windows 또는 브라우저의 밝은·어두운 화면 설정을 따릅니다.</p>
@@ -29,6 +37,8 @@ export function render() {
 }
 
 export const actions = {
+  "local-org": el => { state.settings.orgName = el.value.trim(); persistSettings(); invalidate(); toast("기관·부서명을 저장했습니다", "ok"); refresh(); },
+  "local-author": el => { state.settings.author = el.value.trim(); persistSettings(); invalidate(); toast("담당자명을 저장했습니다", "ok"); refresh(); },
   "local-theme": el => { setTheme(el.value); toast(`화면 테마: ${THEME_LABEL[el.value]}`); refresh(); },
   "local-autosave": el => { savePrefs({ autosave: el.checked }); toast(el.checked ? "자동 저장을 켰습니다" : "자동 저장을 껐습니다"); refresh(); },
   "local-max": el => { savePrefs({ maxAuto: Number(el.value) }); toast("자동 버전 보관 수를 변경했습니다", "ok"); refresh(); },

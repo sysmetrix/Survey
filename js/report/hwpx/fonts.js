@@ -3,8 +3,8 @@
 // 참고: sysmetrix/To-Hwpx — 실제 설치 패밀리명 기록, Pretendard GOV/Variable 교차 대체, KoPub 굵게는 별도 Bold 글꼴
 
 export const FONT_PRESETS = [
+  { id: "gov", name: "공문서형 (휴먼명조)", body: "휴먼명조", heading: "HY헤드라인M", headingOnly: true, note: "행정기관 보고서 기본 조합 — 본문·표·굵은 글씨는 휴먼명조, 큰 제목만 제목 글꼴" },
   { id: "hancom", name: "함초롬 (한글 기본)", body: "함초롬바탕", heading: "함초롬돋움", note: "한글(한컴오피스)에 기본 포함 — 어느 PC에서나 같은 모양" },
-  { id: "gov", name: "공문서형 (휴먼명조 · HY헤드라인M)", body: "휴먼명조", heading: "HY헤드라인M", note: "행정기관 보고서에서 많이 쓰는 조합, 한컴오피스 설치 시 포함" },
   { id: "malgun", name: "맑은 고딕", body: "맑은 고딕", heading: "맑은 고딕", note: "Windows 기본 글꼴" },
   { id: "nanum", name: "나눔고딕", body: "나눔고딕", heading: "나눔고딕", note: "무료 글꼴 — 받는 PC에도 설치 필요", url: "https://hangeul.naver.com/font" },
   { id: "kopub", name: "KoPub돋움체", body: "KoPub돋움체 Medium", heading: "KoPub돋움체 Medium", boldFace: "KoPub돋움체 Bold", note: "무료 공공 글꼴 — 굵은 글자는 KoPub돋움체 Bold 사용", url: "https://www.kopus.org/biz-electronic-font2/" },
@@ -13,10 +13,14 @@ export const FONT_PRESETS = [
   { id: "custom", name: "직접 입력", body: "", heading: "", note: "PC에 설치된 글꼴 이름을 정확히 입력(한글 글꼴 목록에 보이는 이름)" },
 ];
 
+/** 설정이 없을 때 쓰는 기본 글꼴 조합 */
+export const DEFAULT_FONT_PRESET = "gov";
+
 export const FONT_SIZES = [10, 10.5, 11, 12, 13, 14, 15];
 export const LINE_SPACINGS = [150, 160, 170, 180];
 
 const HANCOM = { body: "함초롬바탕", heading: "함초롬돋움" };
+const defaultPreset = () => FONT_PRESETS.find(x => x.id === DEFAULT_FONT_PRESET) || FONT_PRESETS[0];
 
 /** 글꼴 이름 정리 (XML·CSS 안전): 한글·영문·숫자·공백·일부 기호, 최대 40자 */
 export const cleanFontName = s => String(s ?? "").replace(/[^\p{L}\p{N} ._\-()]/gu, "").replace(/\s+/g, " ").trim().slice(0, 40);
@@ -24,10 +28,10 @@ export const cleanFontName = s => String(s ?? "").replace(/[^\p{L}\p{N} ._\-()]/
 /**
  * 설정 → 실제 글꼴 지정
  * @param {{fontPreset?:string, fontBody?:string, fontHeading?:string}} settings
- * @returns {{id:string, body:string, heading:string, boldFace:string|null, substBody:string|null, substHeading:string|null}}
+ * @returns {{id:string, body:string, heading:string, boldFace:string|null, headingOnly:boolean, substBody:string|null, substHeading:string|null}}
  */
 export function resolveFonts(settings = {}) {
-  const p = FONT_PRESETS.find(x => x.id === settings.fontPreset) || FONT_PRESETS[0];
+  const p = FONT_PRESETS.find(x => x.id === settings.fontPreset) || defaultPreset();
   let body = p.body, heading = p.heading;
   if (p.id === "custom") {
     body = cleanFontName(settings.fontBody) || HANCOM.body;
@@ -37,6 +41,8 @@ export function resolveFonts(settings = {}) {
   const pretendardAlt = n => (n === "Pretendard GOV Variable" ? "Pretendard GOV" : n === "Pretendard GOV" ? "Pretendard GOV Variable" : null);
   return {
     id: p.id, body, heading, boldFace: p.boldFace || null,
+    // 제목 글꼴을 큰 제목에만 쓰는 조합(공문서형): 표·캡션·굵은 글씨는 본문 글꼴 유지
+    headingOnly: !!p.headingOnly,
     // 받는 PC에 글꼴이 없을 때: Pretendard 는 다른 설치 이름, 그 밖에는 함초롬으로 표시
     substBody: pretendardAlt(body) || (isHancom(body) ? null : HANCOM.body),
     substHeading: pretendardAlt(heading) || (isHancom(heading) ? null : HANCOM.heading),

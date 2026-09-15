@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { toNum } from "../../js/core/util.js";
+import { toNum, koDate, withWeekday } from "../../js/core/util.js";
 import { detectColumn, parseTime, shortLabel } from "../../js/model/detect.js";
 import { matchLabelSet } from "../../js/model/label-sets.js";
 import { buildCodebook, pairsOf, lintCodebook } from "../../js/model/codebook.js";
@@ -103,4 +103,14 @@ test("파일 파싱: XLSX 다중 시트, CSV EUC-KR", () => {
   const csv = parseCsv(new TextEncoder().encode("\uFEFF성별,만족도\n남,5\n여,\n"), "b.csv", Papa);
   assert.deepEqual(csv.sheets[0].rows, [["남", "5"], ["여", null]]);
   assert.equal(decodeText(new Uint8Array([0xC7, 0xD1])), "한"); // EUC-KR
+});
+
+test("작성일 표기: 날짜 끝에 (요일)", () => {
+  assert.equal(koDate(new Date(2026, 8, 15)), "2026. 9. 15.(화)");
+  assert.equal(withWeekday("2026. 9. 15."), "2026. 9. 15.(화)");
+  assert.equal(withWeekday("2026-09-15"), "2026-09-15(화)");
+  assert.equal(withWeekday("2026. 9. 15.(화)"), "2026. 9. 15.(화)", "이미 있으면 그대로");
+  assert.equal(withWeekday("2026년 2월 30일"), "2026년 2월 30일", "없는 날짜는 그대로");
+  assert.equal(withWeekday("추후 확정"), "추후 확정");
+  assert.equal(withWeekday(""), "");
 });

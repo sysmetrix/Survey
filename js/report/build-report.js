@@ -50,7 +50,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
 
   // ───── 표지·요약 ─────
   const title = S.reportTitle || (LM?.programName ? `${LM.programName} 결과 분석 보고서` : "설문조사 결과 분석 보고서");
-  push({ type: "title", text: title, subtitle: [S.orgName, S.date || koDate()].filter(Boolean).join(" · ") });
+  push({ type: "title", text: title, subtitle: [S.orgName, S.author, S.date || koDate()].filter(Boolean).join(" · ") });
   const sum = [];
   sum.push(B("sum.survey", 1, `□ 조사 개요: ${DESIGN_LABELS[A.meta.design]}, 응답자 ${A.meta.n}명${P && !P.unpaired && A.meta.design === "prepost-sheets" ? `(사전·사후 매칭 ${P.matchedN}명)` : ""}`));
   if (kpiOn) {

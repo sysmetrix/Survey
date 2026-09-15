@@ -85,9 +85,23 @@ export function editDistance(a, b) {
   return dp[b.length];
 }
 
-/** 날짜 → "2026. 9. 13." 형식 */
+const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** 날짜 → "2026. 9. 13.(금)" 형식 (공문서 표기) */
 export function koDate(d = new Date()) {
-  return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.`;
+  return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.(${WEEKDAY[d.getDay()]})`;
+}
+
+/** 직접 입력한 작성일에 "(요일)" 붙이기 (이미 있거나 날짜로 읽히지 않으면 그대로) */
+export function withWeekday(text) {
+  const s = String(text ?? "").trim();
+  if (!s || /\([일월화수목금토]\)/.test(s)) return s;
+  const m = s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  if (!m) return s;
+  const [y, mo, day] = [+m[1], +m[2], +m[3]];
+  const d = new Date(y, mo - 1, day);
+  if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== day) return s;
+  return `${s}(${WEEKDAY[d.getDay()]})`;
 }
 
 /** 개인정보 마스킹 (전화·이메일·주민번호 형태) */

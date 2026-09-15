@@ -1,6 +1,6 @@
 // 앱 진입점: 화면 전환·이벤트 위임 (인라인 핸들러 없음 — CSP script-src 'self')
 import { state } from "./ui/store.js";
-import { STEPS, NO_DATA_VIEWS, parseHash, go, setRenderer, refresh } from "./ui/router.js";
+import { STEPS, NO_DATA_VIEWS, parseHash, go, setRenderer, setPrevView, prevView, refresh } from "./ui/router.js";
 import { toast, esc } from "./ui/util.js";
 import { icon } from "./ui/icons.js";
 import { cycleTheme, themePref, THEME_LABEL, watchSystemTheme } from "./ui/theme.js";
@@ -19,7 +19,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.5.0";
+export const APP_VERSION = "5.6.0";
 const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -49,6 +49,7 @@ function render({ keepScroll = false } = {}) {
   const allowedView = view === "updates" && !hasReleaseAccess() ? "load" : view;
   const id = !NO_DATA_VIEWS.includes(allowedView) && !state.dataset ? "load" : allowedView;
   const changed = id !== currentId;
+  if (changed && currentId && currentId !== id) setPrevView(currentId);
   if (changed && currentId === "present") present.unmount();
   current = VIEWS[id]; currentId = id;
   document.body.classList.toggle("presenting", id === "present");
@@ -75,6 +76,7 @@ const afterAction = () => { if (trackChange()) renderChrome(currentId); };
 const handler = name => current.actions?.[name] || GLOBAL[name];
 const GLOBAL = {
   goto: el => go(el.dataset.to, el.dataset.sub || ""),
+  back: () => go(prevView() || "load"),
   theme: () => { const p = cycleTheme(); toast(`화면 테마: ${THEME_LABEL[p]}`); refresh(); },
   install: () => installApp(),
   skip: () => document.getElementById("main").focus(),

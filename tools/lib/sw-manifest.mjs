@@ -26,12 +26,16 @@ export async function collectAssets() {
   return [...new Set(list)].sort();
 }
 
+// Git 이 줄바꿈을 바꾸는 텍스트 자산 (체크아웃 환경과 무관하게 같은 값이 나오도록 LF 로 통일).
+// 이미지·엑셀 같은 이진 자산은 원본 바이트 그대로 해시한다 — UTF-8 문자열로 왕복하면
+// 잘못된 바이트가 대체 문자로 바뀌어 실행 환경에 따라 결과가 달라질 수 있다.
+const TEXT_ASSET = /\.(html|webmanifest|css|js|mjs|json|svg|txt|xml|csv)$/i;
+
 export async function computeRevision(assets) {
   const h = createHash("sha256");
   for (const a of assets) {
     let buf = await readFile(a);
-    // Git 자동 줄바꿈 변환(CRLF/LF)과 무관하게 같은 값이 나오도록 텍스트는 LF 로 통일
-    if (!/\.png$/.test(a)) buf = Buffer.from(buf.toString("utf8").replace(/\r\n/g, "\n"));
+    if (TEXT_ASSET.test(a)) buf = Buffer.from(buf.toString("utf8").replace(/\r\n/g, "\n"));
     h.update(a); h.update("\0"); h.update(buf); h.update("\0");
   }
   return h.digest("hex").slice(0, 16);

@@ -6,7 +6,7 @@ export function projectToJson(state, { includeData = false } = {}) {
   const obj = {
     app: PROJECT_APP, schema: PROJECT_SCHEMA, savedAt: new Date().toISOString(),
     settings: {
-      orgName: state.settings.orgName, reportTitle: state.settings.reportTitle, date: state.settings.date, thresholds: state.settings.thresholds,
+      orgName: state.settings.orgName, author: state.settings.author, reportTitle: state.settings.reportTitle, date: state.settings.date, thresholds: state.settings.thresholds,
       fontPreset: state.settings.fontPreset, fontBody: state.settings.fontBody, fontHeading: state.settings.fontHeading, baseSize: state.settings.baseSize, lineSpacing: state.settings.lineSpacing,
     },
     codebook: state.codebook, logicModel: state.logicModel, kpis: state.kpis,

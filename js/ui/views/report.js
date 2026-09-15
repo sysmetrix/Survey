@@ -3,10 +3,11 @@ import { state, compute, reportBlocks, invalidate, persistSettings } from "../st
 import { finalizeBlocks, blocksToText, chartSvg } from "../../report/model.js";
 import { blocksToHtml, splitChapters } from "../../report/render-html.js";
 import { renderHwpx } from "../../report/render-hwpx.js";
-import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, resolveFonts, cleanFontName } from "../../report/hwpx/fonts.js";
+import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, DEFAULT_FONT_PRESET, resolveFonts, cleanFontName } from "../../report/hwpx/fonts.js";
 import { svgToPng } from "../../charts/rasterize.js";
 import { projectToJson } from "../../io/project.js";
 import { esc, toast, busy, download, safeFileName, nextFrame, option } from "../util.js";
+import { withWeekday } from "../../core/util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
 import { isFontInstalled } from "../fontcheck.js";
@@ -28,7 +29,9 @@ function paperStyle() {
   const size = baseSize * 1.36;
   const lh = ((Number(state.settings.lineSpacing) || 160) / 100 * 1.09).toFixed(2);
   const scaled = px => `${(px * baseSize / 11).toFixed(1)}px`;
-  return `--paper-body:${q(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${q(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-size-print:${baseSize}pt; --paper-title-size:${scaled(26)}; --paper-h1-size:${scaled(20)}; --paper-h2-size:${scaled(17)}; --paper-small-size:${scaled(14)}; --paper-table-size:${scaled(12.5)}; --paper-compact-size:${scaled(11.5)}; --paper-note-size:${scaled(12)}; --paper-lh:${lh}`;
+  // 공문서형처럼 제목 글꼴을 큰 제목에만 쓰는 조합에서는 표·캡션·요약상자를 본문 글꼴로
+  const sub = f.headingOnly ? f.body : f.heading;
+  return `--paper-body:${q(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${q(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-sub-font:${q(sub)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-size-print:${baseSize}pt; --paper-title-size:${scaled(26)}; --paper-h1-size:${scaled(20)}; --paper-h2-size:${scaled(17)}; --paper-small-size:${scaled(14)}; --paper-table-size:${scaled(12.5)}; --paper-compact-size:${scaled(11.5)}; --paper-note-size:${scaled(12)}; --paper-lh:${lh}`;
 }
 
 function fontBadge(name) {
@@ -42,20 +45,22 @@ function formatPanel() {
   const p = FONT_PRESETS.find(x => x.id === s.fontPreset) || FONT_PRESETS[0];
   const f = resolveFonts(s);
   const names = [...new Set([f.body, f.heading, f.boldFace].filter(Boolean))];
+  // 어느 글꼴이 어디에 쓰이는지 표시 (공문서형은 제목 글꼴을 큰 제목에만 사용)
+  const roleOf = n => n === f.boldFace ? "굵게" : n !== f.body && n === f.heading ? (f.headingOnly ? "제목" : "제목·표") : "본문";
   return `
       <label class="field">글꼴<select class="in" data-change="doc" data-field="fontPreset">${FONT_PRESETS.map(x => option(x.id, x.name, x.id === p.id)).join("")}</select></label>
       ${p.id === "custom" ? `<div class="grid-2in">
         <label class="field">본문 글꼴<input class="in" value="${esc(s.fontBody)}" placeholder="예: 휴먼명조" maxlength="40" data-change="doc" data-field="fontBody"></label>
         <label class="field">제목 글꼴<input class="in" value="${esc(s.fontHeading)}" placeholder="비우면 본문과 같음" maxlength="40" data-change="doc" data-field="fontHeading"></label></div>` : ""}
       <p class="small muted">${esc(p.note)}${p.url ? ` · <a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">내려받기 안내</a>` : ""}</p>
-      <div class="font-names">${names.map(n => `<div class="row gap wrap small"><span>${esc(n)}</span>${fontBadge(n)}</div>`).join("")}</div>
+      <div class="font-names">${names.map(n => `<div class="row gap wrap small"><span>${esc(n)} <span class="muted">${esc(roleOf(n))}</span></span>${fontBadge(n)}</div>`).join("")}</div>
       <div class="row gap wrap">
         <label class="field compact">글자 크기<select class="in" data-change="doc" data-field="baseSize">${FONT_SIZES.map(v => option(v, `${v}pt`, Number(s.baseSize) === v)).join("")}</select></label>
         <label class="field compact">줄 간격<select class="in" data-change="doc" data-field="lineSpacing">${LINE_SPACINGS.map(v => option(v, `${v}%`, Number(s.lineSpacing) === v)).join("")}</select></label>
       </div>
       <div class="row gap wrap format-actions">
-        <button class="btn sm ghost" data-act="font-check" ${checkingFonts ? "disabled aria-busy=\"true\"" : ""}>${icon("check", 15)}${checkingFonts ? "글꼴 확인 중…" : "이 PC의 글꼴 확인"}</button>
-        <button class="btn sm ghost" data-act="reset-doc">기본 서식으로</button>
+        <button class="btn sm sub" data-act="font-check" ${checkingFonts ? "disabled aria-busy=\"true\"" : ""}>${icon("check", 15)}${checkingFonts ? "글꼴 확인 중…" : "이 PC의 글꼴 확인"}</button>
+        <button class="btn sm sub" data-act="reset-doc">기본 서식으로</button>
       </div>
       <p class="small muted format-help">선택 즉시 오른쪽 미리보기에 반영됩니다. 글꼴 확인 시 브라우저가 로컬 글꼴 접근 권한을 물을 수 있습니다.</p>
       <p class="small muted">한글 파일에는 글꼴 이름만 들어갑니다. 받는 PC에 글꼴이 없으면 함초롬 글꼴로 대신 표시됩니다. 웹 이모지는 한글에서 보이는 기호로 바뀝니다(예: ✅→√, 😊→^^).</p>`;
@@ -71,7 +76,11 @@ export function render() {
   <div class="report-layout">
     <aside class="card side no-print">
       <h2>보고서 설정</h2>
-      <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" data-change="setting" data-field="orgName"></label>
+      <div class="grid-2in">
+        <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" data-change="setting" data-field="orgName"></label>
+        <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="예: 홍길동" data-change="setting" data-field="author"></label>
+      </div>
+      <p class="small muted">기관·부서명과 담당자명은 이 브라우저에 저장되어 다음 보고서에도 그대로 쓰입니다.</p>
       <label class="field">보고서 제목<input class="in" value="${esc(state.settings.reportTitle)}" placeholder="${esc(title)}" data-change="setting" data-field="reportTitle"></label>
       <label class="field">작성일<input class="in" value="${esc(state.settings.date)}" data-change="setting" data-field="date"></label>
       <h3>포함할 장</h3>
@@ -79,7 +88,7 @@ export function render() {
       <h3>문장 편집</h3>
       <p class="small muted">미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
       <p class="small">수정 ${nEdited}건 · 숨김 ${nHidden}건</p>
-      <div class="row gap wrap">${nEdited ? `<button class="btn sm ghost" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm ghost" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>
+      <div class="row gap wrap">${nEdited ? `<button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>
       <h3>한글 문서 서식</h3>
       ${formatPanel()}
       <h3>내보내기</h3>
@@ -89,7 +98,7 @@ export function render() {
       <button class="btn block" data-act="goto" data-to="present" data-sub="1">${icon("play", 16)}발표 모드로 보기</button>
       <hr>
       <label class="check small"><input type="checkbox" ${includeData ? "checked" : ""} data-change="include-data"> 원자료 포함 (개인정보 주의)</label>
-      <button class="btn block ghost" data-act="save-project">프로젝트 파일 저장</button>
+      <button class="btn block sub" data-act="save-project">프로젝트 파일 저장</button>
       <p class="small muted">프로젝트 파일에는 문항 설정·사업정보·성과지표·문장 수정·문서 서식이 저장되어 다음에 같은 설문을 올리면 그대로 적용됩니다.</p>
     </aside>
     <div class="paper edit" id="reportPaper" style="${esc(paperStyle())}">${blocksToHtml(blocks, { editable: true })}</div>
@@ -109,7 +118,11 @@ async function figureImages(blocks) {
 }
 
 export const actions = {
-  setting: el => { state.settings[el.dataset.field] = el.value.trim(); persistSettings(); invalidate(); refresh(); },
+  setting: el => {
+    const f = el.dataset.field;
+    state.settings[f] = f === "date" ? withWeekday(el.value) : el.value.trim();
+    persistSettings(); invalidate(); refresh();
+  },
   doc: el => {
     const f = el.dataset.field;
     state.settings[f] = ["baseSize", "lineSpacing"].includes(f) ? Number(el.value) : f === "fontPreset" ? el.value : cleanFontName(el.value);
@@ -136,7 +149,7 @@ export const actions = {
     }
   },
   "reset-doc": () => {
-    Object.assign(state.settings, { fontPreset: "hancom", fontBody: "", fontHeading: "", baseSize: 11, lineSpacing: 160 });
+    Object.assign(state.settings, { fontPreset: DEFAULT_FONT_PRESET, fontBody: "", fontHeading: "", baseSize: 11, lineSpacing: 160 });
     fontStatus = {};
     persistSettings();
     toast("한글 문서 서식을 기본값으로 되돌렸습니다", "ok");
@@ -162,7 +175,7 @@ export const actions = {
     try {
       const { TEMPLATE_PARTS } = await import("../../report/hwpx/template-parts.js");
       const bytes = await renderHwpx(blocks, {
-        parts: TEMPLATE_PARTS, JSZip: window.JSZip, title, creator: state.settings.orgName, doc: docOptions(),
+        parts: TEMPLATE_PARTS, JSZip: window.JSZip, title, creator: state.settings.author || state.settings.orgName, doc: docOptions(),
         rasterize: (svg, w, h) => svgToPng(svg, w, h, 2.5),
         onProgress: (i, n) => busy(true, `그래프 변환 ${i}/${n}`),
         onStats: s => { stats = s; },
