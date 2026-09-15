@@ -35,6 +35,8 @@ let active = false, index = 0, paused = false, lastFocus = null;
 let shown = -1, navFor = -1, stepMs = 0, lastTs = 0, timer = 0;
 // 앞 단계가 앱 동작(샘플 불러오기 등)을 실행했으면 앱이 스스로 화면을 옮길 때까지 기다린다
 let awaitApp = false;
+// 가이드가 스스로 누른 클릭인지 (사용자 조작과 구분)
+let selfClick = false;
 
 const mmss = ms => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 
@@ -52,6 +54,11 @@ const ensureUi = () => {
     if (button.dataset.tutorial === "pause") togglePause(button);
     if (button.dataset.tutorial === "next") advance();
   });
+  // 사용자가 직접 화면을 조작하면 가이드를 접는다 (가이드가 화면을 자기 단계로 되돌리지 않도록)
+  document.addEventListener("click", e => {
+    if (!active || selfClick || e.target.closest("[data-tutorial], [data-act='tutorial']")) return;
+    if (e.target.closest("[data-act], [data-change], [data-drop], a[href]")) stopGuide(false);
+  }, true);
 };
 
 const clearHighlight = () => document.querySelectorAll(".tutorial-focus").forEach(el => el.classList.remove("tutorial-focus"));
@@ -112,7 +119,10 @@ function advance() {
   if (!step || step.done) return stopGuide(true);
   const target = step.run ? document.querySelector(step.target) : null;
   index += 1; stepMs = 0; shown = -1; navFor = -1; awaitApp = !!step.wait;
-  if (step.run && target) step.run(target);
+  if (step.run && target) {
+    selfClick = true;
+    try { step.run(target); } finally { selfClick = false; }
+  }
   paint();
 }
 

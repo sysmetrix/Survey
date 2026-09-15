@@ -26,7 +26,7 @@ test("스냅샷: 원자료 제외·키 순서 무관 해시·변경 내용 비�
   state.kpis.push({ id: "K9", name: "새 지표" });
   state.overrides["sum.kpi"] = "직접 고친 문장";
   state.hiddenChapters.push("주관식 응답 분석");
-  state.settings.fontPreset = "gov";
+  state.settings.fontPreset = "hancom";   // 기본값(공문서형)에서 바꿔야 변경으로 잡힌다
   const after = captureEditable(state);
   const d = diffEditable(before, after);
   const areas = Object.fromEntries(d.map(g => [g.area, g.items.join(" / ")]));
