@@ -101,7 +101,13 @@ export function render() {
   <section class="card">
     <div class="row between wrap">
       <h3 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}${state.businessFound?.doc ? ` <span class="badge ok">문서에서 초안 반영 · 확인 필요</span>` : ""}</h3>
-      <div class="row gap"><button class="btn sm ghost" data-act="save-preset">사업정보·지표 파일로 저장</button><label class="btn sm ghost">파일 불러오기<input type="file" accept=".json" data-change="load-preset" hidden></label><label class="btn sm ghost">문서에서 채우기(.hwpx)<input type="file" accept=".hwpx" data-change="load-plan-doc" hidden></label></div>
+      <div class="rt-io-group" role="group" aria-label="사업정보·성과지표 저장·불러오기">
+        <button class="rt-btn" data-act="save-preset" title="사업정보·지표 파일로 저장">${icon("download", 16)}사업정보·지표 파일로 저장</button>
+        <div class="rt-sep" aria-hidden="true"></div>
+        <label class="rt-btn" title="파일 불러오기">${icon("upload", 16)}파일 불러오기<input type="file" accept=".json" data-change="load-preset" hidden></label>
+        <div class="rt-sep" aria-hidden="true"></div>
+        <label class="rt-btn" title="문서에서 채우기(.hwpx)">${icon("doc", 16)}문서에서 채우기(.hwpx)<input type="file" accept=".hwpx" data-change="load-plan-doc" hidden></label>
+      </div>
     </div>
     <p class="small muted">입력하면 보고서에 ‘사업 개요’와 ‘논리모형’ 표, 목표별 달성 평가가 추가됩니다. 몰라도 보고서 작성에는 문제없습니다.</p>
     <div class="grid3">

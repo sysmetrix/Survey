@@ -12,7 +12,7 @@ function apply() {
   const p = themePref(), root = document.documentElement;
   if (p === "system") delete root.dataset.theme; else root.dataset.theme = p;
   const meta = document.querySelector('meta[name="theme-color"]:not([media])');
-  if (meta) meta.content = resolvedTheme() === "dark" ? "#111412" : "#006D3A";
+  if (meta) meta.content = resolvedTheme() === "dark" ? "#0B0D10" : "#3B5A7A";
 }
 
 export function cycleTheme() {

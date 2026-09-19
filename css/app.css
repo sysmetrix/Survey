@@ -116,22 +116,22 @@ h3 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; letter-spacing: -.
 .btn.sub:hover { background: var(--surface-3); border-color: var(--border-strong); color: var(--text); }
 .btn.block.sub { border-radius: 10px; }
 .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
-.tutorial-focus { position: relative; z-index: 42 !important; border-radius: 12px; outline: 4px solid color-mix(in srgb, var(--accent) 85%, white); outline-offset: 5px; box-shadow: 0 0 0 9999px rgba(5, 12, 8, .58), 0 12px 36px rgba(0,0,0,.24) !important; }
-.tutorial-bar { position: fixed; z-index: 50; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(860px, calc(100% - 28px)); display: grid; grid-template-columns: 1fr auto; gap: 14px 22px; padding: 20px 22px 18px; border: 1px solid rgba(255,255,255,.25); border-radius: 16px; background: rgba(16,24,21,.96); color: #fff; box-shadow: 0 20px 70px rgba(0,0,0,.42); backdrop-filter: blur(16px); }
+.tutorial-focus { position: relative; z-index: 42 !important; border-radius: 12px; outline: 4px solid color-mix(in srgb, var(--accent) 85%, white); outline-offset: 5px; box-shadow: 0 0 0 9999px rgba(6, 10, 16, .58), 0 12px 36px rgba(0,0,0,.24) !important; }
+.tutorial-bar { position: fixed; z-index: 50; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(860px, calc(100% - 28px)); display: grid; grid-template-columns: 1fr auto; gap: 14px 22px; padding: 20px 22px 18px; border: 1px solid rgba(255,255,255,.25); border-radius: 16px; background: rgba(15,20,27,.96); color: #fff; box-shadow: 0 20px 70px rgba(0,0,0,.42); backdrop-filter: blur(16px); }
 .tutorial-progress { position: absolute; inset: 0 0 auto; height: 4px; overflow: hidden; border-radius: 16px 16px 0 0; background: rgba(255,255,255,.16); }
-.tutorial-progress i { display: block; height: 100%; background: #54D497; transition: width .15s linear; }
+.tutorial-progress i { display: block; height: 100%; background: #5885AA; transition: width .15s linear; }
 .tutorial-copy h2 { color: #fff; font-size: 18px; margin: 2px 0 4px; }
-.tutorial-copy p { color: #E3ECE7; font-size: 15px; line-height: 1.55; margin: 0; white-space: pre-line; }
+.tutorial-copy p { color: #E5EBF0; font-size: 15px; line-height: 1.55; margin: 0; white-space: pre-line; }
 .tutorial-meta { display: flex; align-items: center; gap: 8px; }
-.tutorial-kicker { color: #8DE6B9; font-size: 12px; font-weight: 750; }
+.tutorial-kicker { color: #9FC3DE; font-size: 12px; font-weight: 750; }
 /* 이 단계에 남은 시간 — 다음 화면으로 언제 넘어가는지 바로 보이게 강조 */
-.tutorial-left { background: rgba(84, 212, 151, .2); color: #A9F0CB; font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tutorial-left.paused { background: rgba(255,255,255,.14); color: #E3ECE7; }
-.tutorial-timer { margin-left: auto; color: #99A9A1; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tutorial-left { background: rgba(88, 133, 170, .28); color: #BBDCEF; font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tutorial-left.paused { background: rgba(255,255,255,.14); color: #E5EBF0; }
+.tutorial-timer { margin-left: auto; color: #9AA8B4; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* 조작 버튼 세 개는 같은 높이·같은 모양으로, 어두운 바 위에서도 버튼으로 보이게 */
 .tutorial-controls { display: flex; align-items: end; gap: 7px; }
 .tutorial-controls .btn { min-height: 34px; padding: 0 13px; border-radius: 999px; font-size: 13.5px; }
-.tutorial-bar .btn.ghost { background: transparent; border-color: rgba(255,255,255,.24); color: #D7E2DC; }
+.tutorial-bar .btn.ghost { background: transparent; border-color: rgba(255,255,255,.24); color: #D9E2EA; }
 .tutorial-bar .btn.ghost:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.45); color: #fff; }
 .tutorial-bar .btn.sub { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.32); color: #fff; }
 .tutorial-bar .btn.sub:hover { background: rgba(255,255,255,.27); border-color: rgba(255,255,255,.55); color: #fff; }
@@ -365,7 +365,7 @@ svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
 .viz-tip span { color: var(--text-2); }
 
 /* ── 알림 · 처리 중 ── */
-.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(16px); background: #1c1f1d; color: #fff; padding: 11px 18px; border-radius: 12px; opacity: 0; transition: opacity .22s, transform .22s; z-index: 70; max-width: min(92vw, 640px); pointer-events: none; box-shadow: var(--shadow-lg); font-size: 14.5px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(16px); background: #1c1f24; color: #fff; padding: 11px 18px; border-radius: 12px; opacity: 0; transition: opacity .22s, transform .22s; z-index: 70; max-width: min(92vw, 640px); pointer-events: none; box-shadow: var(--shadow-lg); font-size: 14.5px; }
 .toast.show { opacity: 1; transform: translateX(-50%); } .toast.ok { background: #0f5a33; } .toast.bad { background: #9b2c1c; }
 .snack { position: fixed; right: 20px; bottom: 20px; z-index: 75; display: flex; align-items: center; gap: 10px; max-width: min(92vw, 480px); padding: 12px 10px 12px 16px; border-radius: 14px; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-lg); font-size: 14px; }
 .snack span { flex: 1; }

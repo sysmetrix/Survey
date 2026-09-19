@@ -12,6 +12,7 @@ const STEPS = [
   { view: "setup", target: ".tblwrap", title: "문항 설정 확인", text: "문항 역할과 척도 범위, 역문항을 확인합니다.\n문자로 된 보기는 보기별 점수를 정해 주면 숫자로 분석됩니다." },
   { view: "setup", target: "[data-act='goto'][data-to='business']", title: "다음 단계로 이동", text: "문항 설정을 마쳤으니 다음 단계로 넘어가겠습니다.", run: el => el.click(), wait: true },
   { view: "business", target: ".quick-kpis", title: "③ 성과지표는 선택 사항", text: "목표 달성 여부를 보고서에 넣고 싶을 때만 빠른 추가를 사용하세요.\n단순 만족도 분석이라면 입력하지 않아도 됩니다." },
+  { view: "business", target: "[data-change='load-plan-doc']", title: "사업계획서로 초안 채우기", text: "HWPX 사업 운영계획서를 올리면 사업정보·논리모형·성과지표 초안을 자동으로 채워 줍니다.\n자동 인식 결과이니 목표값과 내용은 꼭 확인하세요." },
   { view: "business", target: "[data-act='goto'][data-to='dash']", title: "분석 결과 보기", text: "샘플 분석 결과로 이동합니다.", run: el => el.click(), wait: true },
   { view: "dash", target: ".page-head", title: "④ 핵심 결과부터 확인", text: "응답자 수와 종합 점수를 먼저 확인합니다. 통계 계산은 모두 이 브라우저 안에서만 이뤄집니다." },
   { view: "dash", target: ".tabs", title: "장별로 나눠 보기", text: "분석 결과는 보고서의 장 구성 그대로 탭으로 나뉩니다.\n마지막 품질 탭에서 무응답과 불성실 응답을 확인할 수 있습니다." },
