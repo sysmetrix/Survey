@@ -20,7 +20,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.10.0";
+export const APP_VERSION = "5.10.1";
 const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -32,7 +32,9 @@ function renderChrome(id) {
     const on = s.id === id, done = !!state.dataset && i < curIdx;
     return `<button class="step${on ? " on" : ""}${done ? " done" : ""}" ${disabled ? "disabled" : ""} ${on ? 'aria-current="step"' : ""} data-act="goto" data-to="${s.id}" title="${esc(s.label)}"><i>${done ? icon("check", 14) : s.n}</i><span>${esc(s.label)}</span></button>`;
   }).join(`<span class="step-sep" aria-hidden="true"></span>`);
-  document.getElementById("presentBtn").disabled = !state.dataset;
+  const pb = document.getElementById("presentBtn");
+  pb.disabled = !state.dataset;
+  pb.classList.toggle("primary", !!state.dataset); // 발표 가능(데이터 있음)해지면 강조
   document.getElementById("undoBtn").disabled = !canUndo();
   document.getElementById("redoBtn").disabled = !canRedo();
   const hb = document.getElementById("historyBtn");
@@ -141,9 +143,32 @@ document.addEventListener("focusout", e => {
   refresh();
   afterAction();
 });
+/** 문장 편집 중 Ctrl+B: 선택 영역을 **텍스트**로 감싸거나(이미 감싸져 있으면) 벗김 */
+function toggleBoldSelection() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const selected = sel.toString();
+  if (selected) {
+    const wrapped = selected.startsWith("**") && selected.endsWith("**") && selected.length >= 4;
+    document.execCommand("insertText", false, wrapped ? selected.slice(2, -2) : `**${selected}**`);
+  } else {
+    document.execCommand("insertText", false, "****");
+    const sel2 = window.getSelection();
+    if (sel2 && sel2.rangeCount) {
+      const r = sel2.getRangeAt(0);
+      if (r.startOffset >= 2) { r.setStart(r.startContainer, r.startOffset - 2); r.setEnd(r.startContainer, r.startOffset); sel2.removeAllRanges(); sel2.addRange(r); }
+    }
+  }
+}
 const isTyping = t => !!t?.closest?.("input, textarea, select, [contenteditable='true']");
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target.closest?.("[data-edit]")) { e.preventDefault(); e.target.blur(); return; }
+  // 문장 편집 중 Ctrl+B: 선택한 글자를 **굵게**로(한컴·워드와 같은 단축키)
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyB" && e.target.closest?.("[data-edit]")) {
+    e.preventDefault();
+    toggleBoldSelection();
+    return;
+  }
   // 되돌리기 Ctrl+Z · 다시 실행 Ctrl+Y / Ctrl+Shift+Z (입력 중에는 브라우저 기본 동작)
   if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.code === "KeyZ" || e.code === "KeyY") && !isTyping(e.target) && currentId !== "present") {
     e.preventDefault();

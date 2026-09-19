@@ -15,14 +15,25 @@ import { isFontInstalled } from "../fontcheck.js";
 let includeData = false;
 let fontStatus = {}; // 글꼴 이름 → true/false/null (설치 확인 결과)
 let checkingFonts = false;
-// 사이드바 각 패널의 펼침 여부(기본은 접힘) — 근본적으로 사이드바가 길어지는 건 여러 설정이
-// 한 화면에 다 펼쳐져 있기 때문이므로, 자주 안 바꾸는 항목은 접어 자기 요약 한 줄만 보여준다.
-let formatOpen = false;
-let chaptersOpen = null; // null = 아직 안 건드림 → 장을 하나라도 뺐으면 기본으로 펼침
 let saveOpen = false;
 // 상단 도구모음 상태(설정이 아니라 화면 표시 전용 — 저장하지 않음)
 let zoomPct = 100; // 미리보기 확대율. 100%는 baseSize 그대로, 내보내기(HWPX·인쇄)에는 영향 없음
 let helpOpen = false; // "?" 도움말 팝오버
+let formatOpen = false; // 한글 문서 서식 팝오버(도구모음)
+let jumpOpen = false; // 장 이동 팝오버(도구모음)
+
+// 팝오버 밖을 클릭하면 닫음 — 토글 버튼 자체·팝오버 안쪽 클릭은 제외 (테스트는 DOM 없이 이 파일을 불러오므로 가드)
+if (typeof document !== "undefined") {
+  document.addEventListener("click", e => {
+    if (!helpOpen && !formatOpen && !jumpOpen) return;
+    if (e.target.closest?.("[data-act='toggle-help'], [data-act='format-toggle'], [data-act='toggle-jump'], .rt-pop")) return;
+    let changed = false;
+    if (helpOpen) { helpOpen = false; changed = true; }
+    if (formatOpen) { formatOpen = false; changed = true; }
+    if (jumpOpen) { jumpOpen = false; changed = true; }
+    if (changed) refresh();
+  });
+}
 
 const docOptions = () => {
   const s = state.settings;
@@ -78,8 +89,7 @@ function formatPanel() {
         <button class="btn sm sub" data-act="font-check" ${checkingFonts ? "disabled aria-busy=\"true\"" : ""}>${icon("check", 15)}${checkingFonts ? "글꼴 확인 중…" : "이 PC의 글꼴 확인"}</button>
         <button class="btn sm sub" data-act="reset-doc">기본 서식으로</button>
       </div>
-      <p class="small muted format-help">선택 즉시 오른쪽 미리보기에 반영됩니다. 글꼴 확인 시 브라우저가 로컬 글꼴 접근 권한을 물을 수 있습니다.</p>
-      <p class="small muted">한글 파일에는 글꼴 이름만 들어갑니다. 받는 PC에 글꼴이 없으면 함초롬 글꼴로 대신 표시됩니다. 웹 이모지는 한글에서 보이는 기호로 바뀝니다(예: ✅→√, 😊→^^).</p>`;
+      <p class="small muted format-help">선택 즉시 오른쪽 미리보기에 반영됩니다. 글꼴 확인 시 브라우저가 로컬 글꼴 접근 권한을 물을 수 있습니다.</p>`;
 }
 
 export function render() {
@@ -91,15 +101,19 @@ export function render() {
   const docPreset = FONT_PRESETS.find(x => x.id === state.settings.fontPreset) || FONT_PRESETS[0];
   const docFonts = resolveFonts(state.settings);
   const visibleChapters = allChapters.filter(c => !state.hiddenChapters.includes(c.key));
-  const nChIncluded = visibleChapters.length;
-  const chSummary = nChIncluded === allChapters.length ? `${allChapters.length}개 장 모두 포함` : `${nChIncluded}/${allChapters.length}개 장 포함`;
-  const chOpen = chaptersOpen ?? (nChIncluded !== allChapters.length);
+  const editedList = Object.entries(state.overrides);
   return `
   <div class="report-toolbar no-print">
     <div class="rt-pop-wrap">
       <button class="rt-btn" data-act="toggle-help" aria-expanded="${helpOpen}" aria-haspopup="true">${icon("help", 16)}사용법</button>
       ${helpOpen ? `<div class="rt-pop" role="dialog" aria-label="사용법">
-        <p><b>문장 편집</b> — 미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
+        <p><b>문장 편집</b> — 미리보기의 문장을 클릭해 직접 고칠 수 있습니다.</p>
+        <dl class="rt-keys">
+          <dt><kbd>Enter</kbd></dt><dd>고친 내용 확정</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>B</kbd></dt><dd>선택한 글자 굵게(한컴·워드와 같음)</dd>
+          <dt>✕</dt><dd>이 문장 빼기</dd>
+          <dt>↺</dt><dd>자동 문장으로 되돌리기</dd>
+        </dl>
         <p class="small muted" style="margin-top:8px">표시할 장 같은 설정은 왼쪽 사이드바에서 바꿀 수 있습니다.</p>
       </div>` : ""}
     </div>
@@ -109,12 +123,11 @@ export function render() {
       ${formatOpen ? `<div class="rt-pop wide" role="dialog" aria-label="한글 문서 서식">${formatPanel()}</div>` : ""}
     </div>
     <div class="rt-sep" aria-hidden="true"></div>
-    <div class="rt-group">
-      ${icon("notes", 15)}
-      <select class="rt-select" data-change="jump-chapter" aria-label="장 이동">
-        <option value="">장 이동…</option>
-        ${visibleChapters.map((c, i) => option(`r-ch-${i}`, c.display || c.title, false)).join("")}
-      </select>
+    <div class="rt-pop-wrap">
+      <button class="rt-btn" data-act="toggle-jump" aria-expanded="${jumpOpen}" aria-haspopup="true">${icon("notes", 16)}장 이동</button>
+      ${jumpOpen ? `<div class="rt-pop" role="dialog" aria-label="장 이동">
+        <div class="edited-list">${visibleChapters.map((c, i) => `<button type="button" class="edited-item" data-act="jump-chapter-to" data-id="r-ch-${i}">${esc(c.display || c.title)}${icon("right", 14)}</button>`).join("")}</div>
+      </div>` : ""}
     </div>
     <div class="rt-sep" aria-hidden="true"></div>
     <div class="rt-group" role="group" aria-label="미리보기 크기">
@@ -140,18 +153,15 @@ export function render() {
       <label class="field">보고서 제목<input class="in" value="${esc(state.settings.reportTitle)}" placeholder="${esc(title)}" data-change="setting" data-field="reportTitle"></label>
       <label class="field">작성일<input class="in" value="${esc(state.settings.date)}" data-change="setting" data-field="date"></label>
 
-      <h3>내보내기</h3>
-      <button class="btn primary block" data-act="export-hwpx">${icon("download", 17)}한글(HWPX) 내려받기</button>
-      <button class="btn block" data-act="print">${icon("printer", 17)}인쇄 / PDF 저장</button>
-      <button class="btn block" data-act="copy">보고서 복사(워드·구글문서 붙여넣기)</button>
-      <button class="btn block" data-act="goto" data-to="present" data-sub="1">${icon("play", 16)}발표 모드로 보기</button>
+      <h3>포함할 장</h3>
+      <div class="chapter-list">${allChapters.map(c => `<label class="check"><input type="checkbox" ${state.hiddenChapters.includes(c.key) ? "" : "checked"} data-change="chapter" data-key="${esc(c.key)}"> ${esc(c.display || c.title)}</label>`).join("")}</div>
 
-      <button class="side-toggle group" data-act="chapters-toggle" aria-expanded="${chOpen}" aria-controls="chaptersBody"><b>포함할 장</b><span class="row gap"><span class="small muted">${chSummary}</span>${icon(chOpen ? "left" : "right", 16, "chev")}</span></button>
-      ${chOpen ? `<div id="chaptersBody">${allChapters.map(c => `<label class="check"><input type="checkbox" ${state.hiddenChapters.includes(c.key) ? "" : "checked"} data-change="chapter" data-key="${esc(c.key)}"> ${esc(c.display || c.title)}</label>`).join("")}</div>` : ""}
-
-      <h3>문장 편집</h3>
-      <div class="row gap wrap edit-stats"><span class="badge ${nEdited ? "info" : "muted"}">수정 ${nEdited}건</span><span class="badge ${nHidden ? "warn" : "muted"}">숨김 ${nHidden}건</span></div>
-      ${nEdited || nHidden ? `<div class="row gap wrap">${nEdited ? `<button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>` : ""}
+      <h3 class="side-sep">문장 편집</h3>
+      ${!nEdited && !nHidden ? `<p class="small muted">아직 고친 문장이 없습니다. 미리보기의 문장을 눌러 바로 고쳐 보세요.</p>` : `
+        ${nEdited ? `<div class="edited-list">${editedList.map(([key, text]) => `<button type="button" class="edited-item" data-act="jump-edit" data-key="${esc(key)}">${esc(text.length > 44 ? text.slice(0, 44) + "…" : text)}${icon("right", 14)}</button>`).join("")}</div>
+          <div class="row gap wrap"><button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button></div>` : ""}
+        ${nHidden ? `<div class="row gap wrap edit-stats"><span class="badge warn">숨김 ${nHidden}건</span><button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button></div>` : ""}
+      `}
 
       <button class="side-toggle group" data-act="save-toggle" aria-expanded="${saveOpen}" aria-controls="saveBody"><b>프로젝트 파일 저장</b><span class="row gap"><span class="small muted">${includeData ? "원자료 포함" : "설정만"}</span>${icon(saveOpen ? "left" : "right", 16, "chev")}</span></button>
       ${saveOpen ? `<div id="saveBody">
@@ -213,13 +223,24 @@ export const actions = {
     }
   },
   "format-toggle": () => { formatOpen = !formatOpen; refresh(); },
-  "chapters-toggle": () => { chaptersOpen = !(chaptersOpen ?? state.hiddenChapters.length > 0); refresh(); },
   "save-toggle": () => { saveOpen = !saveOpen; refresh(); },
   "toggle-help": () => { helpOpen = !helpOpen; refresh(); },
-  "jump-chapter": el => {
-    const id = el.value;
-    if (id) document.getElementById(id)?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-    el.value = "";
+  "jump-edit": el => {
+    const key = el.dataset.key;
+    const target = [...document.querySelectorAll("[data-edit]")].find(n => n.dataset.edit === key);
+    if (!target) return;
+    target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    target.classList.add("jump-flash");
+    setTimeout(() => target.classList.remove("jump-flash"), 1600);
+  },
+  "toggle-jump": () => { jumpOpen = !jumpOpen; refresh(); },
+  "jump-chapter-to": el => {
+    const id = el.dataset.id;
+    jumpOpen = false;
+    refresh(); // 팝오버부터 닫고, 새로 그려진 뒤(다음 프레임)에 스크롤 — 중간에 DOM이 바뀌어 스크롤이 끊기지 않게
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    });
   },
   "zoom-out": () => { zoomPct = Math.max(70, zoomPct - 10); refresh(); },
   "zoom-in": () => { zoomPct = Math.min(150, zoomPct + 10); refresh(); },

@@ -121,7 +121,7 @@ h3 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; letter-spacing: -.
 .tutorial-progress { position: absolute; inset: 0 0 auto; height: 4px; overflow: hidden; border-radius: 16px 16px 0 0; background: rgba(255,255,255,.16); }
 .tutorial-progress i { display: block; height: 100%; background: #54D497; transition: width .15s linear; }
 .tutorial-copy h2 { color: #fff; font-size: 18px; margin: 2px 0 4px; }
-.tutorial-copy p { color: #E3ECE7; font-size: 15px; line-height: 1.55; margin: 0; }
+.tutorial-copy p { color: #E3ECE7; font-size: 15px; line-height: 1.55; margin: 0; white-space: pre-line; }
 .tutorial-meta { display: flex; align-items: center; gap: 8px; }
 .tutorial-kicker { color: #8DE6B9; font-size: 12px; font-weight: 750; }
 /* 이 단계에 남은 시간 — 다음 화면으로 언제 넘어가는지 바로 보이게 강조 */
@@ -149,6 +149,12 @@ textarea.in { resize: vertical; line-height: 1.5; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width: 16px; height: 16px; margin: 3px 0 0; }
 .field { display: flex; flex-direction: column; gap: 5px; font-weight: 600; font-size: 13.5px; color: var(--text-2); margin: 8px 0; }
 .check { display: flex; gap: 8px; align-items: flex-start; margin: 7px 0; cursor: pointer; font-size: 14px; }
+.chapter-list { display: flex; flex-direction: column; gap: 1px; margin: 6px 0 4px; }
+.edited-list { display: flex; flex-direction: column; gap: 5px; margin: 8px 0 10px; }
+.edited-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-2); font: inherit; font-size: 13px; line-height: 1.4; cursor: pointer; }
+.edited-item:hover { border-color: var(--brand); background: var(--brand-soft); color: var(--text); }
+.edited-item .ico { flex-shrink: 0; color: var(--text-3); }
+.r-txt.jump-flash { background: #FFF6CC; border-radius: 3px; transition: background 1.2s ease; }
 .field.compact { flex: 1; min-width: 110px; }
 .grid-2in { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .font-names { display: grid; gap: 4px; margin: 4px 0 8px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); }
@@ -201,13 +207,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width:
 .tbl tr:last-child > td { border-bottom: 0; }
 .tbl th { background: var(--surface-2); color: var(--text-2); text-align: left; font-size: 12.5px; font-weight: 700; position: sticky; top: 0; z-index: 1; }
 .tbl tbody tr:hover > td, .tbl tr:hover > td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
-.tbl.setup td.hdr { max-width: 300px; font-weight: 600; } .tbl.setup tr.dim td { opacity: .55; }
+.tbl.setup td.hdr { min-width: 150px; max-width: 300px; font-weight: 600; } .tbl.setup tr.dim td { opacity: .55; }
 .tbl.kpi { min-width: 1180px; } .tbl.kpi td { vertical-align: middle; } .calc { font-weight: 700; font-variant-numeric: tabular-nums; }
 .tbl.kpi td:nth-child(2) { min-width: 180px; } .tbl.kpi td:nth-child(3) select, .tbl.kpi td:nth-child(4) select, .tbl.kpi td:nth-child(10) select { min-width: 90px; }
 .tbl.kpi td:nth-child(5) select { min-width: 170px; } .tbl.kpi td:nth-child(6) input { min-width: 130px; }
-.tbl.setup th:nth-child(2), .tbl.kpi th:nth-child(2) { position: sticky; left: 0; z-index: 2; box-shadow: 1px 0 0 var(--border); }
-.tbl.setup td:nth-child(2), .tbl.kpi td:nth-child(2) { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border); }
-.tbl.setup tr:hover td:nth-child(2), .tbl.kpi tr:hover td:nth-child(2) { background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
+/* 문항 설정 표: #(순번)·원래 열 이름 두 열을 함께 고정해 가로 스크롤해도 어느 행인지 계속 보임 */
+.tbl.setup th:nth-child(1) { position: sticky; left: 0; z-index: 3; min-width: 40px; max-width: 40px; }
+.tbl.setup td:nth-child(1) { position: sticky; left: 0; z-index: 1; background: var(--surface); min-width: 40px; max-width: 40px; }
+.tbl.setup th:nth-child(2), .tbl.kpi th:nth-child(2) { position: sticky; left: 40px; z-index: 2; box-shadow: 1px 0 0 var(--border); }
+.tbl.setup td:nth-child(2), .tbl.kpi td:nth-child(2) { position: sticky; left: 40px; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border); }
+.tbl.kpi th:nth-child(2), .tbl.kpi td:nth-child(2) { left: 0; }
+.tbl.setup tr:hover td:nth-child(1), .tbl.setup tr:hover td:nth-child(2), .tbl.kpi tr:hover td:nth-child(2) { background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
 .tbl.setup th:nth-child(9) { white-space: nowrap; }
 .tbl.corr td { font-size: 11.5px; min-width: 46px; font-variant-numeric: tabular-nums; }
 .labelrow > td { background: var(--surface-2) !important; }
@@ -280,6 +290,9 @@ h3.flush { margin: 0; }
 .rt-pop-wrap { position: relative; }
 .rt-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 25; width: min(300px, 84vw); padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-lg); font-size: 13px; line-height: 1.65; color: var(--text-2); }
 .rt-pop b { color: var(--text); }
+.rt-keys { display: grid; grid-template-columns: auto 1fr; gap: 7px 12px; align-items: center; margin: 10px 0 0; font-size: 12.5px; }
+.rt-keys dt, .rt-keys dd { margin: 0; }
+.rt-keys dd { color: var(--text-2); }
 .rt-pop.wide { width: min(340px, 90vw); max-height: 80vh; overflow-y: auto; }
 .rt-fmt-trigger { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .rt-fmt-trigger .glyph { font-weight: 700; }
@@ -296,9 +309,10 @@ h3.flush { margin: 0; }
 .side-toggle b { font-size: 13px; font-weight: 700; }
 .side-toggle:hover b { text-decoration: underline; }
 .side-toggle .chev { color: var(--text-3); flex-shrink: 0; }
-.side-toggle.group { padding: 14px 24px 10px; margin: 18px -24px 0; border-top: 1px solid var(--border); }
+.side-toggle.group { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
 .side-toggle.group:hover { background: var(--surface-2); }
 .side-toggle.group:hover b { text-decoration: none; }
+.side-sep { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
 @media (max-width: 960px) { .report-layout { grid-template-columns: 1fr; } .side { position: static; max-height: none; overflow-y: visible; } }
 
 /* 보고서 용지(미리보기) — 문서이므로 화면 테마와 무관하게 흰 종이 */

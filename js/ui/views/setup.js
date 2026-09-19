@@ -77,7 +77,7 @@ export function render() {
     const unm = scaled ? unmappedValues(c, rawColumn(state.dataset, c)) : [];
     const nUnm = unm.reduce((s, u) => s + u.n, 0);
     if (nUnm) unmappedCols.push({ c, n: nUnm });
-    const labelBtn = scaled ? `<div><button class="btn sm ${nUnm ? "" : "ghost"}" data-act="toggle-labels" data-key="${esc(c.key)}">보기 점수${nUnm ? ` <span class="badge bad">미변환 ${nUnm}</span>` : c.labelMap ? ` <span class="badge ok">문구 ${Object.keys(c.labelMap).length}</span>` : ""}</button>${c.labelAmbiguous ? `<div class="small warn-text">4점/5점 확인</div>` : ""}</div>` : "";
+    const labelBtn = scaled ? `<div><button class="btn sm ${nUnm ? "" : "ghost"}" data-act="toggle-labels" data-key="${esc(c.key)}">보기 점수${nUnm ? ` <span class="badge bad">미변환 ${nUnm}</span>` : c.labelMap ? ` <span class="badge info">문구 ${Object.keys(c.labelMap).length}</span>` : ""}</button>${c.labelAmbiguous ? `<div class="small warn-text">4점/5점 확인</div>` : ""}</div>` : "";
     return (`<tr class="${c.role === "ignore" ? "dim" : ""}">
       <td class="small muted">${multiSheet ? esc(cb.sheets[c.sheet].name) + "<br>" : ""}${c.index + 1}</td>
       <td class="hdr" title="${esc(c.header)}">${esc(c.header)}<div class="small muted">${esc(sampleValues(c))}</div></td>
