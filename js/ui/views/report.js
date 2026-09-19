@@ -15,7 +15,11 @@ import { isFontInstalled } from "../fontcheck.js";
 let includeData = false;
 let fontStatus = {}; // 글꼴 이름 → true/false/null (설치 확인 결과)
 let checkingFonts = false;
-let formatOpen = false; // 한글 문서 서식 패널 펼침 여부(사이드바 길이 절약을 위해 기본은 접힘)
+// 사이드바 각 패널의 펼침 여부(기본은 접힘) — 근본적으로 사이드바가 길어지는 건 여러 설정이
+// 한 화면에 다 펼쳐져 있기 때문이므로, 자주 안 바꾸는 항목은 접어 자기 요약 한 줄만 보여준다.
+let formatOpen = false;
+let chaptersOpen = null; // null = 아직 안 건드림 → 장을 하나라도 뺐으면 기본으로 펼침
+let saveOpen = false;
 
 const docOptions = () => {
   const s = state.settings;
@@ -83,6 +87,9 @@ export function render() {
   const nEdited = Object.keys(state.overrides).length, nHidden = state.hidden.length;
   const docPreset = FONT_PRESETS.find(x => x.id === state.settings.fontPreset) || FONT_PRESETS[0];
   const docFonts = resolveFonts(state.settings);
+  const nChIncluded = allChapters.filter(c => !state.hiddenChapters.includes(c.key)).length;
+  const chSummary = nChIncluded === allChapters.length ? `${allChapters.length}개 장 모두 포함` : `${nChIncluded}/${allChapters.length}개 장 포함`;
+  const chOpen = chaptersOpen ?? (nChIncluded !== allChapters.length);
   return `
   <div class="report-layout">
     <aside class="card side no-print">
@@ -91,18 +98,20 @@ export function render() {
         <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" data-change="setting" data-field="orgName"></label>
         <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="예: 홍길동" data-change="setting" data-field="author"></label>
       </div>
-      <p class="small muted">기관·부서명과 담당자명은 이 브라우저에 저장되어 다음 보고서에도 그대로 쓰입니다.</p>
+      <p class="small muted">이 브라우저에 저장되어 다음 보고서에도 그대로 쓰입니다.</p>
       <label class="field">보고서 제목<input class="in" value="${esc(state.settings.reportTitle)}" placeholder="${esc(title)}" data-change="setting" data-field="reportTitle"></label>
       <label class="field">작성일<input class="in" value="${esc(state.settings.date)}" data-change="setting" data-field="date"></label>
-      <h3>포함할 장</h3>
-      ${allChapters.map(c => `<label class="check"><input type="checkbox" ${state.hiddenChapters.includes(c.key) ? "" : "checked"} data-change="chapter" data-key="${esc(c.key)}"> ${esc(c.display || c.title)}</label>`).join("")}
-      <h3>문장 편집</h3>
-      <details class="help"><summary>사용법 보기</summary>
-        <p class="small muted">미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
-      </details>
-      <div class="row gap wrap edit-stats"><span class="badge ${nEdited ? "info" : "muted"}">수정 ${nEdited}건</span><span class="badge ${nHidden ? "warn" : "muted"}">숨김 ${nHidden}건</span></div>
-      ${nEdited || nHidden ? `<div class="row gap wrap">${nEdited ? `<button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>` : ""}
-      <button class="side-toggle fmt-toggle" data-act="format-toggle" aria-expanded="${formatOpen}" aria-controls="formatBody">
+
+      <h3>내보내기</h3>
+      <button class="btn primary block" data-act="export-hwpx">${icon("download", 17)}한글(HWPX) 내려받기</button>
+      <button class="btn block" data-act="print">${icon("printer", 17)}인쇄 / PDF 저장</button>
+      <button class="btn block" data-act="copy">보고서 복사(워드·구글문서 붙여넣기)</button>
+      <button class="btn block" data-act="goto" data-to="present" data-sub="1">${icon("play", 16)}발표 모드로 보기</button>
+
+      <button class="side-toggle group" data-act="chapters-toggle" aria-expanded="${chOpen}" aria-controls="chaptersBody"><b>포함할 장</b><span class="row gap"><span class="small muted">${chSummary}</span>${icon(chOpen ? "left" : "right", 16, "chev")}</span></button>
+      ${chOpen ? `<div id="chaptersBody">${allChapters.map(c => `<label class="check"><input type="checkbox" ${state.hiddenChapters.includes(c.key) ? "" : "checked"} data-change="chapter" data-key="${esc(c.key)}"> ${esc(c.display || c.title)}</label>`).join("")}</div>` : ""}
+
+      <button class="side-toggle group fmt-toggle" data-act="format-toggle" aria-expanded="${formatOpen}" aria-controls="formatBody">
         <span class="fmt-toggle-text">
           <b>한글 문서 서식</b>
           <span class="fmt-toggle-sub" style="font-family:'${esc(docFonts.body)}', var(--font)">가나다 · ${esc(docPreset.name)} · ${state.settings.baseSize}pt</span>
@@ -110,15 +119,20 @@ export function render() {
         ${icon(formatOpen ? "left" : "right", 16, "chev")}
       </button>
       ${formatOpen ? `<div id="formatBody">${formatPanel()}</div>` : ""}
-      <h3>내보내기</h3>
-      <button class="btn primary block" data-act="export-hwpx">${icon("download", 17)}한글(HWPX) 내려받기</button>
-      <button class="btn block" data-act="print">${icon("printer", 17)}인쇄 / PDF 저장</button>
-      <button class="btn block" data-act="copy">보고서 복사(워드·구글문서 붙여넣기)</button>
-      <button class="btn block" data-act="goto" data-to="present" data-sub="1">${icon("play", 16)}발표 모드로 보기</button>
-      <hr>
-      <label class="check small"><input type="checkbox" ${includeData ? "checked" : ""} data-change="include-data"> 원자료 포함 (개인정보 주의)</label>
-      <button class="btn block sub" data-act="save-project">프로젝트 파일 저장</button>
-      <p class="small muted">프로젝트 파일에는 문항 설정·사업정보·성과지표·문장 수정·문서 서식이 저장되어 다음에 같은 설문을 올리면 그대로 적용됩니다.</p>
+
+      <h3>문장 편집</h3>
+      <details class="help"><summary>사용법 보기</summary>
+        <p class="small muted">미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
+      </details>
+      <div class="row gap wrap edit-stats"><span class="badge ${nEdited ? "info" : "muted"}">수정 ${nEdited}건</span><span class="badge ${nHidden ? "warn" : "muted"}">숨김 ${nHidden}건</span></div>
+      ${nEdited || nHidden ? `<div class="row gap wrap">${nEdited ? `<button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>` : ""}
+
+      <button class="side-toggle group" data-act="save-toggle" aria-expanded="${saveOpen}" aria-controls="saveBody"><b>프로젝트 파일 저장</b><span class="row gap"><span class="small muted">${includeData ? "원자료 포함" : "설정만"}</span>${icon(saveOpen ? "left" : "right", 16, "chev")}</span></button>
+      ${saveOpen ? `<div id="saveBody">
+        <label class="check small"><input type="checkbox" ${includeData ? "checked" : ""} data-change="include-data"> 원자료 포함 (개인정보 주의)</label>
+        <button class="btn block sub" data-act="save-project">프로젝트 파일 저장</button>
+        <p class="small muted">프로젝트 파일에는 문항 설정·사업정보·성과지표·문장 수정·문서 서식이 저장되어 다음에 같은 설문을 올리면 그대로 적용됩니다.</p>
+      </div>` : ""}
     </aside>
     <div class="paper edit" id="reportPaper" style="${esc(paperStyle())}">${blocksToHtml(blocks, { editable: true })}</div>
   </div>`;
@@ -173,6 +187,8 @@ export const actions = {
     }
   },
   "format-toggle": () => { formatOpen = !formatOpen; refresh(); },
+  "chapters-toggle": () => { chaptersOpen = !(chaptersOpen ?? state.hiddenChapters.length > 0); refresh(); },
+  "save-toggle": () => { saveOpen = !saveOpen; refresh(); },
   "reset-doc": () => {
     Object.assign(state.settings, { fontPreset: DEFAULT_FONT_PRESET, fontBody: "", fontHeading: "", baseSize: DEFAULT_BASE_SIZE, lineSpacing: DEFAULT_LINE_SPACING });
     fontStatus = {};

@@ -269,9 +269,9 @@ h3.flush { margin: 0; }
 .side-toggle b { font-size: 13px; font-weight: 700; }
 .side-toggle:hover b { text-decoration: underline; }
 .side-toggle .chev { color: var(--text-3); flex-shrink: 0; }
-.side-toggle.fmt-toggle { padding: 10px 24px; margin: 18px -24px 0; border-radius: 0; }
-.side-toggle.fmt-toggle:hover { background: var(--surface-2); }
-.side-toggle.fmt-toggle:hover b { text-decoration: none; }
+.side-toggle.group { padding: 10px 24px; margin: 18px -24px 0; }
+.side-toggle.group:hover { background: var(--surface-2); }
+.side-toggle.group:hover b { text-decoration: none; }
 .fmt-toggle-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .fmt-toggle-sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 960px) { .report-layout { grid-template-columns: 1fr; } .side { position: static; } }

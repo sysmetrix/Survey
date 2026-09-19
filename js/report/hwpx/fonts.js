@@ -3,7 +3,7 @@
 // 참고: sysmetrix/To-Hwpx — 실제 설치 패밀리명 기록, Pretendard GOV/Variable 교차 대체, KoPub 굵게는 별도 Bold 글꼴
 
 export const FONT_PRESETS = [
-  { id: "gov", name: "공문서형 (휴먼명조)", body: "휴먼명조", heading: "HY헤드라인M", headingOnly: true, note: "행정기관 보고서 기본 조합 — 본문·표·굵은 글씨는 휴먼명조, 큰 제목만 제목 글꼴" },
+  { id: "gov", name: "휴먼명조", body: "휴먼명조", heading: "HY헤드라인M", headingOnly: true, note: "행정기관 보고서 기본 조합(공문서형) — 본문·표·굵은 글씨는 휴먼명조, 큰 제목만 제목 글꼴" },
   { id: "hancom", name: "함초롬 (한글 기본)", body: "함초롬바탕", heading: "함초롬돋움", note: "한글(한컴오피스)에 기본 포함 — 어느 PC에서나 같은 모양" },
   { id: "malgun", name: "맑은 고딕", body: "맑은 고딕", heading: "맑은 고딕", note: "Windows 기본 글꼴" },
   { id: "nanum", name: "나눔고딕", body: "나눔고딕", heading: "나눔고딕", note: "무료 글꼴 — 받는 PC에도 설치 필요", url: "https://hangeul.naver.com/font" },

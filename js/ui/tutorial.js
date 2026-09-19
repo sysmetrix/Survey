@@ -17,7 +17,7 @@ const STEPS = [
   { view: "dash", target: ".tabs", title: "장별로 나눠 보기", text: "분석 결과는 보고서의 장 구성 그대로 탭으로 나뉩니다. 마지막 품질 탭에서 무응답과 불성실 응답을 확인할 수 있습니다." },
   { view: "dash", target: "[data-act='goto'][data-to='report']", title: "보고서 만들기", text: "분석 결과를 자동 문장과 그래프로 정리한 보고서 미리보기로 이동합니다.", run: el => el.click(), wait: true },
   { view: "report", target: ".report-layout .side", title: "⑤ 보고서 기본 정보", text: "기관·부서명, 담당자명, 보고서 제목과 작성일을 확인하세요. 기관·부서명과 담당자명은 이 브라우저에 저장되어 다음 보고서에도 그대로 쓰입니다." },
-  { view: "report", target: "[data-change='doc'][data-field='fontPreset']", title: "한글 문서 서식 고르기", text: "글꼴·글자 크기·줄 간격을 바꾸면 오른쪽 미리보기에 바로 반영됩니다. 기본값은 공문서형(휴먼명조)입니다." },
+  { view: "report", target: ".fmt-toggle", title: "한글 문서 서식 고르기", text: "눌러서 펼치면 글꼴·글자 크기·줄 간격을 바로 미리보며 고를 수 있습니다. 기본값은 휴먼명조입니다." },
   { view: "report", target: "#reportPaper", title: "문장 직접 고치기", text: "자동으로 작성된 문장을 눌러 그 자리에서 고칠 수 있습니다. Enter로 확정, ✕로 문장 빼기, ↺로 자동 문장 복원입니다." },
   { view: "report", target: "[data-act='export-hwpx']", title: "한글 파일로 내려받기", text: "표와 그래프까지 들어간 한글(HWPX) 문서로 저장합니다. 바로 아래에 인쇄·PDF 저장과 워드 붙여넣기용 복사도 있습니다." },
   { view: "report", target: "#presentBtn", title: "발표 자료도 자동으로", text: "같은 분석 결과로 발표용 슬라이드가 함께 만들어집니다. 발표 화면에서 자료를 PDF나 HTML 파일로 내려받을 수도 있습니다." },
