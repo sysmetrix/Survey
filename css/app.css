@@ -253,6 +253,10 @@ h3.flush { margin: 0; }
 .report-layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 20px; align-items: start; }
 .side { position: sticky; top: calc(var(--topbar-h) + 14px); max-height: calc(100vh - var(--topbar-h) - 28px); overflow: auto; }
 .side h3 { font-size: 13px; color: var(--text-3); text-transform: none; letter-spacing: 0; margin-top: 18px; }
+.side-toggle { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; margin-top: 18px; padding: 0; border: 0; background: none; font: inherit; color: var(--text); cursor: pointer; text-align: left; }
+.side-toggle b { font-size: 13px; font-weight: 700; }
+.side-toggle:hover b { text-decoration: underline; }
+.side-toggle .chev { color: var(--text-3); flex-shrink: 0; }
 @media (max-width: 960px) { .report-layout { grid-template-columns: 1fr; } .side { position: static; max-height: none; } }
 
 /* 보고서 용지(미리보기) — 문서이므로 화면 테마와 무관하게 흰 종이 */

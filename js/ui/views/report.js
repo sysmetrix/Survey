@@ -15,6 +15,7 @@ import { isFontInstalled } from "../fontcheck.js";
 let includeData = false;
 let fontStatus = {}; // 글꼴 이름 → true/false/null (설치 확인 결과)
 let checkingFonts = false;
+let formatOpen = false; // 한글 문서 서식 패널 펼침 여부(사이드바 길이 절약을 위해 기본은 접힘)
 
 const docOptions = () => {
   const s = state.settings;
@@ -89,8 +90,8 @@ export function render() {
       <p class="small muted">미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
       <p class="small">수정 ${nEdited}건 · 숨김 ${nHidden}건</p>
       <div class="row gap wrap">${nEdited ? `<button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>
-      <h3>한글 문서 서식</h3>
-      ${formatPanel()}
+      <button class="side-toggle" data-act="format-toggle" aria-expanded="${formatOpen}" aria-controls="formatBody"><b>한글 문서 서식</b><span class="row gap"><span class="small muted">${esc((FONT_PRESETS.find(x => x.id === state.settings.fontPreset) || FONT_PRESETS[0]).name)}</span>${icon(formatOpen ? "left" : "right", 16, "chev")}</span></button>
+      ${formatOpen ? `<div id="formatBody">${formatPanel()}</div>` : ""}
       <h3>내보내기</h3>
       <button class="btn primary block" data-act="export-hwpx">${icon("download", 17)}한글(HWPX) 내려받기</button>
       <button class="btn block" data-act="print">${icon("printer", 17)}인쇄 / PDF 저장</button>
@@ -148,6 +149,7 @@ export const actions = {
       refresh();
     }
   },
+  "format-toggle": () => { formatOpen = !formatOpen; refresh(); },
   "reset-doc": () => {
     Object.assign(state.settings, { fontPreset: DEFAULT_FONT_PRESET, fontBody: "", fontHeading: "", baseSize: 11, lineSpacing: 160 });
     fontStatus = {};
