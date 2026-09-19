@@ -4,8 +4,13 @@
 import { LIST_KEYS, matchItemKey, parseBusinessSheet, parseKpiSheet } from "./business-sheet.js";
 import { LOGIC_STAGES, emptyLogicModel, normalizeLogicModel, hasLogicModel, hasProgramInfo } from "./logic-model.js";
 
-const SCALAR_KEYS = ["programName", "period", "budget", "target", "department", "purpose", "background"];
+export const SCALAR_KEYS = ["programName", "period", "budget", "target", "department", "purpose", "background"];
 const KPI_HEADER_HINTS = [/지표명|성과지표$|지표$/, /단계/, /목표값|목표치|^목표$/, /실적값|실적/];
+const FIELD_LABELS = { programName: "사업명", period: "사업기간", budget: "사업예산", target: "참여대상", department: "추진부서", purpose: "사업목적", background: "추진배경", goals: "추진목표" };
+
+/** 필드에 값이 채워져 있는지(배열은 길이, 그 외는 참값) */
+export const fieldFilled = (lm, k) => (Array.isArray(lm[k]) ? lm[k].length > 0 : !!lm[k]);
+const previewValue = (lm, k) => (k === "goals" ? lm.goals.map(g => g.text).join(", ") : Array.isArray(lm[k]) ? lm[k].join(", ") : String(lm[k]));
 
 /** 표가 항목/내용류(사업정보)인지, KPI형(성과지표)인지 판별. 둘 다 아니면 null(일정표 등 무시) */
 function classifyTable(t) {
@@ -118,4 +123,23 @@ export function readBusinessFromHwpx({ paragraphs, tables }) {
 
   const kpis = kpiTables.flatMap(t => parseKpiSheet(t, logicModel));
   return { logicModel, kpis: kpis.length ? kpis : null, found: { business: !!logicModel, kpi: kpis.length > 0 } };
+}
+
+const STAGE_LABELS = Object.fromEntries(LOGIC_STAGES.map(s => [s.key, s.label]));
+
+/**
+ * 병합 전에 실제로 무엇이 새로 채워지고 무엇이 추가될지 미리보기 — 상태를 바꾸지 않는 순수 함수.
+ * @param {object} current 현재 state.logicModel(정규화됨)
+ * @param {{logicModel: object|null, kpis: object[]|null}} draft readBusinessFromHwpx 결과
+ * @returns {{fields: {key:string, label:string, value:string}[], kpis: {name:string, stage:string, target:number|null, unit:string}[], merged: object}}
+ */
+export function previewPlanDocDraft(current, draft) {
+  const before = normalizeLogicModel(current || emptyLogicModel());
+  const merged = draft?.logicModel ? mergeIntoLogicModel(before, draft.logicModel) : before;
+  const keys = [...SCALAR_KEYS, "goals", ...LOGIC_STAGES.map(s => s.key)];
+  const fields = keys
+    .filter(k => !fieldFilled(before, k) && fieldFilled(merged, k))
+    .map(k => ({ key: k, label: FIELD_LABELS[k] || STAGE_LABELS[k] || k, value: previewValue(merged, k) }));
+  const kpis = (draft?.kpis || []).map(k => ({ name: k.name, stage: k.stage, target: k.target, unit: k.unit }));
+  return { fields, kpis, merged };
 }

@@ -3,7 +3,7 @@
 import { state, compute, invalidate } from "../store.js";
 import { LOGIC_STAGES, KPI_STAGES, normalizeLogicModel, hasLogicModel, hasProgramInfo } from "../../evaluation/logic-model.js";
 import { METRICS, newKpi } from "../../evaluation/kpi.js";
-import { readBusinessFromHwpx, mergeIntoLogicModel, tagDraftKpis } from "../../evaluation/business-doc.js";
+import { readBusinessFromHwpx, tagDraftKpis, previewPlanDocDraft } from "../../evaluation/business-doc.js";
 import { readHwpxText } from "../../report/hwpx/read.js";
 import { pairsOf } from "../../model/codebook.js";
 import { f1, f2 } from "../../narrative/vocab.js";
@@ -14,6 +14,26 @@ import { icon } from "../icons.js";
 const MAX_PLAN_DOC_MB = 20;
 
 const FIELDS = [["programName", "사업명"], ["period", "사업기간"], ["target", "참여대상"], ["budget", "사업예산"], ["department", "추진부서"]];
+
+let planDocHelpOpen = false; // "문서에서 채우기" 사용법 팝오버
+
+// 팝오버 밖을 클릭하면 닫음(테스트는 DOM 없이 이 파일을 불러오므로 가드) — report.js와 같은 패턴
+if (typeof document !== "undefined") {
+  document.addEventListener("click", e => {
+    if (!planDocHelpOpen) return;
+    if (e.target.closest?.("[data-act='toggle-plan-doc-help'], .rt-pop")) return;
+    planDocHelpOpen = false; refresh();
+  });
+}
+
+function planDocHelpPanel() {
+  return `
+    <p><b>찾는 곳</b> — 항목/내용 두 칸짜리 표(엑셀 사업정보 시트와 같은 모양), 또는 Ⅰ./□/1. 같은 제목줄이 있는 문단.</p>
+    <p><b>채우는 것</b> — 사업명·기간·예산·대상·부서·목적·배경과 투입→활동→산출→단기성과→중기성과→영향 논리모형 6단계, 추진목표. 이미 입력한 칸은 절대 덮어쓰지 않고 빈 칸만 채웁니다.</p>
+    <p><b>성과지표</b> — 문서에서 찾은 지표는 항상 표에 새로 추가되며(기존 지표는 그대로), ‘문서에서 자동 추출 — 확인 필요’ 메모가 자동으로 붙습니다.</p>
+    <p><b>하지 않는 것</b> — 문서를 서버로 보내지 않습니다(브라우저 안에서만 처리). AI가 아닌 규칙 기반 인식이라 서식에 따라 틀리거나 못 찾을 수 있습니다. PDF는 아직 지원하지 않습니다(HWPX만 가능).</p>
+    <p class="small muted">적용 전에 찾은 내용을 보여 드리니, 확인한 뒤 적용하세요.</p>`;
+}
 
 function targetOptions() {
   const cb = state.codebook;
@@ -107,6 +127,11 @@ export function render() {
         <label class="rt-btn" title="파일 불러오기">${icon("upload", 16)}파일 불러오기<input type="file" accept=".json" data-change="load-preset" hidden></label>
         <div class="rt-sep" aria-hidden="true"></div>
         <label class="rt-btn" title="문서에서 채우기(.hwpx)">${icon("doc", 16)}문서에서 채우기(.hwpx)<input type="file" accept=".hwpx" data-change="load-plan-doc" hidden></label>
+        <div class="rt-sep" aria-hidden="true"></div>
+        <div class="rt-pop-wrap">
+          <button class="rt-btn" data-act="toggle-plan-doc-help" aria-expanded="${planDocHelpOpen}" aria-haspopup="true" aria-label="문서에서 채우기 사용법" title="문서에서 채우기 사용법">${icon("help", 16)}</button>
+          ${planDocHelpOpen ? `<div class="rt-pop wide" role="dialog" aria-label="문서에서 채우기 사용법">${planDocHelpPanel()}</div>` : ""}
+        </div>
       </div>
     </div>
     <p class="small muted">입력하면 보고서에 ‘사업 개요’와 ‘논리모형’ 표, 목표별 달성 평가가 추가됩니다. 몰라도 보고서 작성에는 문제없습니다.</p>
@@ -173,6 +198,7 @@ export const actions = {
     } catch (e) { toast(`불러오기 실패: ${e.message}`, "bad"); }
     el.value = "";
   },
+  "toggle-plan-doc-help": () => { planDocHelpOpen = !planDocHelpOpen; refresh(); },
   "load-plan-doc": async el => {
     const f = el.files?.[0];
     el.value = "";
@@ -181,37 +207,63 @@ export const actions = {
     if (f.size > MAX_PLAN_DOC_MB * 1024 * 1024) { toast(`파일이 너무 큽니다(${MAX_PLAN_DOC_MB}MB 초과)`, "bad"); return; }
     busy(true, "문서에서 정보를 찾는 중…");
     await nextFrame();
+    let draft;
     try {
       const bytes = await readFileBytes(f);
       const { paragraphs, tables } = await readHwpxText(bytes, { JSZip: window.JSZip, DOMParser: window.DOMParser });
-      const draft = readBusinessFromHwpx({ paragraphs, tables });
-      if (!draft.logicModel && !draft.kpis?.length) {
-        toast("문서에서 사업정보를 찾지 못했습니다 — 직접 입력해 주세요", "bad", 5000);
-        return;
-      }
-      const before = state.logicModel;
-      state.logicModel = mergeIntoLogicModel(before, draft.logicModel);
-      const filledFields = [...SCALAR_LM_KEYS, ...LOGIC_STAGES.map(s => s.key), "goals"].filter(k => !fieldFilled(before, k) && fieldFilled(state.logicModel, k)).length;
-      let addedKpis = 0;
-      if (draft.kpis?.length) {
-        const base = nextKpiNo();
-        const tagged = tagDraftKpis(draft.kpis).map((k, i) => ({ ...k, id: `K${base + i}` }));
-        state.kpis.push(...tagged);
-        addedKpis = tagged.length;
-      }
-      state.businessFound = { business: false, kpi: false, ...state.businessFound, doc: true };
-      invalidate();
-      toast(`문서에서 초안을 채웠습니다(사업정보 ${filledFields}항목, 지표 ${addedKpis}개) — 자동 추출은 틀릴 수 있으니 꼭 확인하세요`, "ok", 6000);
-      refresh();
+      draft = readBusinessFromHwpx({ paragraphs, tables });
     } catch (e) {
       console.error(e);
+      busy(false);
       toast(e.message === "NOT_HWPX" ? "올바른 HWPX 파일이 아닙니다" : `문서를 읽지 못했습니다: ${e.message}`, "bad", 6000);
-    } finally { busy(false); }
+      return;
+    }
+    busy(false);
+    if (!draft.logicModel && !draft.kpis?.length) {
+      toast("문서에서 사업정보를 찾지 못했습니다 — 항목/내용 표나 Ⅰ./□/1. 같은 제목줄이 있는지 확인해 주세요", "bad", 6000);
+      return;
+    }
+    const preview = previewPlanDocDraft(state.logicModel, draft);
+    if (!preview.fields.length && !preview.kpis.length) {
+      toast("문서 내용을 확인했지만 이미 입력한 내용과 겹쳐 새로 채울 내용이 없습니다", "info", 6000);
+      return;
+    }
+    if (!confirm(formatPlanDocConfirm(preview))) return;
+    state.logicModel = preview.merged;
+    let addedKpis = 0;
+    if (preview.kpis.length) {
+      const base = nextKpiNo();
+      const tagged = tagDraftKpis(draft.kpis).map((k, i) => ({ ...k, id: `K${base + i}` }));
+      state.kpis.push(...tagged);
+      addedKpis = tagged.length;
+    }
+    state.businessFound = { business: false, kpi: false, ...state.businessFound, doc: true };
+    invalidate();
+    toast(`문서에서 초안을 채웠습니다(사업정보 ${preview.fields.length}항목, 지표 ${addedKpis}개) — 자동 추출은 틀릴 수 있으니 꼭 확인하세요`, "ok", 6000);
+    refresh();
   },
 };
 
-const SCALAR_LM_KEYS = ["programName", "period", "budget", "target", "department", "purpose", "background"];
-const fieldFilled = (lm, k) => (Array.isArray(lm[k]) ? lm[k].length > 0 : !!lm[k]);
+const truncate = (s, n) => (s.length > n ? s.slice(0, n) + "…" : s);
+
+function formatPlanDocConfirm(preview) {
+  const lines = ["문서에서 아래 내용을 찾았습니다. 적용할까요?", ""];
+  if (preview.fields.length) {
+    lines.push(`[사업정보·논리모형 ${preview.fields.length}항목]`);
+    preview.fields.slice(0, 10).forEach(f => lines.push(`- ${f.label}: ${truncate(f.value, 40)}`));
+    if (preview.fields.length > 10) lines.push(`  … 외 ${preview.fields.length - 10}항목`);
+    lines.push("");
+  }
+  if (preview.kpis.length) {
+    lines.push(`[성과지표 ${preview.kpis.length}개 추가]`);
+    preview.kpis.slice(0, 8).forEach(k => lines.push(`- ${k.name}`));
+    if (preview.kpis.length > 8) lines.push(`  … 외 ${preview.kpis.length - 8}개`);
+    lines.push("");
+  }
+  lines.push("기존에 입력한 내용은 바뀌지 않고, 지표는 표에 추가만 됩니다.");
+  lines.push("자동 추출은 틀릴 수 있으니 적용 후 꼭 확인하세요.");
+  return lines.join("\n");
+}
 
 const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "direction", "unit", "note"];
 function pickKpi(k) {
