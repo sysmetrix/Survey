@@ -142,14 +142,13 @@ test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   const f = "2026_문화의집_만족도_구글폼.csv";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
   let html = business.render();
-  assert.ok(html.includes("빠른 추가") && html.includes("선택 · 고급") && !html.includes("id=\"lmBody\""), "사업정보는 접힌 상태");
+  assert.ok(html.includes("빠른 추가") && html.includes("선택 · 고급") && html.includes("논리모형"), "사업정보·논리모형은 처음부터 펼쳐짐");
   business.actions["kpi-quick"]({ dataset: { id: "sat" } });
   assert.equal(state.kpis.length, 1);
   assert.equal(state.kpis[0].metric, "score100");
   assert.ok(Number.isFinite(compute().evaluation.results[0].rate), "빠른 추가 지표는 바로 계산");
-  business.actions["lm-toggle"]();
   html = business.render();
-  assert.ok(html.includes("id=\"lmBody\""));
+  assert.ok(html.includes("측정 방법 안내"));
   assert.equal(bad(html), null);
 });
 

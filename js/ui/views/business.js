@@ -10,7 +10,6 @@ import { refresh } from "../router.js";
 import { icon } from "../icons.js";
 
 const FIELDS = [["programName", "사업명"], ["period", "사업기간"], ["target", "참여대상"], ["budget", "사업예산"], ["department", "추진부서"]];
-let lmOpen = null; // null = 입력된 내용이 있으면 펼침
 
 function targetOptions() {
   const cb = state.codebook;
@@ -69,7 +68,6 @@ export function render() {
   const lm = state.logicModel, r = compute();
   const goals = lm.goals || [];
   const hasLm = hasProgramInfo(lm) || hasLogicModel(lm);
-  const open = lmOpen ?? (hasLm || !!state.businessFound?.business);
   const quick = quickKpis(r);
   const used = new Set(state.kpis.map(k => k.metric + "|" + k.name));
 
@@ -89,47 +87,39 @@ export function render() {
     ${state.kpis.length ? kpiTable(r) : `<div class="empty-inline">${icon("chart", 22)}<div><b>아직 성과지표가 없습니다</b><p class="small muted">위의 ‘빠른 추가’를 누르면 이 설문 데이터로 바로 계산되는 지표가 들어갑니다. 목표값만 사업계획서에 맞게 고치면 됩니다.</p></div></div>`}
     ${r.evaluation ? `<p class="summary">종합: 측정 ${r.evaluation.summary.measured}개 중 <b>${r.evaluation.summary.achieved}개 달성</b>, ${r.evaluation.summary.mostly}개 대체로 달성, ${r.evaluation.summary.notAchieved}개 미달성 → 종합 <b>${esc(r.evaluation.summary.grade)}</b></p>` : ""}
     ${r.lint.length ? `<h3>연계 점검</h3><ul class="warnings">${r.lint.map(w => `<li>${levelBadge(w.level)} ${esc(w.msg)}</li>`).join("")}</ul>` : ""}
-    <details class="help"><summary>측정 방법 안내</summary>
-      <ul>${Object.values(METRICS).map(mm => `<li><b>${esc(mm.label)}</b>${mm.formula ? ` — ${esc(mm.formula)}` : ""}</li>`).join("")}</ul>
-      <p class="small muted">만족도는 반응(1단계) 지표입니다. 중기성과·영향은 사전·사후 변화, 향상자 비율 등 변화 지표나 행정 실적(직접 입력)을 권장합니다.</p>
-    </details>
+    <div class="metric-guide">
+      <div class="metric-guide-head">${icon("help", 15)}측정 방법 안내</div>
+      <div class="metric-guide-grid">${Object.values(METRICS).map(mm => `<div class="metric-guide-item"><b>${esc(mm.label)}</b>${mm.formula ? `<span class="muted">${esc(mm.formula)}</span>` : ""}</div>`).join("")}</div>
+      <p class="format-help small muted">만족도는 반응(1단계) 지표입니다. 중기성과·영향은 사전·사후 변화, 향상자 비율 등 변화 지표나 행정 실적(직접 입력)을 권장합니다.</p>
+    </div>
   </section>
 
-  <section class="card optional${open ? " open" : ""}">
-    <button class="optional-head" data-act="lm-toggle" aria-expanded="${open}" aria-controls="lmBody">
-      <span><b>사업정보 · 논리모형</b> <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}
-        <span class="small muted block">입력하면 보고서에 ‘사업 개요’와 ‘논리모형’ 표, 목표별 달성 평가가 추가됩니다. 몰라도 보고서 작성에는 문제없습니다.</span></span>
-      ${icon(open ? "left" : "right", 18, "chev")}
-    </button>
-    ${open ? `<div id="lmBody" class="optional-body">
-      <div class="row end gap"><button class="btn sm ghost" data-act="save-preset">사업정보·지표 파일로 저장</button><label class="btn sm ghost">파일 불러오기<input type="file" accept=".json" data-change="load-preset" hidden></label></div>
-      <div class="grid3">
-        ${FIELDS.map(([k, l]) => `<label class="field">${l}<input class="in" value="${esc(lm[k] || "")}" data-change="lm" data-field="${k}"></label>`).join("")}
-      </div>
-      <div class="grid2">
-        <label class="field">추진배경<textarea class="in" rows="2" data-change="lm" data-field="background">${esc(lm.background)}</textarea></label>
-        <label class="field">사업목적<textarea class="in" rows="2" data-change="lm" data-field="purpose">${esc(lm.purpose)}</textarea></label>
-      </div>
-      <label class="field">추진목표 <span class="muted small">(한 줄에 하나씩 · 성과지표의 ‘연계목표’로 선택할 수 있습니다)</span>
-        <textarea class="in" rows="3" data-change="lm" data-field="goals">${esc(goals.map(g => g.text).join("\n"))}</textarea></label>
-      <h3>논리모형 <span class="muted small">(각 칸에 한 줄에 하나씩 · 비워 둔 칸은 표에서 빠집니다)</span></h3>
-      <div class="logic">
-        ${LOGIC_STAGES.map((s, i) => `<label class="logic-col"><b>${s.label}</b><span class="muted small">${esc(s.hint)}</span>
-          <textarea class="in" rows="5" data-change="lm-stage" data-stage="${s.key}">${esc((lm[s.key] || []).join("\n"))}</textarea></label>${i < LOGIC_STAGES.length - 1 ? `<span class="arrow">→</span>` : ""}`).join("")}
-      </div>
-    </div>` : ""}
+  <section class="card">
+    <div class="row between wrap">
+      <h3 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}</h3>
+      <div class="row gap"><button class="btn sm ghost" data-act="save-preset">사업정보·지표 파일로 저장</button><label class="btn sm ghost">파일 불러오기<input type="file" accept=".json" data-change="load-preset" hidden></label></div>
+    </div>
+    <p class="small muted">입력하면 보고서에 ‘사업 개요’와 ‘논리모형’ 표, 목표별 달성 평가가 추가됩니다. 몰라도 보고서 작성에는 문제없습니다.</p>
+    <div class="grid3">
+      ${FIELDS.map(([k, l]) => `<label class="field">${l}<input class="in" value="${esc(lm[k] || "")}" data-change="lm" data-field="${k}"></label>`).join("")}
+    </div>
+    <div class="grid2">
+      <label class="field">추진배경<textarea class="in" rows="2" data-change="lm" data-field="background">${esc(lm.background)}</textarea></label>
+      <label class="field">사업목적<textarea class="in" rows="2" data-change="lm" data-field="purpose">${esc(lm.purpose)}</textarea></label>
+    </div>
+    <label class="field">추진목표 <span class="muted small">(한 줄에 하나씩 · 성과지표의 ‘연계목표’로 선택할 수 있습니다)</span>
+      <textarea class="in" rows="3" data-change="lm" data-field="goals">${esc(goals.map(g => g.text).join("\n"))}</textarea></label>
+    <h3>논리모형 <span class="muted small">(각 칸에 한 줄에 하나씩 · 비워 둔 칸은 표에서 빠집니다)</span></h3>
+    <div class="logic">
+      ${LOGIC_STAGES.map((s, i) => `<label class="logic-col"><b>${s.label}</b><span class="muted small">${esc(s.hint)}</span>
+        <textarea class="in" rows="5" data-change="lm-stage" data-stage="${s.key}">${esc((lm[s.key] || []).join("\n"))}</textarea></label>${i < LOGIC_STAGES.length - 1 ? `<span class="arrow">→</span>` : ""}`).join("")}
+    </div>
   </section>
 
   <div class="row end gap"><button class="btn primary" data-act="goto" data-to="dash">다음: 분석 결과${icon("right", 16)}</button></div>`;
 }
 
 export const actions = {
-  "lm-toggle": () => {
-    const lm = state.logicModel;
-    const cur = lmOpen ?? (hasProgramInfo(lm) || hasLogicModel(lm) || !!state.businessFound?.business);
-    lmOpen = !cur;
-    refresh();
-  },
   lm: el => {
     const lm = state.logicModel, f = el.dataset.field;
     if (f === "goals") {

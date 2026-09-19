@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.10.2", date: "2026-09-20", title: "성과지표 화면 — 사업정보·논리모형을 항상 펼쳐 보이고, 측정 방법 안내를 카드형으로 정리",
+    groups: {
+      "성과지표": [
+        "'사업정보 · 논리모형'을 접었다 펴는 방식을 없애고 처음부터 펼쳐서 보여줌",
+        "'측정 방법 안내'를 눌러야 열리던 토글에서, 항상 보이는 카드형 표로 바꿔 각 계산법을 한눈에 확인 가능",
+      ],
+    },
+  },
+  {
     version: "5.10.1", date: "2026-09-20", title: "보고서 화면 다듬기 — 도구모음 팝업 자동 닫힘, 발표 버튼 강조, 사이드바 정리",
     groups: {
       "화면": [

@@ -232,13 +232,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width:
 .empty-inline p { margin: 2px 0 0; }
 h3.flush { margin: 0; }
 .block { display: block; }
-.card.optional { padding: 0; overflow: hidden; }
-.optional-head { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 24px; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
-.optional-head:hover { background: var(--surface-2); }
-.optional-head b { font-size: 17px; }
-.optional-head .chev { color: var(--text-3); transform: rotate(90deg); }
-.card.optional.open .optional-head .chev { transform: rotate(-90deg); }
-.optional-body { padding: 0 24px 22px; border-top: 1px solid var(--border); padding-top: 14px; }
+.metric-guide { margin-top: 14px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface-2); }
+.metric-guide-head { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text-2); font-size: 13px; margin-bottom: 10px; }
+.metric-guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 14px; }
+.metric-guide-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface); }
+.metric-guide-item b { font-size: 13px; }
+.metric-guide-item span { font-size: 12px; }
 .logic { display: flex; gap: 8px; align-items: stretch; overflow-x: auto; padding-bottom: 4px; }
 .logic-col { display: flex; flex-direction: column; gap: 4px; min-width: 160px; flex: 1; background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px; }
 .arrow { align-self: center; color: var(--brand-text); font-weight: 800; }
