@@ -41,14 +41,10 @@ function fontBadge(name) {
   return st ? `<span class="badge ok">이 PC에 설치됨</span>` : st === false ? `<span class="badge warn">이 PC에 없음</span>` : `<span class="badge muted">확인 불가</span>`;
 }
 
-/** 글꼴 조합을 실제 그 글꼴로 미리 보여주는 카드 그리드(드롭다운 대신) */
+/** 글꼴 조합 선택 — 이름 글자 자체를 그 글꼴로 보여주는 칩(드롭다운 대신) */
 function fontPicker(p) {
   return `<div class="fontpick" role="listbox" aria-label="글꼴 조합">
-    ${FONT_PRESETS.map(x => `<button type="button" class="fontpick-item${x.id === p.id ? " on" : ""}" data-act="doc-preset" data-id="${x.id}" role="option" aria-selected="${x.id === p.id}">
-      <span class="fontpick-glyph" style="font-family:'${esc(x.body || "inherit")}', var(--font)">${x.id === "custom" ? "Aa" : "가"}</span>
-      <span class="fontpick-label">${esc(x.name)}</span>
-      ${x.id === p.id ? `<span class="fontpick-check">${icon("check", 12)}</span>` : ""}
-    </button>`).join("")}
+    ${FONT_PRESETS.map(x => `<button type="button" class="chip-btn fontpick-chip${x.id === p.id ? " on" : ""}" data-act="doc-preset" data-id="${x.id}" style="font-family:'${esc(x.body || "inherit")}', var(--font)" role="option" aria-selected="${x.id === p.id}">${x.id === p.id ? icon("check", 13) : ""}${esc(x.name)}</button>`).join("")}
   </div>`;
 }
 
