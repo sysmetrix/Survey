@@ -48,10 +48,11 @@ function tableHtml(b) {
  * @param {{editable?:boolean, figureHtml?:(b)=>string, theme?:'light'|'dark'}} opts  theme: 화면 표시용 차트 테마(보고서·HWPX는 항상 light)
  */
 export function blocksToHtml(blocks, { editable = false, figureHtml = null, theme = "light" } = {}) {
+  let chIdx = 0; // 장(레벨1 제목) 순번 — 보고서 화면 도구모음의 "장 이동"이 같은 순번의 id로 이동
   return blocks.map(b => {
     switch (b.type) {
       case "title": return `<h1 class="r-title">${esc(b.text)}</h1>${b.subtitle ? `<p class="r-sub">${esc(b.subtitle)}</p>` : ""}`;
-      case "heading": return b.level === 1 ? `<h2 class="r-h1">${esc(b.display)}</h2>` : `<h3 class="r-h2">${esc(b.display)}</h3>`;
+      case "heading": return b.level === 1 ? `<h2 class="r-h1" id="r-ch-${chIdx++}">${esc(b.display)}</h2>` : `<h3 class="r-h2">${esc(b.display)}</h3>`;
       case "bullets": return b.items.map(it => `<p class="r-b r-b${it.level}${it.edited ? " edited" : ""}"><span class="r-sym">${SYM[it.level]}</span>${editableText(it, editable)}</p>`).join("");
       case "box": return `<div class="r-box">${b.lines.map(l => `<p class="r-boxline${l.edited ? " edited" : ""}">${editableText(l, editable)}</p>`).join("")}</div>`;
       case "paragraph": return `<p class="r-p${b.style === "note" ? " r-note" : ""}">${editableText(b, editable)}</p>`;

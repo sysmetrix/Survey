@@ -20,6 +20,9 @@ let checkingFonts = false;
 let formatOpen = false;
 let chaptersOpen = null; // null = 아직 안 건드림 → 장을 하나라도 뺐으면 기본으로 펼침
 let saveOpen = false;
+// 상단 도구모음 상태(설정이 아니라 화면 표시 전용 — 저장하지 않음)
+let zoomPct = 100; // 미리보기 확대율. 100%는 baseSize 그대로, 내보내기(HWPX·인쇄)에는 영향 없음
+let helpOpen = false; // "?" 도움말 팝오버
 
 const docOptions = () => {
   const s = state.settings;
@@ -31,12 +34,13 @@ function paperStyle() {
   const f = resolveFonts(state.settings);
   const q = n => `"${cleanFontName(n)}"`;
   const baseSize = Number(state.settings.baseSize) || DEFAULT_BASE_SIZE;
-  const size = baseSize * 1.36;
+  const zoom = zoomPct / 100; // 화면 미리보기 전용 배율 — 내보내기(HWPX·인쇄)는 항상 baseSize 그대로
+  const size = baseSize * 1.36 * zoom;
   const lh = ((Number(state.settings.lineSpacing) || DEFAULT_LINE_SPACING) / 100 * 1.09).toFixed(2);
-  const scaled = px => `${(px * baseSize / 11).toFixed(1)}px`; // 11pt 기준으로 그려둔 제목·표 크기 배율(고정값, 기본 글자 크기와 무관)
+  const scaled = px => `${(px * baseSize * zoom / 11).toFixed(1)}px`; // 11pt 기준으로 그려둔 제목·표 크기 배율(고정값, 기본 글자 크기와 무관)
   // 공문서형처럼 제목 글꼴을 큰 제목에만 쓰는 조합에서는 표·캡션·요약상자를 본문 글꼴로
   const sub = f.headingOnly ? f.body : f.heading;
-  return `--paper-body:${q(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${q(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-sub-font:${q(sub)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-size-print:${baseSize}pt; --paper-title-size:${scaled(26)}; --paper-h1-size:${scaled(20)}; --paper-h2-size:${scaled(17)}; --paper-small-size:${scaled(14)}; --paper-table-size:${scaled(12.5)}; --paper-compact-size:${scaled(11.5)}; --paper-note-size:${scaled(12)}; --paper-lh:${lh}`;
+  return `--paper-body:${q(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${q(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-sub-font:${q(sub)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-size-print:${baseSize}pt; --paper-title-size:${scaled(26)}; --paper-h1-size:${scaled(20)}; --paper-h2-size:${scaled(17)}; --paper-small-size:${scaled(14)}; --paper-table-size:${scaled(12.5)}; --paper-compact-size:${scaled(11.5)}; --paper-note-size:${scaled(12)}; --paper-lh:${lh}; --paper-maxw:${(900 * zoom).toFixed(0)}px; --paper-pad-y:${(56 * zoom).toFixed(0)}px; --paper-pad-x:${(64 * zoom).toFixed(0)}px`;
 }
 
 function fontBadge(name) {
@@ -87,10 +91,38 @@ export function render() {
   const nEdited = Object.keys(state.overrides).length, nHidden = state.hidden.length;
   const docPreset = FONT_PRESETS.find(x => x.id === state.settings.fontPreset) || FONT_PRESETS[0];
   const docFonts = resolveFonts(state.settings);
-  const nChIncluded = allChapters.filter(c => !state.hiddenChapters.includes(c.key)).length;
+  const visibleChapters = allChapters.filter(c => !state.hiddenChapters.includes(c.key));
+  const nChIncluded = visibleChapters.length;
   const chSummary = nChIncluded === allChapters.length ? `${allChapters.length}개 장 모두 포함` : `${nChIncluded}/${allChapters.length}개 장 포함`;
   const chOpen = chaptersOpen ?? (nChIncluded !== allChapters.length);
   return `
+  <div class="report-toolbar no-print">
+    <div class="rt-help-wrap">
+      <button class="rt-btn" data-act="toggle-help" aria-expanded="${helpOpen}" aria-haspopup="true">${icon("help", 16)}사용법</button>
+      ${helpOpen ? `<div class="rt-help-pop" role="dialog" aria-label="사용법">
+        <p><b>문장 편집</b> — 미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
+        <p class="small muted" style="margin-top:8px">글꼴·표시할 장 같은 설정은 왼쪽 사이드바에서 바꿀 수 있습니다.</p>
+      </div>` : ""}
+    </div>
+    <div class="rt-sep" aria-hidden="true"></div>
+    <div class="rt-group">
+      ${icon("notes", 15)}
+      <select class="rt-select" data-change="jump-chapter" aria-label="장 이동">
+        <option value="">장 이동…</option>
+        ${visibleChapters.map((c, i) => option(`r-ch-${i}`, c.display || c.title, false)).join("")}
+      </select>
+    </div>
+    <div class="rt-sep" aria-hidden="true"></div>
+    <div class="rt-group" role="group" aria-label="미리보기 크기">
+      <button class="rt-btn" data-act="zoom-out" aria-label="축소" ${zoomPct <= 70 ? "disabled" : ""}>−</button>
+      <button class="rt-btn rt-zoom-val" data-act="zoom-reset" title="100%로">${zoomPct}%</button>
+      <button class="rt-btn" data-act="zoom-in" aria-label="확대" ${zoomPct >= 150 ? "disabled" : ""}>＋</button>
+    </div>
+    <div class="rt-spacer"></div>
+    <button class="rt-btn" data-act="export-hwpx" title="한글(HWPX) 내려받기">${icon("download", 16)}</button>
+    <button class="rt-btn" data-act="print" title="인쇄 / PDF 저장">${icon("printer", 16)}</button>
+    <button class="rt-btn" data-act="copy" title="보고서 복사(워드·구글문서 붙여넣기)">${icon("copy", 16)}</button>
+  </div>
   <div class="report-layout">
     <aside class="card side no-print">
       <h2>보고서 설정</h2>
@@ -121,9 +153,6 @@ export function render() {
       ${formatOpen ? `<div id="formatBody">${formatPanel()}</div>` : ""}
 
       <h3>문장 편집</h3>
-      <details class="help"><summary>사용법 보기</summary>
-        <p class="small muted">미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
-      </details>
       <div class="row gap wrap edit-stats"><span class="badge ${nEdited ? "info" : "muted"}">수정 ${nEdited}건</span><span class="badge ${nHidden ? "warn" : "muted"}">숨김 ${nHidden}건</span></div>
       ${nEdited || nHidden ? `<div class="row gap wrap">${nEdited ? `<button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>` : ""}
 
@@ -189,6 +218,15 @@ export const actions = {
   "format-toggle": () => { formatOpen = !formatOpen; refresh(); },
   "chapters-toggle": () => { chaptersOpen = !(chaptersOpen ?? state.hiddenChapters.length > 0); refresh(); },
   "save-toggle": () => { saveOpen = !saveOpen; refresh(); },
+  "toggle-help": () => { helpOpen = !helpOpen; refresh(); },
+  "jump-chapter": el => {
+    const id = el.value;
+    if (id) document.getElementById(id)?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    el.value = "";
+  },
+  "zoom-out": () => { zoomPct = Math.max(70, zoomPct - 10); refresh(); },
+  "zoom-in": () => { zoomPct = Math.min(150, zoomPct + 10); refresh(); },
+  "zoom-reset": () => { zoomPct = 100; refresh(); },
   "reset-doc": () => {
     Object.assign(state.settings, { fontPreset: DEFAULT_FONT_PRESET, fontBody: "", fontHeading: "", baseSize: DEFAULT_BASE_SIZE, lineSpacing: DEFAULT_LINE_SPACING });
     fontStatus = {};
