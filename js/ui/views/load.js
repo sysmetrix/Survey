@@ -112,7 +112,7 @@ async function openBytes(bytes, fileName) {
     const note = loadDataset(ds, state.pendingProject || null);
     state.pendingProject = null;
     const cb = state.codebook;
-    toast(`${fileName}: 응답 시트 ${cb.responseSheets.length}개, 열 ${cb.columns.length}개 인식${note ? ` · ${note}` : ""}${state.businessFound?.business || state.businessFound?.kpi ? " · 사업정보/성과지표 시트 반영" : ""}`, "ok", 5000);
+    toast(`${fileName}: 응답 시트 ${cb.responseSheets.length}개, 열 ${cb.columns.length}개 인식${note ? ` · ${note}` : ""}${state.businessFound?.business || state.businessFound?.kpi ? " · 사업정보/성과지표 시트 반영" : ""}`, "ok", 3000);
     document.dispatchEvent(new CustomEvent("survey:loaded", { detail: { fileName } }));
     go("setup");
   } catch (e) {

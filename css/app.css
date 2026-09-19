@@ -184,7 +184,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width:
 /* ── ②③ 설정 표 ── */
 .facts { display: flex; flex-wrap: wrap; gap: 12px 30px; margin: 12px 0; }
 .facts > div { display: flex; flex-direction: column; } .facts span { font-size: 12.5px; color: var(--text-3); }
-.tblwrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.tblwrap { position: relative; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+/* 가로 스크롤 그림자 힌트(js/ui/scrollhint.js 가 붙이는 클래스) — 표·탭·단계 표시 공용 */
+.tblwrap.can-scroll-left, .tabs.can-scroll-left, .stepper.can-scroll-left { box-shadow: inset 16px 0 12px -12px rgba(0,0,0,.28); }
+.tblwrap.can-scroll-right, .tabs.can-scroll-right, .stepper.can-scroll-right { box-shadow: inset -16px 0 12px -12px rgba(0,0,0,.28); }
+.tblwrap.can-scroll-left.can-scroll-right, .tabs.can-scroll-left.can-scroll-right, .stepper.can-scroll-left.can-scroll-right { box-shadow: inset 16px 0 12px -12px rgba(0,0,0,.28), inset -16px 0 12px -12px rgba(0,0,0,.28); }
 .tbl { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13.5px; }
 .tbl th, .tbl td { border-bottom: 1px solid var(--border); padding: 7px 9px; vertical-align: top; }
 .tbl tr:last-child > td { border-bottom: 0; }
@@ -194,6 +198,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width:
 .tbl.kpi { min-width: 1180px; } .tbl.kpi td { vertical-align: middle; } .calc { font-weight: 700; font-variant-numeric: tabular-nums; }
 .tbl.kpi td:nth-child(2) { min-width: 180px; } .tbl.kpi td:nth-child(3) select, .tbl.kpi td:nth-child(4) select, .tbl.kpi td:nth-child(10) select { min-width: 90px; }
 .tbl.kpi td:nth-child(5) select { min-width: 170px; } .tbl.kpi td:nth-child(6) input { min-width: 130px; }
+.tbl.setup th:nth-child(2), .tbl.kpi th:nth-child(2) { position: sticky; left: 0; z-index: 2; box-shadow: 1px 0 0 var(--border); }
+.tbl.setup td:nth-child(2), .tbl.kpi td:nth-child(2) { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border); }
+.tbl.setup tr:hover td:nth-child(2), .tbl.kpi tr:hover td:nth-child(2) { background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
+.tbl.setup th:nth-child(9) { white-space: nowrap; }
 .tbl.corr td { font-size: 11.5px; min-width: 46px; font-variant-numeric: tabular-nums; }
 .labelrow > td { background: var(--surface-2) !important; }
 .labelpanel { padding: 8px 4px 12px; display: flex; flex-direction: column; gap: 10px; }
@@ -227,7 +235,7 @@ h3.flush { margin: 0; }
 .kcard span { font-size: 13px; color: var(--text-3); font-weight: 600; }
 .kcard b { font-size: 26px; line-height: 1.15; font-weight: 800; letter-spacing: -.03em; color: var(--text); font-variant-numeric: tabular-nums; }
 .kcard small { color: var(--text-3); font-size: 12.5px; }
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; margin-top: 4px; }
+.tabs { position: relative; display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; margin-top: 4px; }
 .tab { flex: none; border: 0; background: none; padding: 10px 14px; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; color: var(--text-3); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; border-radius: 8px 8px 0 0; }
 .tab:hover { color: var(--text); background: var(--surface-2); }
 .tab.on { color: var(--brand-text); border-color: var(--brand); font-weight: 750; }

@@ -87,7 +87,9 @@ export function render() {
       <h3>포함할 장</h3>
       ${allChapters.map(c => `<label class="check"><input type="checkbox" ${state.hiddenChapters.includes(c.key) ? "" : "checked"} data-change="chapter" data-key="${esc(c.key)}"> ${esc(c.display || c.title)}</label>`).join("")}
       <h3>문장 편집</h3>
-      <p class="small muted">미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
+      <details class="help"><summary>사용법 보기</summary>
+        <p class="small muted">미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
+      </details>
       <p class="small">수정 ${nEdited}건 · 숨김 ${nHidden}건</p>
       <div class="row gap wrap">${nEdited ? `<button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button>` : ""}${nHidden ? `<button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button>` : ""}</div>
       <button class="side-toggle" data-act="format-toggle" aria-expanded="${formatOpen}" aria-controls="formatBody"><b>한글 문서 서식</b><span class="row gap"><span class="small muted">${esc((FONT_PRESETS.find(x => x.id === state.settings.fontPreset) || FONT_PRESETS[0]).name)}</span>${icon(formatOpen ? "left" : "right", 16, "chev")}</span></button>

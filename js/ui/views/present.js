@@ -129,6 +129,7 @@ export function render({ sub }) {
   return `<div class="present st-${theme}${ui.notes ? " notes-on" : ""}" id="present" tabindex="-1">
     <div class="p-main">
       <div class="p-progress" aria-hidden="true"><i style="width:${((idx + 1) / total * 100).toFixed(2)}%"></i></div>
+      <p class="p-rotate-hint" aria-hidden="true">기기를 가로로 돌리면 화면 가득 볼 수 있습니다</p>
       <div class="p-stage">${slideHtml(slides[idx], idx, total, theme)}</div>
       ${view.blank ? `<button class="p-blank" data-act="p-blank" aria-label="화면 가림 해제 (B)"></button>` : ""}
       <output class="p-jump" id="pJump" hidden></output>
