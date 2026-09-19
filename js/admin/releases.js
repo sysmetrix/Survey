@@ -2,6 +2,12 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.8.3", date: "2026-09-20", title: "사이드바 자체 스크롤 복원",
+    groups: {
+      "화면": ["보고서 사이드바가 화면보다 길어지면(모든 항목을 펼쳤을 때 등) 페이지 전체가 아니라 사이드바 안에서만 스크롤되도록 되돌림 — 기본(접힘) 상태는 그대로 짧게 유지"],
+    },
+  },
+  {
     version: "5.8.2", date: "2026-09-20", title: "보고서 사이드바 재구성 — 내보내기를 위로, 나머지는 접어서 요약",
     groups: {
       "보고서": [

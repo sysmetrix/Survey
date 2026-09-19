@@ -263,7 +263,7 @@ h3.flush { margin: 0; }
 
 /* ── ⑤ 보고서 ── */
 .report-layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 20px; align-items: start; }
-.side { position: sticky; top: calc(var(--topbar-h) + 14px); } /* 사이드바 자체는 스크롤하지 않고, 내용이 길면 페이지 스크롤을 따라간다 */
+.side { position: sticky; top: calc(var(--topbar-h) + 14px); max-height: calc(100vh - var(--topbar-h) - 28px); overflow-y: auto; }
 .side h3 { font-size: 13px; color: var(--text-3); text-transform: none; letter-spacing: 0; margin-top: 18px; }
 .side-toggle { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; margin-top: 18px; padding: 0; border: 0; background: none; font: inherit; color: var(--text); cursor: pointer; text-align: left; }
 .side-toggle b { font-size: 13px; font-weight: 700; }
@@ -274,7 +274,7 @@ h3.flush { margin: 0; }
 .side-toggle.group:hover b { text-decoration: none; }
 .fmt-toggle-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .fmt-toggle-sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 960px) { .report-layout { grid-template-columns: 1fr; } .side { position: static; } }
+@media (max-width: 960px) { .report-layout { grid-template-columns: 1fr; } .side { position: static; max-height: none; overflow-y: visible; } }
 
 /* 보고서 용지(미리보기) — 문서이므로 화면 테마와 무관하게 흰 종이 */
 .paper { --paper-bg: #fff; --paper-ink: #000; --paper-sub: #444; --paper-line: #9A9A9A; --paper-rule: #000; --paper-head: #D9D9D9; --paper-soft: #F2F2F2; color-scheme: light;
