@@ -18,6 +18,9 @@ export const DEFAULT_FONT_PRESET = "gov";
 
 export const FONT_SIZES = [10, 10.5, 11, 12, 13, 14, 15];
 export const LINE_SPACINGS = [150, 160, 170, 180];
+/** 설정이 없을 때 쓰는 기본 글자 크기(pt)·줄 간격(%) — 아래 값을 바꾸면 전체 기본값이 함께 바뀜 */
+export const DEFAULT_BASE_SIZE = 12;
+export const DEFAULT_LINE_SPACING = 160;
 
 const HANCOM = { body: "함초롬바탕", heading: "함초롬돋움" };
 const defaultPreset = () => FONT_PRESETS.find(x => x.id === DEFAULT_FONT_PRESET) || FONT_PRESETS[0];

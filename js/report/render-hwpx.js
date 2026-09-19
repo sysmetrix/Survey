@@ -2,6 +2,7 @@
 import { createHwpxDoc } from "./hwpx/writer.js";
 import { packHwpx } from "./hwpx/package.js";
 import { chartSvg } from "./model.js";
+import { DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING } from "./hwpx/fonts.js";
 
 export const MAX_TABLE_COLS = 12;
 
@@ -32,10 +33,10 @@ export function splitWideTable(b, maxCols = MAX_TABLE_COLS) {
  */
 export async function renderHwpx(blocks, env) {
   const d = env.doc || {};
-  const baseSize = Number(d.baseSize) || 11;
+  const baseSize = Number(d.baseSize) || DEFAULT_BASE_SIZE;
   const doc = createHwpxDoc({
     parts: env.parts, title: env.title || "", creator: env.creator || "",
-    baseSize, lineSpacing: Number(d.lineSpacing) || 160,
+    baseSize, lineSpacing: Number(d.lineSpacing) || DEFAULT_LINE_SPACING,
     fontSettings: { fontPreset: d.fontPreset, fontBody: d.fontBody, fontHeading: d.fontHeading },
   });
   const tableSize = compact => Math.max(7, baseSize - (compact ? 3 : 2));

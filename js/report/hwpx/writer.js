@@ -4,7 +4,7 @@
 // 본문 XML 패턴(hp:tbl, hp:pic, hh:bold)은 한글 2024 저장본에서 추출한 구조를 따른다.
 import { escText } from "./xml.js";
 import { toHwpText } from "./symbols.js";
-import { resolveFonts, applyFontsToHeader } from "./fonts.js";
+import { resolveFonts, applyFontsToHeader, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING } from "./fonts.js";
 
 export const HWPUNIT_PER_MM = 7200 / 25.4;
 export const mm = v => Math.round(v * HWPUNIT_PER_MM);
@@ -113,7 +113,7 @@ export const stripBold = t => String(t ?? "").split(BOLD_SPLIT).map(s => (BOLD_W
  * @param {number} [o.lineSpacing] 본문 줄 간격(%)
  * @param {object} [o.fontSettings] {fontPreset, fontBody, fontHeading} — fonts.js resolveFonts
  */
-export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, baseSize = 11, lineSpacing = 160, fontSettings = {}, pageNumber = true } = {}) {
+export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, baseSize = DEFAULT_BASE_SIZE, lineSpacing = DEFAULT_LINE_SPACING, fontSettings = {}, pageNumber = true } = {}) {
   const M = { left: 20, right: 20, top: 10, bottom: 10, header: 10, footer: 10, ...margins };
   if (parts.FONTS && (parts.FONTS.dotum !== FONT_ID.dotum || parts.FONTS.batang !== FONT_ID.batang)) throw new Error("템플릿 글꼴 순서가 예상과 다릅니다(0=돋움, 1=바탕)");
   const fonts = resolveFonts(fontSettings);

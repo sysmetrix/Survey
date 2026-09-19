@@ -11,7 +11,7 @@ import { finalizeBlocks } from "../report/model.js";
 import { buildDeck } from "../present/deck.js";
 import { DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { koDate } from "../core/util.js";
-import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, DEFAULT_FONT_PRESET, cleanFontName } from "../report/hwpx/fonts.js";
+import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, DEFAULT_FONT_PRESET, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING, cleanFontName } from "../report/hwpx/fonts.js";
 
 const LS_KEY = "survey-v5-settings";
 function loadSettings() {
@@ -29,7 +29,7 @@ export function pickDocSettings(o = {}) {
   return {
     fontPreset: FONT_PRESETS.some(p => p.id === o.fontPreset) ? o.fontPreset : DEFAULT_FONT_PRESET,
     fontBody: cleanFontName(o.fontBody), fontHeading: cleanFontName(o.fontHeading),
-    baseSize: num(o.baseSize, FONT_SIZES, 11), lineSpacing: num(o.lineSpacing, LINE_SPACINGS, 160),
+    baseSize: num(o.baseSize, FONT_SIZES, DEFAULT_BASE_SIZE), lineSpacing: num(o.lineSpacing, LINE_SPACINGS, DEFAULT_LINE_SPACING),
   };
 }
 const DOC_KEYS = ["fontPreset", "fontBody", "fontHeading", "baseSize", "lineSpacing"];
