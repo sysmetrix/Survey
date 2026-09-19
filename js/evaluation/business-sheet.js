@@ -3,13 +3,19 @@ import { isBlank } from "../core/util.js";
 import { normalizeLogicModel, KPI_STAGES } from "./logic-model.js";
 import { metricFromText } from "./kpi.js";
 
-const ITEM_MAP = [
+export const ITEM_MAP = [
   [/^사업\s*명|프로그램\s*명/, "programName"], [/사업\s*기간|운영\s*기간|기간/, "period"], [/예산|사업비/, "budget"],
   [/대상|참여\s*대상/, "target"], [/담당|부서/, "department"], [/목적/, "purpose"], [/배경|필요성/, "background"],
   [/추진\s*목표|목표/, "goals"], [/투입/, "inputs"], [/활동/, "activities"], [/산출/, "outputs"],
   [/단기\s*성과/, "outcomesShort"], [/중기\s*성과/, "outcomesMid"], [/영향|장기\s*성과|임팩트/, "impact"],
 ];
-const LIST_KEYS = new Set(["goals", "inputs", "activities", "outputs", "outcomesShort", "outcomesMid", "impact"]);
+export const LIST_KEYS = new Set(["goals", "inputs", "activities", "outputs", "outcomesShort", "outcomesMid", "impact"]);
+
+/** 항목 라벨(칸 값·문단 제목줄 공통) → 논리모형 키 */
+export function matchItemKey(text) {
+  const hit = ITEM_MAP.find(([re]) => re.test(text));
+  return hit ? hit[1] : null;
+}
 
 /** 사업정보 시트: [구분, 항목, 내용, 비고] 또는 [항목, 내용] */
 export function parseBusinessSheet(sheet) {
@@ -23,9 +29,8 @@ export function parseBusinessSheet(sheet) {
   rows.forEach(r => {
     const item = String(r[iItem] ?? "").trim(), val = r[iVal];
     if (!item || isBlank(val)) return;
-    const hit = ITEM_MAP.find(([re]) => re.test(item));
-    if (!hit) return;
-    const key = hit[1];
+    const key = matchItemKey(item);
+    if (!key) return;
     const text = String(val).trim();
     if (LIST_KEYS.has(key)) {
       lm[key] = lm[key] || [];

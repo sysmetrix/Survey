@@ -1,13 +1,17 @@
 // ③ 성과지표(선택)·사업정보·논리모형(선택) 입력 화면
-// 처음 쓰는 직원도 부담 없도록: 성과지표는 '빠른 추가'로 시작, 사업정보·논리모형은 접어 두고 필요할 때만 펼침
+// 처음 쓰는 직원도 부담 없도록: 성과지표는 '빠른 추가'로 시작, 사업정보·논리모형은 항상 펼쳐서 바로 보여줌
 import { state, compute, invalidate } from "../store.js";
 import { LOGIC_STAGES, KPI_STAGES, normalizeLogicModel, hasLogicModel, hasProgramInfo } from "../../evaluation/logic-model.js";
 import { METRICS, newKpi } from "../../evaluation/kpi.js";
+import { readBusinessFromHwpx, mergeIntoLogicModel, tagDraftKpis } from "../../evaluation/business-doc.js";
+import { readHwpxText } from "../../report/hwpx/read.js";
 import { pairsOf } from "../../model/codebook.js";
 import { f1, f2 } from "../../narrative/vocab.js";
-import { esc, option, levelBadge, toast, download, readFileText } from "../util.js";
+import { esc, option, levelBadge, toast, download, readFileText, readFileBytes, busy, nextFrame } from "../util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
+
+const MAX_PLAN_DOC_MB = 20;
 
 const FIELDS = [["programName", "사업명"], ["period", "사업기간"], ["target", "참여대상"], ["budget", "사업예산"], ["department", "추진부서"]];
 
@@ -96,8 +100,8 @@ export function render() {
 
   <section class="card">
     <div class="row between wrap">
-      <h3 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}</h3>
-      <div class="row gap"><button class="btn sm ghost" data-act="save-preset">사업정보·지표 파일로 저장</button><label class="btn sm ghost">파일 불러오기<input type="file" accept=".json" data-change="load-preset" hidden></label></div>
+      <h3 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}${state.businessFound?.doc ? ` <span class="badge ok">문서에서 초안 반영 · 확인 필요</span>` : ""}</h3>
+      <div class="row gap"><button class="btn sm ghost" data-act="save-preset">사업정보·지표 파일로 저장</button><label class="btn sm ghost">파일 불러오기<input type="file" accept=".json" data-change="load-preset" hidden></label><label class="btn sm ghost">문서에서 채우기(.hwpx)<input type="file" accept=".hwpx" data-change="load-plan-doc" hidden></label></div>
     </div>
     <p class="small muted">입력하면 보고서에 ‘사업 개요’와 ‘논리모형’ 표, 목표별 달성 평가가 추가됩니다. 몰라도 보고서 작성에는 문제없습니다.</p>
     <div class="grid3">
@@ -163,7 +167,45 @@ export const actions = {
     } catch (e) { toast(`불러오기 실패: ${e.message}`, "bad"); }
     el.value = "";
   },
+  "load-plan-doc": async el => {
+    const f = el.files?.[0];
+    el.value = "";
+    if (!f) return;
+    if (!/\.hwpx$/i.test(f.name)) { toast("HWPX(.hwpx) 파일만 지원합니다 — PDF는 추후 지원 예정", "bad"); return; }
+    if (f.size > MAX_PLAN_DOC_MB * 1024 * 1024) { toast(`파일이 너무 큽니다(${MAX_PLAN_DOC_MB}MB 초과)`, "bad"); return; }
+    busy(true, "문서에서 정보를 찾는 중…");
+    await nextFrame();
+    try {
+      const bytes = await readFileBytes(f);
+      const { paragraphs, tables } = await readHwpxText(bytes, { JSZip: window.JSZip, DOMParser: window.DOMParser });
+      const draft = readBusinessFromHwpx({ paragraphs, tables });
+      if (!draft.logicModel && !draft.kpis?.length) {
+        toast("문서에서 사업정보를 찾지 못했습니다 — 직접 입력해 주세요", "bad", 5000);
+        return;
+      }
+      const before = state.logicModel;
+      state.logicModel = mergeIntoLogicModel(before, draft.logicModel);
+      const filledFields = [...SCALAR_LM_KEYS, ...LOGIC_STAGES.map(s => s.key), "goals"].filter(k => !fieldFilled(before, k) && fieldFilled(state.logicModel, k)).length;
+      let addedKpis = 0;
+      if (draft.kpis?.length) {
+        const base = nextKpiNo();
+        const tagged = tagDraftKpis(draft.kpis).map((k, i) => ({ ...k, id: `K${base + i}` }));
+        state.kpis.push(...tagged);
+        addedKpis = tagged.length;
+      }
+      state.businessFound = { business: false, kpi: false, ...state.businessFound, doc: true };
+      invalidate();
+      toast(`문서에서 초안을 채웠습니다(사업정보 ${filledFields}항목, 지표 ${addedKpis}개) — 자동 추출은 틀릴 수 있으니 꼭 확인하세요`, "ok", 6000);
+      refresh();
+    } catch (e) {
+      console.error(e);
+      toast(e.message === "NOT_HWPX" ? "올바른 HWPX 파일이 아닙니다" : `문서를 읽지 못했습니다: ${e.message}`, "bad", 6000);
+    } finally { busy(false); }
+  },
 };
+
+const SCALAR_LM_KEYS = ["programName", "period", "budget", "target", "department", "purpose", "background"];
+const fieldFilled = (lm, k) => (Array.isArray(lm[k]) ? lm[k].length > 0 : !!lm[k]);
 
 const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "direction", "unit", "note"];
 function pickKpi(k) {
