@@ -269,7 +269,7 @@ h3.flush { margin: 0; }
 .side-toggle b { font-size: 13px; font-weight: 700; }
 .side-toggle:hover b { text-decoration: underline; }
 .side-toggle .chev { color: var(--text-3); flex-shrink: 0; }
-.side-toggle.group { padding: 10px 24px; margin: 18px -24px 0; }
+.side-toggle.group { padding: 14px 24px 10px; margin: 18px -24px 0; border-top: 1px solid var(--border); }
 .side-toggle.group:hover { background: var(--surface-2); }
 .side-toggle.group:hover b { text-decoration: none; }
 .fmt-toggle-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
