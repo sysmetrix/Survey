@@ -4,7 +4,7 @@
 
 export const FONT_PRESETS = [
   { id: "gov", name: "휴먼명조", body: "휴먼명조", heading: "HY헤드라인M", headingOnly: true, note: "행정기관 보고서 기본 조합(공문서형) — 본문·표·굵은 글씨는 휴먼명조, 큰 제목만 제목 글꼴" },
-  { id: "hancom", name: "함초롬 (한글 기본)", body: "함초롬바탕", heading: "함초롬돋움", note: "한글(한컴오피스)에 기본 포함 — 어느 PC에서나 같은 모양" },
+  { id: "hancom", hidden: true, name: "함초롬 (한글 기본)", body: "함초롬바탕", heading: "함초롬돋움", note: "한글(한컴오피스)에 기본 포함 — 어느 PC에서나 같은 모양" }, // 선택 목록에서는 뺌(대체 글꼴로는 계속 쓰임) — 이전에 골랐던 프로젝트 파일과의 호환을 위해 항목 자체는 남김
   { id: "malgun", name: "맑은 고딕", body: "맑은 고딕", heading: "맑은 고딕", note: "Windows 기본 글꼴" },
   { id: "nanum", name: "나눔고딕", body: "나눔고딕", heading: "나눔고딕", note: "무료 글꼴 — 받는 PC에도 설치 필요", url: "https://hangeul.naver.com/font" },
   { id: "kopub", name: "KoPub돋움체", body: "KoPub돋움체 Medium", heading: "KoPub돋움체 Medium", boldFace: "KoPub돋움체 Bold", note: "무료 공공 글꼴 — 굵은 글자는 KoPub돋움체 Bold 사용", url: "https://www.kopus.org/biz-electronic-font2/" },

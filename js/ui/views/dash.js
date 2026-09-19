@@ -12,6 +12,15 @@ import { resolvedTheme } from "../theme.js";
 
 const TYPE_LABEL = { positive: "긍정", negative: "부정", suggestion: "건의", neutral: "기타", none: "없음" };
 let textFilter = { col: "", type: "", q: "" };
+let tabsScrollLeft = 0; // 탭(장) 가로 스크롤 위치 — 탭 클릭마다 화면 전체가 다시 그려져도 유지
+
+/** 매 렌더 뒤 호출(main.js) — 새로 그려진 .tabs 에 이전 가로 스크롤 위치를 되돌림 */
+export function mount() {
+  const el = document.querySelector(".tabs");
+  if (!el) return;
+  el.scrollLeft = tabsScrollLeft;
+  el.addEventListener("scroll", () => { tabsScrollLeft = el.scrollLeft; }, { passive: true });
+}
 
 function cards(r) {
   const A = r.analysis, E = r.evaluation, P = A.prepost;

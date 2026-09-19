@@ -52,7 +52,7 @@ function fontBadge(name) {
 /** 글꼴 조합 선택 — 이름 글자 자체를 그 글꼴로 보여주는 칩(드롭다운 대신) */
 function fontPicker(p) {
   return `<div class="fontpick" role="listbox" aria-label="글꼴 조합">
-    ${FONT_PRESETS.map(x => `<button type="button" class="chip-btn fontpick-chip${x.id === p.id ? " on" : ""}" data-act="doc-preset" data-id="${x.id}" style="font-family:'${esc(x.body || "inherit")}', var(--font)" role="option" aria-selected="${x.id === p.id}">${x.id === p.id ? icon("check", 13) : ""}${esc(x.name)}</button>`).join("")}
+    ${FONT_PRESETS.filter(x => !x.hidden || x.id === p.id).map(x => `<button type="button" class="chip-btn fontpick-chip${x.id === p.id ? " on" : ""}" data-act="doc-preset" data-id="${x.id}" style="font-family:'${esc(x.body || "inherit")}', var(--font)" role="option" aria-selected="${x.id === p.id}">${x.id === p.id ? icon("check", 13) : ""}${esc(x.name)}</button>`).join("")}
   </div>`;
 }
 
