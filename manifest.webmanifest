@@ -9,8 +9,8 @@
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#F4F5F2",
-  "theme_color": "#006D3A",
+  "background_color": "#F7F8FA",
+  "theme_color": "#3B5A7A",
   "categories": ["productivity", "business", "education"],
   "icons": [
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },

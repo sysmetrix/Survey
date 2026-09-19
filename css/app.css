@@ -1,17 +1,19 @@
-/* 설문 분석·결과평가 v5.2 — 디자인 토큰(밝은/어두운 화면) · KRDS 원칙(일관성·접근성 AA·효율성) · Pretendard GOV */
+/* 설문 분석·결과평가 v5.9 — 디자인 토큰(밝은/어두운 화면) · KRDS 원칙(일관성·접근성 AA·효율성) · Pretendard GOV
+   색감: 슬레이트 블루(Mercury·Arc 브라우저류 참고) — 기본 초록이 "AI 도구 기본값"처럼 흔해 보인다는
+   피드백으로 2026-09-20 교체. 대비는 WCAG AA(4.5:1 이상 텍스트, 3:1 이상 UI 요소) 확인 후 적용. */
 :root {
   color-scheme: light;
   --font: "Pretendard GOV Variable", "Pretendard GOV", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
-  --bg: #F4F5F2; --surface: #FFFFFF; --surface-2: #F1F3EF; --surface-3: #E6E9E4;
-  --border: #E0E3DD; --border-strong: #C6CBC3;
-  --text: #15181B; --text-2: #434A51; --text-3: #646B72;
-  --brand: #006D3A; --brand-hover: #00592F; --brand-soft: #E7F3EC; --brand-soft-2: #CFE7D9; --brand-text: #006D3A; --on-brand: #FFFFFF;
+  --bg: #F7F8FA; --surface: #FFFFFF; --surface-2: #EEF1F4; --surface-3: #E3E8ED;
+  --border: #DCE2E8; --border-strong: #C3CCD5;
+  --text: #0A0A0A; --text-2: #3D444C; --text-3: #63707D;
+  --brand: #3B5A7A; --brand-hover: #2F4863; --brand-soft: #E4EAF1; --brand-soft-2: #C9D6E1; --brand-text: #2F4C68; --on-brand: #FFFFFF;
   --accent: #2a78d6; --link: #1d5fb4;
   --ok: #006300; --ok-soft: #E2F2E2; --bad: #B42318; --bad-soft: #FDECEA; --warn: #8A5A00; --warn-soft: #FFF2D2; --info: #1F5A94; --info-soft: #E3EDF8;
   --radius-sm: 8px; --radius: 12px; --radius-lg: 18px;
-  --shadow-sm: 0 1px 2px rgba(18, 28, 22, .05);
-  --shadow: 0 1px 2px rgba(18, 28, 22, .04), 0 4px 16px rgba(18, 28, 22, .05);
-  --shadow-lg: 0 12px 40px rgba(18, 28, 22, .14);
+  --shadow-sm: 0 1px 2px rgba(16, 20, 26, .05);
+  --shadow: 0 1px 2px rgba(16, 20, 26, .04), 0 4px 16px rgba(16, 20, 26, .05);
+  --shadow-lg: 0 12px 40px rgba(16, 20, 26, .14);
   --ring: 0 0 0 3px rgba(42, 120, 214, .38);
   --topbar-h: 64px;
   --rtbar-h: 44px; /* 보고서 화면 상단 도구모음 높이 */
@@ -19,10 +21,10 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0E100F; --surface: #161917; --surface-2: #1D211E; --surface-3: #272C28;
-    --border: #2A302B; --border-strong: #3B433D;
-    --text: #ECEFEC; --text-2: #BAC1BB; --text-3: #939B94;
-    --brand: #34B27A; --brand-hover: #48C58C; --brand-soft: #15271D; --brand-soft-2: #1D3A2A; --brand-text: #5CCB95; --on-brand: #04130B;
+    --bg: #0B0D10; --surface: #14171B; --surface-2: #1A1E23; --surface-3: #232830;
+    --border: #2B3138; --border-strong: #3C434C;
+    --text: #F1F3F5; --text-2: #C5CBD1; --text-3: #8F98A2;
+    --brand: #46708F; --brand-hover: #5885AA; --brand-soft: #1C2A36; --brand-soft-2: #24384A; --brand-text: #9FC3DE; --on-brand: #FFFFFF;
     --accent: #3987e5; --link: #86b6ef;
     --ok: #3DBE3D; --ok-soft: #15291A; --bad: #FF8A80; --bad-soft: #3A1B19; --warn: #F5B94A; --warn-soft: #34290F; --info: #86B6EF; --info-soft: #172638;
     --shadow-sm: 0 1px 2px rgba(0,0,0,.4); --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25); --shadow-lg: 0 12px 40px rgba(0,0,0,.5);
@@ -31,10 +33,10 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0E100F; --surface: #161917; --surface-2: #1D211E; --surface-3: #272C28;
-  --border: #2A302B; --border-strong: #3B433D;
-  --text: #ECEFEC; --text-2: #BAC1BB; --text-3: #939B94;
-  --brand: #34B27A; --brand-hover: #48C58C; --brand-soft: #15271D; --brand-soft-2: #1D3A2A; --brand-text: #5CCB95; --on-brand: #04130B;
+  --bg: #0B0D10; --surface: #14171B; --surface-2: #1A1E23; --surface-3: #232830;
+  --border: #2B3138; --border-strong: #3C434C;
+  --text: #F1F3F5; --text-2: #C5CBD1; --text-3: #8F98A2;
+  --brand: #46708F; --brand-hover: #5885AA; --brand-soft: #1C2A36; --brand-soft-2: #24384A; --brand-text: #9FC3DE; --on-brand: #FFFFFF;
   --accent: #3987e5; --link: #86b6ef;
   --ok: #3DBE3D; --ok-soft: #15291A; --bad: #FF8A80; --bad-soft: #3A1B19; --warn: #F5B94A; --warn-soft: #34290F; --info: #86B6EF; --info-soft: #172638;
   --shadow-sm: 0 1px 2px rgba(0,0,0,.4); --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.25); --shadow-lg: 0 12px 40px rgba(0,0,0,.5);
@@ -133,9 +135,9 @@ h3 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; letter-spacing: -.
 .tutorial-bar .btn.ghost:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.45); color: #fff; }
 .tutorial-bar .btn.sub { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.32); color: #fff; }
 .tutorial-bar .btn.sub:hover { background: rgba(255,255,255,.27); border-color: rgba(255,255,255,.55); color: #fff; }
-.tutorial-bar .btn.primary { background: #34B27A; border-color: #34B27A; color: #04130B; }
-.tutorial-bar .btn.primary:hover { background: #48C58C; border-color: #48C58C; }
-.tutorial-bar .btn:focus-visible { box-shadow: 0 0 0 3px rgba(84, 212, 151, .55); }
+.tutorial-bar .btn.primary { background: #46708F; border-color: #46708F; color: #fff; }
+.tutorial-bar .btn.primary:hover { background: #5885AA; border-color: #5885AA; }
+.tutorial-bar .btn:focus-visible { box-shadow: 0 0 0 3px rgba(88, 133, 170, .55); }
 @media (max-width: 640px) { .tutorial-bar { grid-template-columns: 1fr; padding: 18px 16px 14px; } .tutorial-controls { justify-content: flex-end; } .tutorial-copy p { font-size: 14px; } }
 
 .in { font: inherit; font-size: 14px; color: var(--text); border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 10px; min-height: 36px; background: var(--surface); width: 100%; min-width: 0; transition: border-color .15s, box-shadow .15s; }
@@ -275,9 +277,15 @@ h3.flush { margin: 0; }
 .rt-select { height: 30px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--text-2); font: inherit; font-weight: 600; padding: 0 6px; max-width: 168px; }
 .rt-select:hover { background: var(--surface-2); border-color: var(--border); }
 .rt-spacer { flex: 1; }
-.rt-help-wrap { position: relative; }
-.rt-help-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 25; width: min(300px, 84vw); padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-lg); font-size: 13px; line-height: 1.65; color: var(--text-2); }
-.rt-help-pop b { color: var(--text); }
+.rt-pop-wrap { position: relative; }
+.rt-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 25; width: min(300px, 84vw); padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-lg); font-size: 13px; line-height: 1.65; color: var(--text-2); }
+.rt-pop b { color: var(--text); }
+.rt-pop.wide { width: min(340px, 90vw); max-height: 80vh; overflow-y: auto; }
+.rt-fmt-trigger { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+.rt-fmt-trigger .glyph { font-weight: 700; }
+.rt-io-group { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }
+.rt-io-group .rt-btn.primary { background: var(--brand); color: var(--on-brand); }
+.rt-io-group .rt-btn.primary:hover { background: var(--brand-hover); color: var(--on-brand); }
 @media (max-width: 760px) {
   .report-toolbar { position: static; flex-wrap: wrap; row-gap: 6px; padding: 8px 4px; }
 }
@@ -291,8 +299,6 @@ h3.flush { margin: 0; }
 .side-toggle.group { padding: 14px 24px 10px; margin: 18px -24px 0; border-top: 1px solid var(--border); }
 .side-toggle.group:hover { background: var(--surface-2); }
 .side-toggle.group:hover b { text-decoration: none; }
-.fmt-toggle-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.fmt-toggle-sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 960px) { .report-layout { grid-template-columns: 1fr; } .side { position: static; max-height: none; overflow-y: visible; } }
 
 /* 보고서 용지(미리보기) — 문서이므로 화면 테마와 무관하게 흰 종이 */

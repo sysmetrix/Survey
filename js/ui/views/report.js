@@ -73,7 +73,6 @@ function formatPanel() {
         <label class="field compact">글자 크기<select class="in" data-change="doc" data-field="baseSize">${FONT_SIZES.map(v => option(v, `${v}pt`, Number(s.baseSize) === v)).join("")}</select></label>
         <label class="field compact">줄 간격<select class="in" data-change="doc" data-field="lineSpacing">${LINE_SPACINGS.map(v => option(v, `${v}%`, Number(s.lineSpacing) === v)).join("")}</select></label>
       </div>
-      <div class="font-preview" style="font-family:'${esc(f.body)}', var(--font); font-size:${s.baseSize}pt">가나다 ABC 123 — <b>이렇게 보입니다</b></div>
       <div class="font-names">${names.map(n => `<div class="row gap wrap small"><span>${esc(n)} <span class="muted">${esc(roleOf(n))}</span></span>${fontBadge(n)}</div>`).join("")}</div>
       <div class="row gap wrap format-actions">
         <button class="btn sm sub" data-act="font-check" ${checkingFonts ? "disabled aria-busy=\"true\"" : ""}>${icon("check", 15)}${checkingFonts ? "글꼴 확인 중…" : "이 PC의 글꼴 확인"}</button>
@@ -97,12 +96,17 @@ export function render() {
   const chOpen = chaptersOpen ?? (nChIncluded !== allChapters.length);
   return `
   <div class="report-toolbar no-print">
-    <div class="rt-help-wrap">
+    <div class="rt-pop-wrap">
       <button class="rt-btn" data-act="toggle-help" aria-expanded="${helpOpen}" aria-haspopup="true">${icon("help", 16)}사용법</button>
-      ${helpOpen ? `<div class="rt-help-pop" role="dialog" aria-label="사용법">
+      ${helpOpen ? `<div class="rt-pop" role="dialog" aria-label="사용법">
         <p><b>문장 편집</b> — 미리보기의 문장을 클릭해 직접 고칠 수 있습니다(Enter로 확정). 굵게는 <code>**텍스트**</code>. ✕로 문장 빼기, ↺로 자동 문장 복원.</p>
-        <p class="small muted" style="margin-top:8px">글꼴·표시할 장 같은 설정은 왼쪽 사이드바에서 바꿀 수 있습니다.</p>
+        <p class="small muted" style="margin-top:8px">표시할 장 같은 설정은 왼쪽 사이드바에서 바꿀 수 있습니다.</p>
       </div>` : ""}
+    </div>
+    <div class="rt-sep" aria-hidden="true"></div>
+    <div class="rt-pop-wrap">
+      <button class="rt-btn rt-fmt-trigger" data-act="format-toggle" aria-expanded="${formatOpen}" aria-haspopup="true" style="font-family:'${esc(docFonts.body)}', var(--font)"><span class="glyph">가</span> ${esc(docPreset.name)} · ${state.settings.baseSize}pt</button>
+      ${formatOpen ? `<div class="rt-pop wide" role="dialog" aria-label="한글 문서 서식">${formatPanel()}</div>` : ""}
     </div>
     <div class="rt-sep" aria-hidden="true"></div>
     <div class="rt-group">
@@ -119,9 +123,11 @@ export function render() {
       <button class="rt-btn" data-act="zoom-in" aria-label="확대" ${zoomPct >= 150 ? "disabled" : ""}>＋</button>
     </div>
     <div class="rt-spacer"></div>
-    <button class="rt-btn" data-act="export-hwpx" title="한글(HWPX) 내려받기">${icon("download", 16)}</button>
-    <button class="rt-btn" data-act="print" title="인쇄 / PDF 저장">${icon("printer", 16)}</button>
-    <button class="rt-btn" data-act="copy" title="보고서 복사(워드·구글문서 붙여넣기)">${icon("copy", 16)}</button>
+    <div class="rt-io-group" role="group" aria-label="내보내기">
+      <button class="rt-btn primary" data-act="export-hwpx" title="한글(HWPX) 내려받기">${icon("download", 16)}</button>
+      <button class="rt-btn" data-act="print" title="인쇄 / PDF 저장">${icon("printer", 16)}</button>
+      <button class="rt-btn" data-act="copy" title="보고서 복사(워드·구글문서 붙여넣기)">${icon("copy", 16)}</button>
+    </div>
   </div>
   <div class="report-layout">
     <aside class="card side no-print">
@@ -142,15 +148,6 @@ export function render() {
 
       <button class="side-toggle group" data-act="chapters-toggle" aria-expanded="${chOpen}" aria-controls="chaptersBody"><b>포함할 장</b><span class="row gap"><span class="small muted">${chSummary}</span>${icon(chOpen ? "left" : "right", 16, "chev")}</span></button>
       ${chOpen ? `<div id="chaptersBody">${allChapters.map(c => `<label class="check"><input type="checkbox" ${state.hiddenChapters.includes(c.key) ? "" : "checked"} data-change="chapter" data-key="${esc(c.key)}"> ${esc(c.display || c.title)}</label>`).join("")}</div>` : ""}
-
-      <button class="side-toggle group fmt-toggle" data-act="format-toggle" aria-expanded="${formatOpen}" aria-controls="formatBody">
-        <span class="fmt-toggle-text">
-          <b>한글 문서 서식</b>
-          <span class="fmt-toggle-sub" style="font-family:'${esc(docFonts.body)}', var(--font)">가나다 · ${esc(docPreset.name)} · ${state.settings.baseSize}pt</span>
-        </span>
-        ${icon(formatOpen ? "left" : "right", 16, "chev")}
-      </button>
-      ${formatOpen ? `<div id="formatBody">${formatPanel()}</div>` : ""}
 
       <h3>문장 편집</h3>
       <div class="row gap wrap edit-stats"><span class="badge ${nEdited ? "info" : "muted"}">수정 ${nEdited}건</span><span class="badge ${nHidden ? "warn" : "muted"}">숨김 ${nHidden}건</span></div>
