@@ -23,7 +23,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.21.0";
+export const APP_VERSION = "5.22.0";
 const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -56,7 +56,7 @@ function render({ keepScroll = false } = {}) {
   const id = !NO_DATA_VIEWS.includes(allowedView) && !state.dataset ? "load" : allowedView;
   const changed = id !== currentId;
   if (changed && currentId && currentId !== id) setPrevView(currentId);
-  if (changed && currentId === "present") present.unmount();
+  if (changed) current.unmount?.();
   current = VIEWS[id]; currentId = id;
   document.body.classList.toggle("presenting", id === "present");
   const y = window.scrollY;
@@ -139,15 +139,21 @@ document.addEventListener("focusout", e => {
   const el = e.target.closest("[data-edit]");
   if (!el) return;
   el.dataset.editing = "";
-  const text = htmlToMarkup(el);
+  const text = htmlToMarkup(el, { multiline: el.dataset.multiline === "1" });
   const key = el.dataset.edit;
   if (text !== el.dataset.raw) {
     if (key.startsWith("deck:")) {
-      // 발표 슬라이드 문구 편집: "deck:<슬라이드id>.<필드>" — 문장 숨기기 개념이 없어 빈 값도 그대로 저장
+      // 발표 슬라이드 문구 편집: "deck:<슬라이드id>.<필드>"(자동 문구) 또는 "deck:<슬라이드id>.el:<요소id>"(자유배치 텍스트 박스)
       const [slideId, field] = key.slice(5).split(/\.(.+)/);
       const bySlide = { ...state.deckOverrides.bySlide };
-      const entry = bySlide[slideId] || { mode: "auto", text: {}, textBase: {} };
-      bySlide[slideId] = { ...entry, text: { ...entry.text, [field]: text }, textBase: { ...entry.textBase, [field]: el.dataset.auto } };
+      const entry = bySlide[slideId] || { mode: "auto", text: {}, textBase: {}, elements: [] };
+      if (field.startsWith("el:")) {
+        const elId = field.slice(3);
+        const elements = (entry.elements || []).map(it => (it.id === elId ? { ...it, markup: text } : it));
+        bySlide[slideId] = { ...entry, elements };
+      } else {
+        bySlide[slideId] = { ...entry, text: { ...entry.text, [field]: text }, textBase: { ...entry.textBase, [field]: el.dataset.auto } };
+      }
       state.deckOverrides = { ...state.deckOverrides, bySlide };
     } else if (text) {
       state.overrides[key] = text;
@@ -166,7 +172,9 @@ function toggleFormat(cmd) {
 }
 const isTyping = t => !!t?.closest?.("input, textarea, select, [contenteditable='true']");
 document.addEventListener("keydown", e => {
-  if (e.key === "Enter" && e.target.closest?.("[data-edit]")) { e.preventDefault(); e.target.blur(); return; }
+  const editEl = e.target.closest?.("[data-edit]");
+  if (e.key === "Enter" && editEl?.dataset.multiline === "1") { e.preventDefault(); document.execCommand("insertLineBreak"); return; }
+  if (e.key === "Enter" && editEl) { e.preventDefault(); e.target.blur(); return; }
   if ((e.ctrlKey || e.metaKey) && !e.altKey && e.target.closest?.("[data-edit]")) {
     const cmd = !e.shiftKey && e.code === "KeyB" ? "bold" : !e.shiftKey && e.code === "KeyI" ? "italic" : !e.shiftKey && e.code === "KeyU" ? "underline" : e.shiftKey && e.code === "KeyX" ? "strikeThrough" : null;
     if (cmd) { e.preventDefault(); toggleFormat(cmd); return; }

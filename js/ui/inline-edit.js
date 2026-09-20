@@ -53,8 +53,9 @@ export function wrapRun(text, marks) {
   return core ? lead + wrapMarks(escapeLiteral(core), marks) + trail : text;
 }
 
-/** 편집 끝(blur): contenteditable 안 실제 서식 → 저장 표식 문자열로 되돌림 */
-export function htmlToMarkup(root) {
+/** 편집 끝(blur): contenteditable 안 실제 서식 → 저장 표식 문자열로 되돌림.
+ *  multiline=true(자유배치 텍스트 박스)면 줄바꿈(<br>)을 \n 으로 보존, 기본(문장 한 줄)은 공백으로 뭉갬 */
+export function htmlToMarkup(root, { multiline = false } = {}) {
   const runs = [];
   const walk = node => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -66,9 +67,15 @@ export function htmlToMarkup(root) {
       return;
     }
     if (node.nodeType !== 1) return;
-    if (node.tagName === "BR") { const last = runs[runs.length - 1]; if (last) last.text += " "; return; } // 편집 필드는 한 줄(Enter=blur)
+    if (node.tagName === "BR") {
+      const br = multiline ? "\n" : " ";
+      const last = runs[runs.length - 1];
+      if (last && !hasMarks(last.marks)) last.text += br; else runs.push({ text: br, marks: {} });
+      return;
+    }
     node.childNodes.forEach(walk);
   };
   root.childNodes.forEach(walk);
-  return runs.map(r => (hasMarks(r.marks) ? wrapRun(r.text, r.marks) : escapeLiteral(r.text))).join("").replace(/\s+/g, " ").trim();
+  const joined = runs.map(r => (hasMarks(r.marks) ? wrapRun(r.text, r.marks) : escapeLiteral(r.text))).join("");
+  return multiline ? joined.replace(/[ \t]+/g, " ").replace(/[ \t]*\n[ \t]*/g, "\n").trim() : joined.replace(/\s+/g, " ").trim();
 }

@@ -11,12 +11,14 @@ import * as business from "../../js/ui/views/business.js";
 import * as dash from "../../js/ui/views/dash.js";
 import * as report from "../../js/ui/views/report.js";
 import * as present from "../../js/ui/views/present.js";
+import * as presentEdit from "../../js/ui/views/present-edit.js";
 import * as historyView from "../../js/ui/views/history.js";
 import * as settingsView from "../../js/ui/views/settings.js";
 import * as updatesView from "../../js/ui/views/updates.js";
 import { splitChapters } from "../../js/report/render-html.js";
 import { makeTemplate } from "../../js/io/template-xlsx.js";
 import { projectToJson, parseProject } from "../../js/io/project.js";
+import { allDeckSlides } from "../../js/ui/store.js";
 const require = createRequire(import.meta.url);
 const XLSX = require("../../vendor/xlsx-0.20.3.full.min.js");
 const Papa = require("../../vendor/papaparse-5.4.1.min.js");
@@ -27,7 +29,7 @@ for (const file of ["2026_진로탐색_사전사후.xlsx", "2026_문화의집_�
   test(`화면 렌더: ${file}`, async () => {
     const ds = parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa });
     loadDataset(ds);
-    const views = { load, setup, business, dash, report, present };
+    const views = { load, setup, business, dash, report, present, presentEdit };
     for (const [name, v] of Object.entries(views)) {
       const html = v.render({ sub: "" });
       assert.ok(html.length > 500, `${name} 렌더 길이`);
@@ -149,6 +151,67 @@ test("발표 모드: 개요·슬라이드 숨기기·번호 범위", async () =>
   assert.equal(bad(present.render({ sub: "3" })), null);
   present.actions["p-unhide-all"]();
   assert.equal(present.visibleSlides().length, n);
+});
+
+test("슬라이드 편집: 자유배치 전환, 요소 추가, 슬라이드 추가·삭제·순서변경", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  const first = allDeckSlides()[0];
+  presentEdit.actions["pe-select"]({ dataset: { id: first.id } });
+  assert.equal(bad(presentEdit.render({})), null, "편집 화면 렌더에 undefined/NaN 없음");
+  assert.ok(!presentEdit.render({}).includes("s-free"), "디태치 전에는 자유배치 레이어 없음");
+
+  // 자동 → 자유배치 전환
+  presentEdit.actions["pe-detach"]();
+  const detached = presentEdit.render({});
+  assert.ok(detached.includes("s-free") && detached.includes("s-el "), "디태치 후 자유배치 요소 렌더");
+  assert.ok(state.deckOverrides.bySlide[first.id].elements.length > 0);
+
+  // 자동으로 되돌리기
+  presentEdit.actions["pe-revert-auto"]();
+  assert.equal(state.deckOverrides.bySlide[first.id].mode, "auto");
+
+  // 새 빈 슬라이드 추가 → 목록에 반영, 자동으로 선택됨
+  const before = allDeckSlides().length;
+  presentEdit.actions["pe-add-slide"]();
+  assert.equal(allDeckSlides().length, before + 1);
+  const added = allDeckSlides().find(s => s.type === "custom");
+  assert.ok(added, "새 슬라이드가 목록에 있음");
+  assert.equal(state.deckOverrides.bySlide[added.id].mode, "custom");
+
+  // 자유배치 슬라이드에 텍스트·도형 요소 추가
+  presentEdit.actions["pe-add-text"]();
+  presentEdit.actions["pe-add-shape"]();
+  assert.equal(state.deckOverrides.bySlide[added.id].elements.length, 2);
+  const textEl = state.deckOverrides.bySlide[added.id].elements[0];
+  assert.equal(textEl.kind, "text");
+
+  // 속성 패널 변경(위치) — pe-add-shape 직후라 지금 선택된 요소는 마지막에 추가한 도형
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "x" }, value: "42" });
+  assert.equal(state.deckOverrides.bySlide[added.id].elements.find(x => x.kind === "shape").x, 42, "선택된(마지막 추가) 도형에 반영");
+
+  // 요소 복제·삭제
+  presentEdit.actions["pe-el-duplicate"]();
+  assert.equal(state.deckOverrides.bySlide[added.id].elements.length, 3);
+  presentEdit.actions["pe-el-delete"]();
+  assert.equal(state.deckOverrides.bySlide[added.id].elements.length, 2);
+
+  // 순서 변경: 새 슬라이드를 맨 위로
+  const orderBefore = allDeckSlides().map(s => s.id);
+  const addedIdx = orderBefore.indexOf(added.id);
+  while (allDeckSlides().map(s => s.id).indexOf(added.id) > 0) presentEdit.actions["pe-move-slide"]({ dataset: { dir: "up" } });
+  assert.equal(allDeckSlides()[0].id, added.id, `${addedIdx}번째에서 맨 위로 이동`);
+
+  // 슬라이드 삭제(사용자가 만든 슬라이드는 완전히 삭제)
+  presentEdit.actions["pe-delete-slide"]();
+  assert.equal(allDeckSlides().length, before);
+  assert.ok(!state.deckOverrides.customSlides[added.id]);
+
+  // 자동 슬라이드는 삭제해도 숨김 처리(데이터는 남아 복원 가능)
+  presentEdit.actions["pe-select"]({ dataset: { id: first.id } });
+  presentEdit.actions["pe-delete-slide"]();
+  assert.ok(state.deckHidden.includes(first.id));
+  assert.ok(allDeckSlides().some(s => s.id === first.id), "숨겨도 목록 자체에서는 안 없어짐(복원 가능)");
 });
 
 test("작업 내역 화면: 저장소가 없는 환경에서도 안내 표시", () => {

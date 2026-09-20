@@ -45,7 +45,8 @@ export const state = {
   settings: loadSettings(),
   overrides: {}, hidden: [], hiddenChapters: [],
   deckHidden: [], overrideBase: {},
-  deckOverrides: { bySlide: {} },
+  deckOverrides: { bySlide: {}, customSlides: {} },
+  deckOrder: null,
   excludeStraight: false,
   businessFound: null,
   results: null, dirty: true,
@@ -75,7 +76,7 @@ export function loadDataset(dataset, project = null) {
     state.logicModel = biz.logicModel || emptyLogicModel();
     state.kpis = biz.kpis || [];
     state.overrides = {}; state.hidden = []; state.hiddenChapters = []; state.deckHidden = []; state.overrideBase = {};
-    state.deckOverrides = { bySlide: {} };
+    state.deckOverrides = { bySlide: {}, customSlides: {} }; state.deckOrder = null;
     state.settings.reportTitle = "";
   }
   invalidate();
@@ -92,9 +93,15 @@ export function chooseDataSheet(index) {
   state.logicModel = biz.logicModel || emptyLogicModel();
   state.kpis = biz.kpis || [];
   state.overrides = {}; state.hidden = []; state.hiddenChapters = []; state.deckHidden = []; state.overrideBase = {};
-  state.deckOverrides = { bySlide: {} };
+  state.deckOverrides = { bySlide: {}, customSlides: {} }; state.deckOrder = null;
   invalidate();
 }
+
+/** deckOverrides 는 항상 bySlide·customSlides 두 사전을 갖도록 방어(프로젝트 파일·이전 버전 내역 호환) */
+const normalizeDeckOverrides = v => ({
+  bySlide: v && typeof v.bySlide === "object" ? v.bySlide : {},
+  customSlides: v && typeof v.customSlides === "object" ? v.customSlides : {},
+});
 
 /** 외부(프로젝트 파일·내역)에서 온 설정은 알려진 항목만 검증해 반영 */
 function applySettingsFrom(s) {
@@ -116,7 +123,8 @@ export function applyEditable(e) {
   state.hiddenChapters = Array.isArray(e.hiddenChapters) ? e.hiddenChapters : [];
   state.deckHidden = Array.isArray(e.deckHidden) ? e.deckHidden : [];
   state.overrideBase = e.overrideBase && typeof e.overrideBase === "object" ? e.overrideBase : {};
-  state.deckOverrides = e.deckOverrides && typeof e.deckOverrides === "object" ? e.deckOverrides : { bySlide: {} };
+  state.deckOverrides = normalizeDeckOverrides(e.deckOverrides);
+  state.deckOrder = Array.isArray(e.deckOrder) ? e.deckOrder : null;
   state.excludeStraight = !!e.excludeStraight;
   applySettingsFrom(e.settings);
   invalidate();
@@ -131,7 +139,8 @@ export function applyProject(p) {
   state.hiddenChapters = p.report?.hiddenChapters || [];
   state.deckHidden = p.present?.hidden || [];
   state.overrideBase = p.report?.overrideBase || {};
-  state.deckOverrides = p.present?.overrides || { bySlide: {} };
+  state.deckOverrides = normalizeDeckOverrides(p.present?.overrides);
+  state.deckOrder = Array.isArray(p.present?.order) ? p.present.order : null;
   state.excludeStraight = !!p.excludeStraight;
   applySettingsFrom(p.settings);
   state.pendingProject = p;
@@ -164,7 +173,7 @@ export function compute() {
   return state.results;
 }
 
-/** 발표 슬라이드 (분석 결과가 바뀔 때만 다시 구성) */
+/** 발표 슬라이드: 분석 결과가 바뀔 때만 다시 구성(자동 생성분만, 순서·숨김·사용자 슬라이드는 반영 전) */
 let deckCache = { results: null, settingsKey: "", slides: [] };
 export function deckSlides() {
   const r = compute();
@@ -174,6 +183,44 @@ export function deckSlides() {
     deckCache = { results: r, settingsKey, slides: buildDeck({ analysis: r.analysis, evaluation: r.evaluation, logicModel: state.logicModel, codebook: state.codebook, settings: state.settings }) };
   }
   return deckCache.slides;
+}
+
+/** 새 빈 슬라이드 뼈대(사용자가 처음부터 채우는 자유배치 슬라이드) */
+export function blankCustomSlide() {
+  const id = `custom:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  return { id, type: "custom", section: "사용자 슬라이드", title: "새 슬라이드", notes: [], elements: [] };
+}
+
+/** 자동 생성 슬라이드 + 사용자가 추가한 슬라이드를 정해진 순서로 하나로 합침(숨김 포함, 개요 화면용) —
+ *  문구·요소 오버라이드(state.deckOverrides.bySlide)는 여기서 섞지 않고 각 렌더 함수가 그때그때 얹음
+ *  (보고서 finalizeBlocks() 와 같은 원칙 — 자동 내용과 사용자 수정을 읽을 때마다 새로 합쳐야 되돌리기·
+ *  "근거 변경" 감지가 가능함) */
+export function allDeckSlides() {
+  const auto = deckSlides();
+  const custom = state.deckOverrides.customSlides || {};
+  const byId = new Map(auto.map(s => [s.id, s]));
+  for (const id of Object.keys(custom)) byId.set(id, custom[id]);
+  const order = Array.isArray(state.deckOrder) && state.deckOrder.length ? state.deckOrder : [...auto.map(s => s.id), ...Object.keys(custom)];
+  const seen = new Set();
+  const out = [];
+  for (const id of order) { seen.add(id); const s = byId.get(id); if (s) out.push(s); }
+  // deckOrder 에 없는 새 자동 슬라이드(데이터가 바뀌어 새로 생긴 지표 등)는 뒤에 이어붙임
+  for (const s of auto) if (!seen.has(s.id)) out.push(s);
+  return out;
+}
+
+/** 위 목록에서 숨긴 슬라이드만 뺀 것 — 발표·인쇄·내보내기(present.js·export-html.js·앞으로의
+ *  render-pptx.js)가 공통으로 쓰는 단일 진입점 */
+export function assembledDeckSlides() {
+  const hidden = new Set(state.deckHidden);
+  return allDeckSlides().filter(s => !hidden.has(s.id));
+}
+
+/** 지금 실제로 쓰이고 있는 순서를 배열로(state.deckOrder 가 비어 있으면 자동 순서를 그대로 material화) —
+ *  슬라이드 추가·삭제·순서변경은 항상 이 배열을 고쳐 state.deckOrder 에 씀 */
+export function effectiveDeckOrder() {
+  if (Array.isArray(state.deckOrder) && state.deckOrder.length) return [...state.deckOrder];
+  return allDeckSlides().map(s => s.id);
 }
 
 export function reportBlocks() {

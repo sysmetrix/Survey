@@ -1,7 +1,8 @@
 // ⑥ 발표 모드: 분석 결과를 16:9 슬라이드로 — 키보드·전체화면·개요·발표자 노트·슬라이드 숨기기·PDF 인쇄
-import { state, deckSlides } from "../store.js";
+import { state, assembledDeckSlides, allDeckSlides } from "../store.js";
 import { chartSvg } from "../../report/model.js";
 import { inlineHtml } from "../../report/render-html.js";
+import { slideHtmlCustom } from "../../present/edit/render-custom.js";
 import { maskPII } from "../../core/util.js";
 import { buildPresentHtml, EXPORT_ICONS } from "../../present/export-html.js";
 import { esc, busy, download, safeFileName, toast, nextFrame } from "../util.js";
@@ -22,7 +23,7 @@ const TONE = { good: ["✓", "양호"], warning: ["△", "주의"], critical: ["
 const STAGE_LABEL = { auto: "화면 테마 따름", light: "밝은 무대", dark: "어두운 무대" };
 const KEYS = [["→  Space  PgDn", "다음"], ["←  PgUp", "이전"], ["Home / End", "처음 / 마지막"], ["숫자 + Enter", "해당 번호로 이동"], ["O", "슬라이드 개요"], ["N", "발표자 노트"], ["F", "전체화면"], ["B", "화면 가리기"], ["T", "무대 밝기"], ["P", "발표 자료 내려받기"], ["Esc", "닫기 · 발표 끝내기"]];
 
-export const visibleSlides = () => { const hidden = new Set(state.deckHidden); return deckSlides().filter(s => !hidden.has(s.id)); };
+export const visibleSlides = () => assembledDeckSlides();
 const stageTheme = () => (ui.stage === "auto" ? resolvedTheme() : ui.stage);
 
 function chart(c, theme) {
@@ -32,6 +33,8 @@ function chart(c, theme) {
 const toneMark = t => (TONE[t] ? `<span class="tone ${t}" role="img" aria-label="${TONE[t][1]}">${TONE[t][0]}</span>` : "");
 const quoteText = q => maskPII(typeof q === "string" ? q : q?.text ?? "");
 const list = items => `<ul class="s-list">${items.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+/** 제목을 슬라이드 본문 밖(발표자 노트·개요 라벨·내보내기 파일명 등)에 쓸 때도 직접 고친 문구를 그대로 반영 */
+const displayTitle = s => state.deckOverrides.bySlide[s.id]?.text?.title ?? s.title;
 
 /** 슬라이드 문구 편집 필드: 직접 고친 문구가 있으면(무대·개요·인쇄·내보내기 모두) 항상 그 문구를 보여주고,
  *  editable=true(슬라이드 편집 화면)일 때만 contenteditable 표식 문자열 편집(state.deckOverrides.bySlide 에 저장)으로 감쌈 */
@@ -43,8 +46,12 @@ function slideField(slideId, field, autoText, editable) {
   return `<span class="r-txt" contenteditable="true" spellcheck="false" data-edit="${esc(key)}" data-raw="${esc(text)}" data-auto="${esc(autoText)}">${inlineHtml(text)}</span>`;
 }
 
+/** 슬라이드가 자유배치 모드인지(처음부터 빈 슬라이드로 만들었거나, 자동 슬라이드를 디태치함) */
+export const isCustomSlide = s => (state.deckOverrides.bySlide[s.id]?.mode || (s.type === "custom" ? "custom" : "auto")) === "custom";
+
 /** 슬라이드 1장 HTML (무대·개요 썸네일·인쇄·편집 공용). editable=true(슬라이드 편집 화면)일 때만 문구를 직접 고칠 수 있음 */
 export function slideHtml(s, i, total, theme, { editable = false } = {}) {
+  if (isCustomSlide(s)) return slideHtmlCustom(s, state.deckOverrides.bySlide[s.id], i, total, theme, { editable });
   const org = state.settings.orgName || "";
   const head = `<header class="s-head"><p class="s-eyebrow">${esc(s.section)}</p><h2 class="s-title">${slideField(s.id, "title", s.title, editable)}</h2>${s.subtitle ? `<p class="s-sub">${slideField(s.id, "subtitle", s.subtitle, editable)}</p>` : ""}</header>`;
   let inner;
@@ -74,7 +81,7 @@ export function slideHtml(s, i, total, theme, { editable = false } = {}) {
   }
   const edge = s.type === "cover" || s.type === "end";
   const foot = `<footer class="s-foot"><span>${edge ? "" : esc(s.source || "")}</span><span>${esc(org)}${edge ? "" : `${org ? " · " : ""}${i + 1} / ${total}`}</span></footer>`;
-  return `<article class="slide t-${s.type} ${theme}" aria-roledescription="슬라이드" aria-label="${i + 1} / ${total}. ${esc(s.title)}">${inner}${foot}</article>`;
+  return `<article class="slide t-${s.type} ${theme}" aria-roledescription="슬라이드" aria-label="${i + 1} / ${total}. ${esc(displayTitle(s))}">${inner}${foot}</article>`;
 }
 
 const btn = (act, ic, label, extra = "") => `<button class="p-btn" data-act="${act}" aria-label="${esc(label)}" title="${esc(label)}" ${extra}>${icon(ic, 20)}</button>`;
@@ -106,15 +113,15 @@ function notesHtml(s, idx, slides) {
   const next = slides[idx + 1];
   return `<aside class="p-notes" aria-label="발표자 노트">
     <div class="p-notes-head"><b>발표자 노트</b><span class="p-clock">${icon("clock", 15)}<span id="pClock">${clock()}</span></span></div>
-    <p class="p-notes-title">${idx + 1}. ${esc(s.title)}</p>
+    <p class="p-notes-title">${idx + 1}. ${esc(displayTitle(s))}</p>
     ${s.notes.length ? `<ul class="p-notes-list">${s.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : `<p class="muted small">메모가 없습니다.</p>`}
-    <div class="p-notes-next"><span>다음</span><p>${next ? esc(next.title) : "마지막 슬라이드입니다"}</p></div>
+    <div class="p-notes-next"><span>다음</span><p>${next ? esc(displayTitle(next)) : "마지막 슬라이드입니다"}</p></div>
   </aside>`;
 }
 
 function overviewHtml(idx, theme) {
   const hidden = new Set(state.deckHidden);
-  const all = deckSlides();
+  const all = allDeckSlides();
   const total = all.filter(s => !hidden.has(s.id)).length;
   let n = 0;
   return `<div class="p-overview" role="dialog" aria-label="슬라이드 개요">
@@ -122,8 +129,8 @@ function overviewHtml(idx, theme) {
     <div class="p-ov-grid">${all.map(s => {
       const off = hidden.has(s.id), num = off ? 0 : ++n;
       return `<div class="p-thumb${off ? " off" : ""}${num === idx + 1 ? " on" : ""}">
-        <div class="p-thumb-go" role="button" tabindex="0" data-act="${off ? "p-toggle" : "p-goto"}" data-n="${num}" data-id="${esc(s.id)}" aria-label="${off ? "숨김 해제" : `${num}번 슬라이드로 이동`}: ${esc(s.title)}">${slideHtml(s, Math.max(0, num - 1), total, theme)}</div>
-        <div class="p-thumb-foot"><span class="p-thumb-n">${off ? "숨김" : num}</span><span class="p-thumb-title">${esc(s.section || s.title)}</span><button class="icon-btn sm" data-act="p-toggle" data-id="${esc(s.id)}" aria-label="${off ? "슬라이드 보이기" : "슬라이드 숨기기"}" title="${off ? "보이기" : "숨기기"}">${icon(off ? "eyeOff" : "eye", 16)}</button></div>
+        <div class="p-thumb-go" role="button" tabindex="0" data-act="${off ? "p-toggle" : "p-goto"}" data-n="${num}" data-id="${esc(s.id)}" aria-label="${off ? "숨김 해제" : `${num}번 슬라이드로 이동`}: ${esc(displayTitle(s))}">${slideHtml(s, Math.max(0, num - 1), total, theme)}</div>
+        <div class="p-thumb-foot"><span class="p-thumb-n">${off ? "숨김" : num}</span><span class="p-thumb-title">${esc(s.section || displayTitle(s))}</span><button class="icon-btn sm" data-act="p-toggle" data-id="${esc(s.id)}" aria-label="${off ? "슬라이드 보이기" : "슬라이드 숨기기"}" title="${off ? "보이기" : "숨기기"}">${icon(off ? "eyeOff" : "eye", 16)}</button></div>
       </div>`;
     }).join("")}</div>
   </div>`;
@@ -202,14 +209,14 @@ export const actions = {
         if (!res.ok) throw new Error(`${u} (HTTP ${res.status})`);
         return res.text();
       }))).join("\n");
-      const title = state.settings.reportTitle || slides[0]?.title || "발표 자료";
+      const title = state.settings.reportTitle || (slides[0] ? displayTitle(slides[0]) : "발표 자료");
       const html = buildPresentHtml({
         title, css, dark: stageTheme() === "dark",
         icons: Object.fromEntries(EXPORT_ICONS.map(n => [n, icon(n, 20)])),
         slides: slides.map((s, i) => ({
           light: slideHtml(s, i, total, "light"),
           dark: slideHtml(s, i, total, "dark"),
-          title: s.title, section: s.section, notes: s.notes || [],
+          title: displayTitle(s), section: s.section, notes: s.notes || [],
         })),
       });
       download(new Blob([html], { type: "text/html;charset=utf-8" }), `${safeFileName(title)}_발표자료.html`);

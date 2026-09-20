@@ -16,7 +16,8 @@ export function captureEditable(state) {
     hidden: state.hidden || [],
     hiddenChapters: state.hiddenChapters || [],
     deckHidden: state.deckHidden || [],
-    deckOverrides: state.deckOverrides || { bySlide: {} },
+    deckOverrides: state.deckOverrides || { bySlide: {}, customSlides: {} },
+    deckOrder: state.deckOrder || null,
     excludeStraight: !!state.excludeStraight,
     settings: Object.fromEntries(SETTINGS_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]])),
   }));
@@ -132,7 +133,12 @@ export function diffEditable(older, newer) {
   diffSet(a.deckHidden, b.deckHidden, "발표 슬라이드");
   const da = a.deckOverrides?.bySlide || {}, db = b.deckOverrides?.bySlide || {};
   const editedSlides = [...new Set([...Object.keys(da), ...Object.keys(db)])].filter(id => !same(da[id], db[id])).length;
-  if (editedSlides) add("발표 슬라이드", `문구 편집 ${editedSlides}개`);
+  if (editedSlides) add("발표 슬라이드", `문구·자유배치 편집 ${editedSlides}개`);
+  const csa = a.deckOverrides?.customSlides || {}, csb = b.deckOverrides?.customSlides || {};
+  const addedSlides = Object.keys(csb).filter(id => !(id in csa)).length, removedSlides = Object.keys(csa).filter(id => !(id in csb)).length;
+  if (addedSlides) add("발표 슬라이드", `새 슬라이드 ${addedSlides}개 추가`);
+  if (removedSlides) add("발표 슬라이드", `슬라이드 ${removedSlides}개 삭제`);
+  if (!same(a.deckOrder, b.deckOrder)) add("발표 슬라이드", "순서 변경");
 
   const sa = a.settings || {}, sb = b.settings || {};
   const SET_LABEL = { orgName: "기관·부서명", author: "담당자명", reportTitle: "보고서 제목", date: "작성일", thresholds: "판정 기준", scoreBasis: "100점 환산 기준", fontPreset: "글꼴", fontBody: "본문 글꼴", fontHeading: "제목 글꼴", baseSize: "글자 크기", lineSpacing: "줄 간격" };

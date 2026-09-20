@@ -11,7 +11,7 @@ export function projectToJson(state, { includeData = false } = {}) {
     },
     codebook: state.codebook, logicModel: state.logicModel, kpis: state.kpis,
     report: { overrides: state.overrides, overrideBase: state.overrideBase || {}, hidden: state.hidden, hiddenChapters: state.hiddenChapters },
-    present: { hidden: state.deckHidden || [], overrides: state.deckOverrides || { bySlide: {} } },
+    present: { hidden: state.deckHidden || [], overrides: state.deckOverrides || { bySlide: {}, customSlides: {} }, order: state.deckOrder || null },
     excludeStraight: state.excludeStraight,
     dataFingerprint: state.dataset ? { fileName: state.dataset.fileName, headersHash: state.codebook?.headersHash, rows: state.dataset.sheets.map(s => s.rows.length) } : null,
   };

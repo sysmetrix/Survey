@@ -178,7 +178,7 @@ const toProject = snap => ({
   app: "survey-v5", schema: 1,
   settings: snap.data.settings, codebook: snap.data.codebook, logicModel: snap.data.logicModel, kpis: snap.data.kpis,
   report: { overrides: snap.data.overrides, hidden: snap.data.hidden, hiddenChapters: snap.data.hiddenChapters },
-  present: { hidden: snap.data.deckHidden, overrides: snap.data.deckOverrides }, excludeStraight: snap.data.excludeStraight,
+  present: { hidden: snap.data.deckHidden, overrides: snap.data.deckOverrides, order: snap.data.deckOrder }, excludeStraight: snap.data.excludeStraight,
 });
 
 /**
