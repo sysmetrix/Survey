@@ -49,7 +49,7 @@ function quickKpis(r) {
   const A = r.analysis, P = A.prepost;
   const overall = A.overallItem?.label;
   return [
-    A.items.length && { id: "sat", label: "만족도 80점 이상", kpi: { name: overall ? `${overall}(100점 환산)` : "만족도(100점 환산)", stage: "단기성과", metric: "score100", targetRef: overall || "전체", target: 80, unit: "점" } },
+    A.items.length && { id: "sat", label: "만족도 92점 이상", kpi: { name: overall ? `${overall}(100점 환산)` : "만족도(100점 환산)", stage: "단기성과", metric: "score100", targetRef: overall || "전체", target: 92, unit: "점" } },
     A.items.length && { id: "top2", label: "긍정응답률 80% 이상", kpi: { name: "긍정응답률", stage: "단기성과", metric: "top2", targetRef: overall || "전체", target: 80, unit: "%" } },
     A.nps.length && { id: "nps", label: "추천지수(NPS) 30점 이상", kpi: { name: "순추천지수(NPS)", stage: "단기성과", metric: "nps", targetRef: A.nps[0].label, target: 30, unit: "점" } },
     P && { id: "diff", label: "사전·사후 0.3점 향상", kpi: { name: "참여 전후 향상도", stage: "단기성과", metric: "prepostDiff", targetRef: "전체", target: 0.3, unit: "점" } },

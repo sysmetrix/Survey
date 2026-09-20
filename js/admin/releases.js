@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.13.1", date: "2026-09-20", title: "성과지표 빠른 추가 '만족도' 기본 목표값 조정",
+    groups: {
+      "성과지표": [
+        "빠른 추가 '만족도 80점 이상' → '만족도 92점 이상'으로 변경(추가 후 목표값은 그대로 고칠 수 있음)",
+      ],
+    },
+  },
+  {
     version: "5.13.0", date: "2026-09-20", title: "우클릭 제한, 유형 필터 개선, 사용법 팝업 가로 스크롤 수정",
     groups: {
       "보안": [
