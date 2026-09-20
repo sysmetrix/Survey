@@ -43,8 +43,25 @@ export function busy(on, msg = "처리 중…") {
   if (typeof document === "undefined") return;
   const el = document.getElementById("busy");
   if (!el) return;
+  clearTimeout(busyDone._t);
+  el.classList.remove("done");
   el.hidden = !on;
   el.querySelector(".busy-msg").textContent = msg;
+}
+
+/** 화면 가운데에 완료 안내를 잠시 보여준다 (클릭하면 바로 닫힘). msg 의 줄바꿈(
+)은 그대로 표시 */
+export function busyDone(msg, ms = 2400) {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById("busy");
+  if (!el) return;
+  el.querySelector(".busy-msg").textContent = msg;
+  el.classList.add("done");
+  el.hidden = false;
+  clearTimeout(busyDone._t);
+  const close = () => { clearTimeout(busyDone._t); el.hidden = true; el.classList.remove("done"); el.removeEventListener("click", close); };
+  el.addEventListener("click", close);
+  busyDone._t = setTimeout(close, ms);
 }
 
 export function download(data, fileName, mime = "application/octet-stream") {

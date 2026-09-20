@@ -8,6 +8,7 @@ import { buildSurvey } from "../../js/model/survey.js";
 import { analyzeSurvey } from "../../js/analysis/run.js";
 import { score100 } from "../../js/analysis/items.js";
 import { pairedComparison } from "../../js/analysis/prepost.js";
+import { resetCrossCache } from "../../js/analysis/cross.js";
 import { evaluateKpis } from "../../js/evaluation/kpi.js";
 import { buildReport } from "../../js/report/build-report.js";
 import { buildDeck } from "../../js/present/deck.js";
@@ -120,6 +121,11 @@ test("선택 화면: 데이터 설정·로컬 설정에 두 방식과 차이 설
     for (const [name, html] of [["setup", setup.render()], ["settings", settingsView.render()]]) {
       assert.ok(html.includes("반올림 전 평균으로 환산") && html.includes("반올림 후 평균으로 환산"), `${name}: 두 선택지 문구`);
       assert.ok(html.includes("최대 ±0.125점"), `${name}: 오차 크기 설명`);
+      assert.equal((html.match(/badge info">기본</g) || []).length, 1, `${name}: '기본' 태그는 한 번만`);
+      assert.ok(html.includes('badge info">경영평가<'), `${name}: 반올림 후 선택지의 '경영평가' 태그`);
+      assert.ok(!html.includes("(기본)"), `${name}: 태그와 중복되는 '(기본)' 문구 없음`);
+      assert.ok(html.includes("높아질 수도(올림), 낮아질 수도(내림)"), `${name}: 방향이 다를 수 있다는 설명`);
+      assert.ok(html.includes("올림,") && html.includes("내림,") && html.includes("예 1.") && html.includes("예 2."), `${name}: 올림·내림 예시 두 개`);
       assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(html), `${name}: 이 파일에서의 영향 수`);
       assert.ok(html.includes("로컬 설정"), `${name}: 나중에 바꿀 수 있다는 안내`);
       const checked = html.match(/value="(exact|rounded)" checked/g);
@@ -128,4 +134,24 @@ test("선택 화면: 데이터 설정·로컬 설정에 두 방식과 차이 설
     }
   }
   state.settings.scoreBasis = "exact"; invalidate();
+});
+
+test("집단 비교 결과 재사용: 기준만 바꾸면 환산 점수만 달라지고 나머지는 새로 계산한 것과 같음, 자료가 바뀌면 다시 계산", () => {
+  const strip = cross => cross.map(d => ({ ...d, rows: d.rows.map(r => ({ ...r, stats: r.stats.map(({ score100, ...s }) => s) })) }));
+  const ds = makeDs();
+  resetCrossCache();
+  const a = analyze(ds, "exact").an;
+  const b = analyze(ds, "rounded").an; // 재사용
+  resetCrossCache();
+  const c = analyze(ds, "rounded").an; // 처음부터 계산
+  assert.ok(a.cross.length > 0);
+  assert.deepEqual(b.cross, c.cross, "재사용한 결과 = 새로 계산한 결과");
+  assert.deepEqual(strip(a.cross), strip(b.cross), "환산 점수 외 값(검정·평균 등)은 기준과 무관");
+  assert.ok(a.cross.some((d, i) => d.rows.some((r, j) => r.stats.some((s, k) => s.score100 !== b.cross[i].rows[j].stats[k].score100))), "환산 점수는 기준에 따라 달라짐");
+  b.cross[0].rows[0].stats[0].mean = -999; // 받은 쪽에서 고쳐도 저장된 결과가 오염되지 않아야 함
+  assert.notEqual(analyze(ds, "rounded").an.cross[0].rows[0].stats[0].mean, -999);
+  const ds2 = makeDs(); ds2.sheets[0].rows[0][2] = ds2.sheets[0].rows[0][2] === 1 ? 5 : 1;
+  const d = analyze(ds2, "exact").an;
+  resetCrossCache();
+  assert.deepEqual(d.cross, analyze(ds2, "exact").an.cross, "자료가 바뀌면 캐시를 쓰지 않고 새로 계산");
 });

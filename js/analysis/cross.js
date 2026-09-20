@@ -55,7 +55,30 @@ export function compareGroups(groupVals, groupNames, { minN = 2, smallN = DEFAUL
  * @param items  itemStats 결과
  * @param domainsRes domainStats 결과
  */
-export function crossAnalysis(survey, items, domainsRes, { maxGroups = 12, minGroupN = 2, scoreBasis = "exact" } = {}) {
+export function crossAnalysis(survey, items, domainsRes, opts = {}) {
+  const { maxGroups = 12, minGroupN = 2, scoreBasis = "exact" } = opts;
+  // 집단 비교(사후검정 등)는 계산이 무겁고 100점 환산 기준과 무관하므로, 입력이 같으면 결과를 재사용하고 환산 점수만 새로 계산한다
+  const key = JSON.stringify([maxGroups, minGroupN, domainsRes?.total?.keys ?? null,
+    survey.demographics.map(c => [c.key, c.label, survey.values(c.key)]),
+    items.map(it => [it.key, it.label, it.min, it.max, survey.values(it.key)])]);
+  let out;
+  if (crossCache.key === key) {
+    out = structuredClone(crossCache.out);
+  } else {
+    out = computeCross(survey, items, domainsRes, { maxGroups, minGroupN });
+    crossCache = { key, out: structuredClone(out) };
+  }
+  for (const demo of out) for (const row of demo.rows) {
+    const it = items.find(x => x.key === row.key);
+    row.stats.forEach(s => { s.score100 = score100(s.mean, it.min, it.max, scoreBasis); });
+  }
+  return out;
+}
+
+let crossCache = { key: null, out: null };
+export const resetCrossCache = () => { crossCache = { key: null, out: null }; };
+
+function computeCross(survey, items, domainsRes, { maxGroups, minGroupN }) {
   const out = [];
   const totalComp = domainsRes?.total ? compositeScores(survey, survey.scales.filter(c => domainsRes.total.keys.includes(c.key))) : null;
   for (const demo of survey.demographics) {
@@ -65,11 +88,8 @@ export function crossAnalysis(survey, items, domainsRes, { maxGroups = 12, minGr
     const groupsOf = values => names.map(nm => values.filter((v, i) => g[i] === nm && v !== null));
     const counts = names.map(nm => g.filter(x => x === nm).length);
     const rows = items.map(it => {
-      const col = survey.scales.find(c => c.key === it.key);
       const vals = survey.values(it.key);
       const cmp = compareGroups(groupsOf(vals), names, { minN: minGroupN });
-      const { min, max } = col.scale;
-      cmp.stats.forEach(s => { s.score100 = score100(s.mean, min, max, scoreBasis); });
       return { key: it.key, label: it.label, ...cmp };
     });
     let total = null;
