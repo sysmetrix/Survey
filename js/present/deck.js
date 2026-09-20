@@ -81,7 +81,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       subtitle: sig ? `통계적으로 유의한 변화 · 효과 ${ALLP.primary.effectLabel}` : "통계적으로 유의한 변화는 확인되지 않음",
       hero: {
         value: signed(ALLP.diff), unit: "점", caption: `사전 ${f2(ALLP.mPre)} → 사후 ${f2(ALLP.mPost)}`,
-        facts: [`${ALLP.primary.name} ${statParen(ALLP.primary)}`, Number.isFinite(ALLP.improvedPct) ? `참여자 ${f1(ALLP.improvedPct)}% 향상` : "", `100점 환산 ${f1(ALLP.score100Pre)} → ${f1(ALLP.score100Post)}`].filter(Boolean),
+        facts: [`${ALLP.primary.name} ${statParen(ALLP.primary)}`, Number.isFinite(ALLP.improvedPct) ? `참여자 ${f1(ALLP.improvedPct)}% 향상` : "", `100점 환산 ${f2(ALLP.score100Pre)} → ${f2(ALLP.score100Post)}`].filter(Boolean),
       },
       chart: { kind: "dumbbell", data: rowsFrom(doms.length >= 2 ? doms : P.items), opts: { ...zoom(rowsFrom(doms.length >= 2 ? doms : P.items)), width: 620, labelWidth: 130 } },
       notes: [...P.domains.map(d => `${d.name}: ${f2(d.mPre)} → ${f2(d.mPost)} ${statParen(d.primary)}`), P.retrospective ? "회고식 사전검사(회상 응답)임을 함께 설명" : "", P.matchedN < t.minN ? `매칭 ${P.matchedN}명으로 표본이 작음` : ""].filter(Boolean),
@@ -106,10 +106,10 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
     const hi = detail[0], lo = detail.at(-1);
     add({ id: "ranking",
       type: "chart", section: "만족도",
-      title: `${q(short(hi.label, 16))} ${f1(hi.score100)}점으로 가장 높고, ${q(short(lo.label, 16))} ${f1(lo.score100)}점으로 가장 낮습니다`,
-      subtitle: tot && Number.isFinite(tot.score100) ? `세부 문항 평균 ${f1(tot.score100)}점(100점 환산, ${levelWord(tot.score100, t)})` : "",
-      chart: { kind: "hbar", data: detail.slice(0, 12).map(i => ({ label: i.label, value: i.score100 })), opts: { max: 100, refValue: tot?.score100 ?? null, refLabel: "평균", unit: "점", width: 900, labelWidth: 280 } },
-      notes: detail.map(i => `${i.label}: ${f2(i.mean)}점(100점 ${f1(i.score100)}, 긍정 ${f1(i.top2)}%, 부정 ${f1(i.bottom2)}%)`),
+      title: `${q(short(hi.label, 16))} ${f2(hi.score100)}점으로 가장 높고, ${q(short(lo.label, 16))} ${f2(lo.score100)}점으로 가장 낮습니다`,
+      subtitle: tot && Number.isFinite(tot.score100) ? `세부 문항 평균 ${f2(tot.score100)}점(100점 환산, ${levelWord(tot.score100, t)})` : "",
+      chart: { kind: "hbar", data: detail.slice(0, 12).map(i => ({ label: i.label, value: i.score100 })), opts: { max: 100, refValue: tot?.score100 ?? null, refLabel: "평균", unit: "점", width: 900, labelWidth: 280, valueFmt: f2 } },
+      notes: detail.map(i => `${i.label}: ${f2(i.mean)}점(100점 ${f2(i.score100)}, 긍정 ${f1(i.top2)}%, 부정 ${f1(i.bottom2)}%)`),
       source: `100점 환산 = (평균 − 최소) ÷ (최대 − 최소) × 100 · n=${Math.min(...detail.map(i => i.n))}`,
     });
   }
@@ -168,9 +168,9 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
     const st = r0.stats.filter(s => Number.isFinite(s.score100)).sort((a, b) => b.score100 - a.score100);
     add({ id: `cross-${c.label}`,
       type: "chart", section: "집단 비교",
-      title: `${josa(c.label, "에")} 따라 ${q(short(r0.label, 16))} 만족도가 다릅니다(${st[0].group} ${f1(st[0].score100)} > ${st.at(-1).group} ${f1(st.at(-1).score100)})`,
+      title: `${josa(c.label, "에")} 따라 ${q(short(r0.label, 16))} 만족도가 다릅니다(${st[0].group} ${f2(st[0].score100)} > ${st.at(-1).group} ${f2(st.at(-1).score100)})`,
       subtitle: `통계적으로 유의한 차이가 있는 문항 ${sigRows.length}개`,
-      chart: { kind: "groupedHbar", categories: sigRows.map(r => r.label), series: c.groups.slice(0, 4).map((g, gi) => ({ name: g.name, values: sigRows.map(r => r.stats[gi]?.score100) })), opts: { max: 100, width: 900, labelWidth: 240 } },
+      chart: { kind: "groupedHbar", categories: sigRows.map(r => r.label), series: c.groups.slice(0, 4).map((g, gi) => ({ name: g.name, values: sigRows.map(r => r.stats[gi]?.score100) })), opts: { max: 100, width: 900, labelWidth: 240, valueFmt: f2 } },
       notes: sigRows.map(r => `${r.label}: ${statParen(r.test)}`),
       source: `100점 환산 · ${c.groups.map(g => `${g.name} n=${g.n}`).join(", ")}`,
     });
@@ -198,9 +198,9 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   const good = [], improve = [], next = [];
   if (E) E.results.filter(r => r.judgment === "달성").slice(0, 2).forEach(r => good.push(`${r.name} 목표 달성(${f1(r.rate)}%)`));
   if (ALLP && ALLP.primary.p < 0.05 && ALLP.diff > 0) good.push(`참여 후 성과 점수 ${signed(ALLP.diff)}점 향상(${ALLP.primary.effectLabel})`);
-  detail.filter(i => i.score100 >= t.level[1]).slice(0, 2).forEach(i => good.push(`${short(i.label, 20)} ${f1(i.score100)}점`));
+  detail.filter(i => i.score100 >= t.level[1]).slice(0, 2).forEach(i => good.push(`${short(i.label, 20)} ${f2(i.score100)}점`));
   if (E) E.results.filter(r => r.judgment === "미달성").slice(0, 2).forEach(r => { improve.push(`${r.name} 미달성(${f1(r.rate)}%)`); next.push(`${r.name}: 원인 분석·운영 방식 보완`); });
-  (A.ipa?.points || []).filter(p => p.quadrant === "집중 개선").slice(0, 2).forEach(p => { improve.push(`${short(p.label, 20)} 만족도 ${f1(p.performance)}점`); next.push(`${short(p.label, 20)} 개선 과제 수립`); });
+  (A.ipa?.points || []).filter(p => p.quadrant === "집중 개선").slice(0, 2).forEach(p => { improve.push(`${short(p.label, 20)} 만족도 ${f2(p.performance)}점`); next.push(`${short(p.label, 20)} 개선 과제 수립`); });
   texts.forEach(tx => tx.themes.filter(th => th.negative >= 3).slice(0, 1).forEach(th => improve.push(`주관식 ${th.name} 개선 요구 ${th.negative}건`)));
   if (P) P.items.filter(i => !(i.primary.p < 0.05)).slice(0, 1).forEach(i => next.push(`${short(i.label, 18)} 관련 활동 보강`));
   if (E) next.push("차년도 성과지표 목표(안) 검토");

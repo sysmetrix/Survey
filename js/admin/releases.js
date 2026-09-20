@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.12.2", date: "2026-09-20", title: "100점 환산 점수를 소수점 2자리로 표기",
+    groups: {
+      "보고서·발표": [
+        "'100점 환산' 점수(문항·영역·전체 만족도, 사전·사후, 성과지표)를 보고서·발표 슬라이드·화면 요약 카드 전체에서 소수점 2자리로 통일 표기(예: 75.4점 → 75.35점)",
+        "긍정·부정응답률, 달성률, NPS 등 백분율 값은 기존대로 소수점 1자리 유지",
+      ],
+    },
+  },
+  {
     version: "5.12.1", date: "2026-09-20", title: "분석 결과 화면의 상관계수 표기를 다른 화면과 통일",
     groups: {
       "화면": [

@@ -269,7 +269,7 @@ export function ipaScatter(points, { width = 720, height = 460, meanI, meanP, ti
     const nearRight = px + 22 > pad.l + W - 4;
     const inner = `<circle class="m" cx="${r1(px)}" cy="${r1(py)}" r="6" fill="${focus ? T.emphasis : T.accent}" stroke="${T.surface}" stroke-width="2"/>` +
       text(nearRight ? px - 9 : px + 9, py - 9, String(i + 1), { fs: 11, anchor: nearRight ? "end" : "start", fill: T.ink, weight: 700 });
-    b += tip(`${i + 1}. ${p.label}`, `만족도 ${p.performance.toFixed(1)}점 · 중요도 ${p.importance.toFixed(2)}${focus ? " · 집중 개선" : ""}`, inner, `<circle cx="${r1(px)}" cy="${r1(py)}" r="14" fill="transparent" pointer-events="all"/>`);
+    b += tip(`${i + 1}. ${p.label}`, `만족도 ${p.performance.toFixed(2)}점 · 중요도 ${p.importance.toFixed(2)}${focus ? " · 집중 개선" : ""}`, inner, `<circle cx="${r1(px)}" cy="${r1(py)}" r="14" fill="transparent" pointer-events="all"/>`);
   });
   b += text(pad.l + W / 2, height - 12, "중요도 (전반 만족도와의 상관계수)", { fs: 12, anchor: "middle", fill: T.sub });
   b += `<text transform="translate(16 ${pad.t + H / 2}) rotate(-90)" font-size="12" text-anchor="middle" fill="${T.sub}">만족도 (100점 환산)</text>`;

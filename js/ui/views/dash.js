@@ -30,7 +30,7 @@ function cards(r) {
     ["응답자", `${A.meta.n}명`, DESIGN_LABELS[A.meta.design]],
     E && ["성과지표", `${E.summary.achieved}/${E.summary.measured} 달성`, `종합 ${E.summary.grade}`],
     all && ["사전→사후", `${signed(all.diff)}점`, `${pText(all.primary.p)} · ${all.primary.effectLabel}`],
-    Number.isFinite(sat) && ["만족도(100점)", `${f1(sat)}점`, A.overallItem ? A.overallItem.label : "척도 문항 평균"],
+    Number.isFinite(sat) && ["만족도(100점)", `${f2(sat)}점`, A.overallItem ? A.overallItem.label : "척도 문항 평균"],
     A.nps[0] && ["NPS", signed(A.nps[0].nps, 1), `추천 ${f1(A.nps[0].promoters)}%`],
     A.reliability && Number.isFinite(A.reliability.alpha) && ["신뢰도 α", f2(A.reliability.alpha), alphaLabel(A.reliability.alpha)],
   ].filter(Boolean);

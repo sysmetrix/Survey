@@ -72,7 +72,7 @@ function kpiTable(r) {
     const res = results.get(k.id);
     const m = METRICS[k.metric] || METRICS.manual;
     const judgeCls = res?.judgment === "달성" ? "ok" : res?.judgment === "대체로 달성" ? "info" : res?.judgment === "미달성" ? "bad" : "muted";
-    const val = v => (Number.isFinite(v) ? (["mean", "prepostDiff", "effectSize"].includes(k.metric) ? f2(v) : Number.isInteger(v) ? String(v) : f1(v)) : "-");
+    const val = v => (Number.isFinite(v) ? (["mean", "prepostDiff", "effectSize", "score100", "postScore100", "prepostDiff100"].includes(k.metric) ? f2(v) : Number.isInteger(v) ? String(v) : f1(v)) : "-");
     return `<tr>
       <td><input class="in xs" value="${esc(k.id)}" data-change="kpi" data-i="${i}" data-field="id" aria-label="지표 ID"></td>
       <td><input class="in" value="${esc(k.name)}" placeholder="예: 진로 관심 향상도" data-change="kpi" data-i="${i}" data-field="name" aria-label="지표명"></td>
