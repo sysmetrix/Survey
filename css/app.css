@@ -228,6 +228,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width:
 .chip-btn { border: 1px dashed var(--border-strong); background: var(--surface); color: var(--text); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .chip-btn:hover:not(:disabled) { border-style: solid; border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); }
 .chip-btn:disabled { opacity: .45; cursor: default; }
+/* 유형 필터 등 소수 옵션을 한눈에 보여주는 세그먼트 버튼(드롭다운보다 직관적, 값도 바로 보임) */
+.seg-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.seg-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface); color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.seg-btn:hover { background: var(--surface-2); color: var(--text); }
+.seg-btn.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.seg-btn .n { font-variant-numeric: tabular-nums; opacity: .75; }
+.seg-btn.on .n { opacity: .9; }
 .empty-inline { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: var(--radius); background: var(--surface-2); color: var(--text-2); }
 .empty-inline p { margin: 2px 0 0; }
 h3.flush { margin: 0; }
@@ -293,6 +300,7 @@ h3.flush { margin: 0; }
 .rt-keys dt, .rt-keys dd { margin: 0; }
 .rt-keys dd { color: var(--text-2); }
 .rt-pop.wide { width: min(340px, 90vw); max-height: 80vh; overflow-y: auto; }
+.rt-pop.right { left: auto; right: 0; } /* 트리거가 줄 오른쪽 끝에 있을 때 왼쪽으로 열어 가로 스크롤 방지 */
 .rt-fmt-trigger { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .rt-fmt-trigger .glyph { font-weight: 700; }
 .rt-io-group { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }

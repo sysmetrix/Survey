@@ -44,8 +44,11 @@ function textTab(r) {
   const list = tx.responses.filter(x => (!textFilter.type || x.type === textFilter.type) && (!textFilter.q || x.text.includes(textFilter.q)));
   return `<div class="row gap wrap">
       <select class="in" data-change="tx-col">${A.text.map(t => option(t.key, t.label, t.key === tx.key)).join("")}</select>
-      <select class="in" data-change="tx-type">${option("", "전체 유형", !textFilter.type)}${Object.entries(TYPE_LABEL).map(([k, v]) => option(k, `${v} (${tx.types[k]})`, textFilter.type === k)).join("")}</select>
       <input class="in" placeholder="검색어" value="${esc(textFilter.q)}" data-change="tx-q">
+    </div>
+    <div class="seg-filter" role="group" aria-label="응답 유형 필터">
+      <button class="seg-btn${textFilter.type ? "" : " on"}" data-act="tx-type-set" data-type="">전체<span class="n">${tx.responses.length}</span></button>
+      ${Object.entries(TYPE_LABEL).map(([k, v]) => `<button class="seg-btn${textFilter.type === k ? " on" : ""}" data-act="tx-type-set" data-type="${k}">${v}<span class="n">${tx.types[k]}</span></button>`).join("")}
     </div>
     <p class="small muted">${list.length}건 · 개인정보(전화·이메일 형태)는 자동 가림 · 분류는 규칙 기반이므로 원문과 함께 검토하세요.</p>
     <ul class="responses">${list.slice(0, 500).map(x => `<li><span class="badge ${x.type === "positive" ? "ok" : x.type === "negative" || x.type === "suggestion" ? "bad" : "muted"}">${TYPE_LABEL[x.type]}</span> ${esc(x.text)}</li>`).join("")}</ul>`;
@@ -96,7 +99,7 @@ export function render({ sub }) {
 
 export const actions = {
   "tx-col": el => { textFilter.col = el.value; refresh(); },
-  "tx-type": el => { textFilter.type = el.value; refresh(); },
+  "tx-type-set": el => { textFilter.type = el.dataset.type; refresh(); },
   "tx-q": el => { textFilter.q = el.value.trim(); refresh(); },
   exclude: () => { state.excludeStraight = true; invalidate(); refresh(); },
 };

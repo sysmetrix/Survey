@@ -20,7 +20,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.12.3";
+export const APP_VERSION = "5.13.0";
 const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -121,6 +121,11 @@ document.addEventListener("drop", e => {
   const f = e.dataTransfer.files?.[0];
   const fn = handler(`drop-${z.dataset.drop}`);
   if (f && fn) fn(f);
+});
+// 우클릭(오른쪽 클릭) 메뉴 제한 — 입력창·보고서 문장 편집처럼 실제로 필요한 곳은 예외로 허용
+document.addEventListener("contextmenu", e => {
+  if (e.target.closest("input, textarea, select, [contenteditable], [data-edit]")) return;
+  e.preventDefault();
 });
 // 보고서 문장 직접 편집: 포커스 시 원문(**굵게** 표기 포함) 표시 → 포커스 해제 시 저장
 document.addEventListener("focusin", e => {

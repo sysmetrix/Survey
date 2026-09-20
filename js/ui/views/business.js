@@ -136,7 +136,7 @@ export function render() {
         <div class="rt-sep" aria-hidden="true"></div>
         <div class="rt-pop-wrap">
           <button class="rt-btn" data-act="toggle-plan-doc-help" aria-expanded="${planDocHelpOpen}" aria-haspopup="true" aria-label="문서에서 채우기 사용법" title="문서에서 채우기 사용법">${icon("help", 16)}</button>
-          ${planDocHelpOpen ? `<div class="rt-pop wide" role="dialog" aria-label="문서에서 채우기 사용법">${planDocHelpPanel()}</div>` : ""}
+          ${planDocHelpOpen ? `<div class="rt-pop wide right" role="dialog" aria-label="문서에서 채우기 사용법">${planDocHelpPanel()}</div>` : ""}
         </div>
       </div>
     </div>
