@@ -2,6 +2,12 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.15.1", date: "2026-09-20", title: "문항이 많은 설문에서 분석이 멈추던 문제 해결",
+    groups: {
+      "분석": ["전반 만족도 영향요인(회귀) 계산이 문항 수에 따라 기하급수로 느려져, 문항이 10개 안팎만 넘어도 ‘분석 중’에서 멈추던 문제 해결", "회귀·VIF 수치는 그대로이며 문항 13개 설문도 즉시 분석"],
+    },
+  },
+  {
     version: "5.15.0", date: "2026-09-20", title: "출생연도·활동 시작연도 열을 연령대·년차 구간으로 바꿔 특성별 비교에 반영",
     groups: {
       "데이터 설정": [

@@ -70,6 +70,17 @@ test("mtcars: 상관, 회귀, Shapiro-Wilk", () => {
   near(s.W, 0.94756, 1e-5, "W"); near(s.p, 0.1229, 1e-4, "SW p");
 });
 
+test("다중회귀: VIF는 2변수에서 1/(1-r²), 변수 13개도 즉시 끝남 (VIF 재귀 폭증 회귀 방지)", { timeout: 5000 }, () => {
+  const x1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], x2 = [2, 1, 4, 3, 7, 5, 8, 6, 10, 9];
+  const y = [1.1, 2.3, 2.9, 4.2, 4.8, 6.5, 6.9, 8.4, 8.8, 10.3];
+  const m = ols(y, [{ name: "x1", values: x1 }, { name: "x2", values: x2 }]);
+  const r = pearson(x1, x2).r;
+  near(m.coef[1].vif, 1 / (1 - r * r), 1e-9, "vif");
+  const xs = Array.from({ length: 13 }, (_, j) => ({ name: `x${j}`, values: Array.from({ length: 60 }, (_, i) => ((i * (j + 3) * 7919) % 5) + 1 + (i % (j + 2) === 0 ? 1 : 0)) }));
+  const big = ols(Array.from({ length: 60 }, (_, i) => (i * 31) % 5 + 1), xs);
+  assert.ok(big && big.coef.length === 14);
+});
+
 test("χ², Fisher", () => {
   const c = chiSquare([[762, 327, 468], [484, 239, 477]]);
   near(c.chi2, 30.07, 5e-3, "chi2"); assert.equal(c.df, 2); near(c.p, 2.954e-07, 2e-9, "chi p");

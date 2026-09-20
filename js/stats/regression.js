@@ -24,8 +24,9 @@ function invert(M) {
 /**
  * y: 숫자|null 배열, xs: [{name, values}] — 결측 행 제외 후 추정
  * 반환: coef [{name, b, se, t, p, beta, vif}], r2, adjR2, F, df1, df2, pF, n
+ * withVif=false: VIF 계산 생략 (VIF 자체가 보조 회귀에서 ols를 부르므로 재귀 폭증 방지)
  */
-export function ols(y, xs) {
+export function ols(y, xs, { withVif = true } = {}) {
   const rows = [];
   for (let i = 0; i < y.length; i++) {
     if (y[i] === null || !Number.isFinite(y[i])) continue;
@@ -57,7 +58,7 @@ export function ols(y, xs) {
     const c = { name: j === 0 ? "(상수)" : xs[j - 1].name, b: bj, se, t, p: Number.isFinite(t) ? pt2(t, df2) : NaN };
     if (j > 0) {
       c.beta = sdY > 0 ? bj * sd(xCols[j - 1]) / sdY : NaN;
-      c.vif = p > 1 ? vif(xCols, j - 1) : 1;
+      c.vif = !withVif ? NaN : p > 1 ? vif(xCols, j - 1) : 1;
     }
     return c;
   });
@@ -66,6 +67,6 @@ export function ols(y, xs) {
 
 function vif(xCols, j) {
   const others = xCols.filter((_, i) => i !== j).map((values, i) => ({ name: String(i), values }));
-  const res = ols(xCols[j], others);
+  const res = ols(xCols[j], others, { withVif: false });
   return res && res.r2 < 1 ? 1 / (1 - res.r2) : Infinity;
 }
