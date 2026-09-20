@@ -28,10 +28,10 @@ test("인라인 이벤트 핸들러·javascript: URL 없음 (v5 화면)", async 
 test("순수 모듈은 DOM·브라우저 전역에 의존하지 않음", async () => {
   const dirs = ["js/core", "js/stats", "js/model", "js/analysis", "js/evaluation", "js/narrative", "js/report", "js/io", "js/present", "js/charts", "js/history"];
   // 브라우저 API 가 있어야만 동작하는 모듈 (캔버스·WebCrypto·이 브라우저 전용 키 보관)
-  const allow = new Set(["js/report/render-hwpx.js", "js/charts/rasterize.js", "js/history/crypto.js"].map(p => p.replace(/\//g, "\\")));
+  const allow = new Set(["js/report/render-hwpx.js", "js/charts/rasterize.js", "js/history/crypto.js"]);
   for (const d of dirs) {
     for (const f of await walk(d)) {
-      if (allow.has(f)) continue;
+      if (allow.has(f.replace(/\\/g, "/"))) continue;
       const src = (await readFile(f, "utf8")).replace(/\/\/.*$/gm, "");
       const m = src.match(/\b(document|window|localStorage|sessionStorage|navigator)\s*\./);
       assert.equal(m, null, `${f}: ${m?.[0]}`);
