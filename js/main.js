@@ -6,6 +6,8 @@ import { icon } from "./ui/icons.js";
 import { cycleTheme, themePref, THEME_LABEL, watchSystemTheme } from "./ui/theme.js";
 import { initPwa, installApp } from "./ui/pwa.js";
 import { installTooltips } from "./ui/tooltip.js";
+import { installFormatToolbar } from "./ui/format-toolbar.js";
+import { markupToHtml, htmlToMarkup } from "./ui/inline-edit.js";
 import { installScrollHints } from "./ui/scrollhint.js";
 import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redoChange, canUndo, canRedo } from "./ui/history/manager.js";
 import * as load from "./ui/views/load.js";
@@ -20,7 +22,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.17.1";
+export const APP_VERSION = "5.18.0";
 const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -127,16 +129,16 @@ document.addEventListener("contextmenu", e => {
   if (e.target.closest("input, textarea, select, [contenteditable], [data-edit]")) return;
   e.preventDefault();
 });
-// 보고서 문장 직접 편집: 포커스 시 원문(**굵게** 표기 포함) 표시 → 포커스 해제 시 저장
+// 보고서 문장 직접 편집: 포커스 중에도 굵게·기울임 등 실제 서식으로 보임(WYSIWYG) → 포커스 해제 시 표식 문자열로 저장
 document.addEventListener("focusin", e => {
   const el = e.target.closest("[data-edit]");
-  if (el && el.dataset.editing !== "1") { el.dataset.editing = "1"; el.textContent = el.dataset.raw; }
+  if (el && el.dataset.editing !== "1") { el.dataset.editing = "1"; el.innerHTML = markupToHtml(el.dataset.raw); }
 });
 document.addEventListener("focusout", e => {
   const el = e.target.closest("[data-edit]");
   if (!el) return;
   el.dataset.editing = "";
-  const text = el.textContent.replace(/\s+/g, " ").trim();
+  const text = htmlToMarkup(el);
   if (text !== el.dataset.raw) {
     if (text) {
       state.overrides[el.dataset.edit] = text;
@@ -148,31 +150,17 @@ document.addEventListener("focusout", e => {
   refresh();
   afterAction();
 });
-/** 문장 편집 중 Ctrl+B: 선택 영역을 **텍스트**로 감싸거나(이미 감싸져 있으면) 벗김 */
-function toggleBoldSelection() {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return;
-  const selected = sel.toString();
-  if (selected) {
-    const wrapped = selected.startsWith("**") && selected.endsWith("**") && selected.length >= 4;
-    document.execCommand("insertText", false, wrapped ? selected.slice(2, -2) : `**${selected}**`);
-  } else {
-    document.execCommand("insertText", false, "****");
-    const sel2 = window.getSelection();
-    if (sel2 && sel2.rangeCount) {
-      const r = sel2.getRangeAt(0);
-      if (r.startOffset >= 2) { r.setStart(r.startContainer, r.startOffset - 2); r.setEnd(r.startContainer, r.startOffset); sel2.removeAllRanges(); sel2.addRange(r); }
-    }
-  }
+/** 문장 편집 중 Ctrl+B/I/U·Ctrl+Shift+X: 선택 영역에 실제 서식 적용(워드·한글과 같은 단축키) */
+function toggleFormat(cmd) {
+  document.execCommand("styleWithCSS", false, true);
+  document.execCommand(cmd, false, null);
 }
 const isTyping = t => !!t?.closest?.("input, textarea, select, [contenteditable='true']");
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target.closest?.("[data-edit]")) { e.preventDefault(); e.target.blur(); return; }
-  // 문장 편집 중 Ctrl+B: 선택한 글자를 **굵게**로(한컴·워드와 같은 단축키)
-  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyB" && e.target.closest?.("[data-edit]")) {
-    e.preventDefault();
-    toggleBoldSelection();
-    return;
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.target.closest?.("[data-edit]")) {
+    const cmd = !e.shiftKey && e.code === "KeyB" ? "bold" : !e.shiftKey && e.code === "KeyI" ? "italic" : !e.shiftKey && e.code === "KeyU" ? "underline" : e.shiftKey && e.code === "KeyX" ? "strikeThrough" : null;
+    if (cmd) { e.preventDefault(); toggleFormat(cmd); return; }
   }
   // 되돌리기 Ctrl+Z · 다시 실행 Ctrl+Y / Ctrl+Shift+Z (입력 중에는 브라우저 기본 동작)
   if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.code === "KeyZ" || e.code === "KeyY") && !isTyping(e.target) && currentId !== "present") {
@@ -222,6 +210,7 @@ document.getElementById("historyBtn").innerHTML = icon("history", 18);
 document.getElementById("settingsBtn").innerHTML = icon("settings", 18);
 watchSystemTheme(() => refresh());
 installTooltips();
+installFormatToolbar();
 installScrollHints();
 initPwa({ onFile: f => load.actions["drop-data"](f), hasUnsavedWork: () => !!state.dataset });
 initHistory({ onUpdate: () => { if (currentId === "history" || currentId === "load") refresh(); else renderChrome(currentId); } });

@@ -35,6 +35,11 @@ const P = {
   sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
   copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.3 9a2.7 2.7 0 1 1 4 2.3c-.9.5-1.3 1-1.3 2v.4"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/>',
+  bold: '<path d="M7 4h6a3.5 3.5 0 0 1 0 7H7zM7 11h7a3.5 3.5 0 0 1 0 7H7z" stroke-width="1.4" fill="currentColor" stroke="none"/>',
+  italic: '<path d="M12 4h6M6 20h6M15 4 9 20" stroke-width="2"/>',
+  underline: '<path d="M6 4v7a6 6 0 0 0 12 0V4M5 20h14" stroke-width="2"/>',
+  strike: '<path d="M5 12h14M8 6.5c0-1.7 1.8-3 4-3s4 1.1 4 2.6c0 1-.6 1.7-1.6 2.2M16 17.5c0 1.7-1.8 3-4 3s-4-1.3-4-2.9" stroke-width="1.8"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-.6-.2-1-.5-1.4-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.3-4-7.5-9-7.5z"/><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/>',
 };
 
 /** @param {keyof P} name */

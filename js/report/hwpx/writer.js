@@ -5,6 +5,7 @@
 import { escText } from "./xml.js";
 import { toHwpText } from "./symbols.js";
 import { resolveFonts, applyFontsToHeader, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING } from "./fonts.js";
+import { parseInline, stripInlineMarks } from "../inline-marks.js";
 
 export const HWPUNIT_PER_MM = 7200 / 25.4;
 export const mm = v => Math.round(v * HWPUNIT_PER_MM);
@@ -35,8 +36,8 @@ function createRegistry(headerXml, { boldFace = false, headingOnly = false } = {
     return id;
   };
 
-  const charPr = ({ font = "batang", size = 11, bold = false, color = "#000000", spacing = 0 }) =>
-    intern("charPr", { font, size, bold, color, spacing }, (id, s) => {
+  const charPr = ({ font = "batang", size = 11, bold = false, italic = false, underline = false, strike = false, color = "#000000", spacing = 0 }) =>
+    intern("charPr", { font, size, bold, italic, underline, strike, color, spacing }, (id, s) => {
       // 별도 Bold 글꼴(KoPub 등)이 있으면 굵게는 그 글꼴로, 없으면 <hh:bold/>
       const useBoldFace = s.bold && boldFace;
       const f = useBoldFace ? FONT_ID.bold : FONT_ROLE[s.font] ?? FONT_ID.batang;
@@ -44,7 +45,10 @@ function createRegistry(headerXml, { boldFace = false, headingOnly = false } = {
       return `<hh:charPr id="${id}" height="${Math.round(s.size * 100)}" textColor="${s.color}" shadeColor="none" useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="2">` +
         `<hh:fontRef ${all(f)}/><hh:ratio ${all(100)}/><hh:spacing ${all(s.spacing)}/><hh:relSz ${all(100)}/><hh:offset ${all(0)}/>` +
         (s.bold && !useBoldFace ? "<hh:bold/>" : "") +
-        `<hh:underline type="NONE" shape="SOLID" color="#000000"/><hh:strikeout shape="NONE" color="#000000"/><hh:outline type="NONE"/><hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/></hh:charPr>`;
+        (s.italic ? "<hh:italic/>" : "") +
+        `<hh:underline type="${s.underline ? "BOTTOM" : "NONE"}" shape="SOLID" color="${s.underline ? s.color : "#000000"}"/>` +
+        `<hh:strikeout shape="${s.strike ? "SOLID" : "NONE"}" color="${s.strike ? s.color : "#000000"}"/>` +
+        `<hh:outline type="NONE"/><hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/></hh:charPr>`;
     });
 
   /** 단위: HWPUNIT (1pt = 100) */
@@ -98,11 +102,6 @@ export const SHADES = {
 
 const BULLET_SYMBOL = { 1: "□", 2: "○", 3: "-", 4: "·" };
 
-/** 굵게 마크업: **텍스트** (앞뒤 공백 없음, 인접 별표 없음) */
-export const BOLD_SPLIT = /((?<!\*)\*\*(?![\s*])[^*]*?[^\s*]\*\*(?!\*)|(?<!\*)\*\*[^\s*]\*\*(?!\*))/g;
-export const BOLD_WHOLE = /^\*\*[^\s*]([^*]*[^\s*])?\*\*$/;
-export const stripBold = t => String(t ?? "").split(BOLD_SPLIT).map(s => (BOLD_WHOLE.test(s) ? s.slice(2, -2) : s)).join("");
-
 // ─────────────────────────── 문서 작성기 ───────────────────────────
 /**
  * @param {object} o
@@ -140,17 +139,16 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     return r;
   };
 
-  /** "**굵게**" 마크업 → run 배열 (별표 연속 "***"·"** p" 는 굵게로 해석하지 않음) */
+  /** "**굵게**·_기울임_·++밑줄++·~~취소선~~·{c:#RRGGBB}색{/c}" 표식 → run 배열(inline-marks.js 참고) */
   const runs = (text, charSpec) => {
-    const parts2 = hwpText(text).split(BOLD_SPLIT).filter(s => s !== "");
-    if (!parts2.length) return `<hp:run charPrIDRef="${cp(charSpec)}"/>`;
-    return parts2.map(seg => {
-      const bold = BOLD_WHOLE.test(seg);
-      const t = bold ? seg.slice(2, -2) : seg;
-      return `<hp:run charPrIDRef="${cp({ ...charSpec, bold: charSpec.bold || bold })}"><hp:t>${escText(t)}</hp:t></hp:run>`;
+    const runList = parseInline(hwpText(text)).filter(r => r.text !== "");
+    if (!runList.length) return `<hp:run charPrIDRef="${cp(charSpec)}"/>`;
+    return runList.map(r => {
+      const spec = { ...charSpec, bold: charSpec.bold || !!r.bold, italic: charSpec.italic || !!r.italic, underline: charSpec.underline || !!r.underline, strike: charSpec.strike || !!r.strike, color: r.color || charSpec.color };
+      return `<hp:run charPrIDRef="${cp(spec)}"><hp:t>${escText(r.text)}</hp:t></hp:run>`;
     }).join("");
   };
-  const stripMarks = t => stripBold(hwpText(t));
+  const stripMarks = t => stripInlineMarks(hwpText(t));
 
   const pOpen = paraId => {
     const pb = pendingPageBreak ? 1 : 0;

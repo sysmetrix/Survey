@@ -11,6 +11,7 @@ import { withWeekday } from "../../core/util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
 import { isFontInstalled, fontNameCandidates } from "../fontcheck.js";
+import { stripInlineMarks } from "../../report/inline-marks.js";
 
 let includeData = false;
 let fontStatus = {}; // 글꼴 이름 → true/false/null (설치 확인 결과)
@@ -168,7 +169,7 @@ export function render() {
 
       <h3 class="side-sep">문장 편집</h3>
       ${!nEdited && !nHidden ? `<p class="small muted">아직 고친 문장이 없습니다. 미리보기의 문장을 눌러 바로 고쳐 보세요.</p>` : `
-        ${nEdited ? `<div class="edited-list">${editedList.map(([key, text]) => `<button type="button" class="edited-item" data-act="jump-edit" data-key="${esc(key)}">${esc(text.length > 44 ? text.slice(0, 44) + "…" : text)}${icon("right", 14)}</button>`).join("")}</div>
+        ${nEdited ? `<div class="edited-list">${editedList.map(([key, text]) => { const plain = stripInlineMarks(text); return `<button type="button" class="edited-item" data-act="jump-edit" data-key="${esc(key)}">${esc(plain.length > 44 ? plain.slice(0, 44) + "…" : plain)}${icon("right", 14)}</button>`; }).join("")}</div>
           <div class="row gap wrap"><button class="btn sm sub" data-act="reset-all">수정 모두 되돌리기</button></div>` : ""}
         ${nHidden ? `<div class="row gap wrap edit-stats"><span class="badge warn">숨김 ${nHidden}건</span><button class="btn sm sub" data-act="unhide-all">숨긴 문장 복원</button></div>` : ""}
       `}

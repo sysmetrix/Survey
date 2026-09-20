@@ -1,5 +1,5 @@
 // 분석 결과 → 보고서 블록 (규칙 기반 개조식 서술)
-import { levelWord, f1, f2, signed, pText, statParen, statNum, sigPhrase, sigStar, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
+import { levelWord, f1, f2, f2b, signed, pText, statParen, statNum, sigPhrase, sigStar, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { josa } from "../narrative/josa.js";
 import { DESIGN_LABELS } from "../model/codebook.js";
 import { hasLogicModel, hasProgramInfo, LOGIC_STAGES } from "../evaluation/logic-model.js";
@@ -15,6 +15,8 @@ const DEFAULT_LEVEL_LABELS = {
 const q = s => `‘${s}’`;
 const H = (level, text, extra = {}) => ({ type: "heading", level, text, ...extra });
 const cellH = text => ({ text, shade: "header", bold: true });
+/** alphaLabel(짧은 판정어) → 문장 속 서술어에 붙는 형태("다소 낮음" → "다소 낮은 수준") */
+const ALPHA_LEVEL_PHRASE = { "매우 우수": "매우 우수한 수준", "양호": "양호한 수준", "수용 가능": "수용 가능한 수준", "다소 낮음": "다소 낮은 수준", "낮음": "낮은 수준" };
 
 /** 척도 수준 라벨 (코드북 라벨 → 기본 라벨 → n점) */
 export function levelLabels(col, min, max) {
@@ -58,8 +60,8 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     sum.push(B("sum.kpi", 1, `□ 성과지표: ${s.measured}개 중 **${s.achieved}개 달성**${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}${s.notAchieved ? `, ${s.notAchieved}개 미달성` : ""} (종합 **${s.grade}**)`));
   }
   if (ALLP) sum.push(B("sum.prepost", 1, `□ 성과 변화: 사전 ${f2(ALLP.mPre)}점 → 사후 ${f2(ALLP.mPost)}점(**${signed(ALLP.diff)}점**), ${sigPhrase(ALLP.primary.p)}`));
-  if (overall) sum.push(B("sum.overall", 1, `□ 만족도: ${overall.label} ${f2(overall.mean)}점(100점 환산 **${f2(overall.score100)}점**, ${levelWord(overall.score100, t)})`));
-  else if (tot && Number.isFinite(tot.score100)) sum.push(B("sum.total", 1, `□ 만족도: 척도 문항 평균 100점 환산 **${f2(tot.score100)}점**(${levelWord(tot.score100, t)})`));
+  if (overall) sum.push(B("sum.overall", 1, `□ 만족도: ${overall.label} 평균 ${f2(overall.mean)}점(100점 환산 **${f2(overall.score100)}점**)으로 ${levelWord(overall.score100, t)}임`));
+  else if (tot && Number.isFinite(tot.score100)) sum.push(B("sum.total", 1, `□ 만족도: 척도 문항 전체 평균 100점 환산 **${f2(tot.score100)}점**으로 ${levelWord(tot.score100, t)}임`));
   if (A.nps.length) sum.push(B("sum.nps", 1, `□ 순추천지수(NPS): ${signed(A.nps[0].nps, 1)}점`));
   if (detailItems.length >= 2) sum.push(B("sum.items", 1, `□ 최고 문항 ${q(detailItems[0].label)}(${f2(detailItems[0].score100)}점), 최저 문항 ${q(detailItems.at(-1).label)}(${f2(detailItems.at(-1).score100)}점)`));
   const impTheme = A.text.flatMap(tx => tx.themes.filter(th => th.negative >= 2)).sort((a, b) => b.negative - a.negative)[0]?.name;
@@ -111,11 +113,19 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   ov.push(B("s.items", 1, `조사 내용: ${parts.join(", ")}`));
   if (scaleRange) ov.push(B("s.scale", 1, `척도: ${scaleRange.min}~${scaleRange.max}점(점수가 높을수록 긍정)`), B("s.score100", 2, `100점 환산 점수 = (평균 − 최소점) ÷ (최대점 − 최소점) × 100${A.meta.scoreBasis === "rounded" ? "(표에 적힌 소수 둘째 자리 평균으로 계산)" : "(반올림 전 평균으로 계산)"}, 긍정응답률 = 상위 2개 척도 응답 비율`));
   if (A.reliability && Number.isFinite(A.reliability.alpha)) {
+    const { alpha } = A.reliability;
     const [aLo, aHi] = A.reliability.alphaCi || [];
-    ov.push(B("s.alpha", 1, `신뢰도: Cronbach α = ${f2(A.reliability.alpha)}(${alphaLabel(A.reliability.alpha)})${Number.isFinite(aLo) ? `, 95%CI[${f2(aLo)}, ${f2(aHi)}]` : ""}`));
+    const hasCi = Number.isFinite(aLo) && Number.isFinite(aHi);
+    const phrase = ALPHA_LEVEL_PHRASE[alphaLabel(alpha)] || alphaLabel(alpha);
+    const evidence = `Cronbach α=${f2b(alpha)}${hasCi ? `, 95% 신뢰구간 [${f2b(aLo)}, ${f2b(aHi)}]` : ""}`;
+    // 신뢰구간 폭이 넓으면(문항 수·표본이 적어 추정이 불안정하면) 그 사실도 함께 판단해 줌
+    const unstable = hasCi && (aHi - aLo) > 0.5;
+    ov.push(B("s.alpha", 1, unstable
+      ? `신뢰도는 ${phrase}이며(${evidence}), 신뢰도 추정의 안정성도 낮았음`
+      : `신뢰도는 ${phrase}임(${evidence})`));
   }
   if (A.meta.straightLiners && !S.excludedCount) ov.push(B("s.clean", 1, `자료 점검: 모든 척도 문항에 같은 값으로 응답한 사례 ${A.meta.straightLiners}명 확인(분석에 포함)`));
-  ov.push(B("s.method", 1, "분석 방법: 기술통계, 집단 간 차이 검정(Welch t검정·분산분석), 사전·사후 차이 검정(대응표본 t검정 또는 Wilcoxon 부호순위 검정), 유의수준 .05"));
+  ov.push(B("s.method", 1, "분석 방법: 기술통계, 집단 간 차이 검정(Welch t검정·분산분석), 사전·사후 차이 검정(대응표본 t검정 또는 Wilcoxon 부호순위 검정), 유의수준 .05(다층모형·요인분석 등 고급 분석은 별도 통계 패키지 사용을 권장)"));
   bullets(ov);
 
   if (A.respondents.length) {

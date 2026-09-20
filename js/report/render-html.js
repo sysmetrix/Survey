@@ -1,16 +1,26 @@
 // 보고서 블록 → HTML (편집 미리보기·대시보드·인쇄·클립보드 공용, 순수 문자열 생성)
 import { esc } from "../core/util.js";
 import { chartSvg } from "./model.js";
-import { BOLD_SPLIT, BOLD_WHOLE } from "./hwpx/writer.js";
+import { parseInline, stripInlineMarks } from "./inline-marks.js";
 
 const SYM = { 1: "□", 2: "○", 3: "-", 4: "·" };
-export const inlineHtml = t => String(t ?? "").split(BOLD_SPLIT).map(s => (BOLD_WHOLE.test(s) ? `<strong>${esc(s.slice(2, -2))}</strong>` : esc(s))).join("").replace(/\n/g, "<br>");
+
+function runHtml(r) {
+  let html = esc(r.text).replace(/\n/g, "<br>");
+  if (r.italic) html = `<em>${html}</em>`;
+  if (r.bold) html = `<strong>${html}</strong>`;
+  if (r.underline) html = `<u>${html}</u>`;
+  if (r.strike) html = `<s>${html}</s>`;
+  if (r.color) html = `<span style="color:${esc(r.color)}">${html}</span>`;
+  return html;
+}
+export const inlineHtml = t => parseInline(t).map(runHtml).join("");
 
 function editableText(it, editable) {
   const { key, text, edited, stale, auto } = it;
   if (!editable || !key) return `<span class="r-txt">${inlineHtml(text)}</span>`;
   return `<span class="r-txt" contenteditable="true" spellcheck="false" data-edit="${esc(key)}" data-raw="${esc(text)}" data-auto="${esc(auto ?? text)}">${inlineHtml(text)}</span>` +
-    (stale ? `<span class="r-stale no-print" title="직접 고친 뒤 분석 결과(근거 수치)가 바뀌었습니다. 새 자동 문장: ${esc(auto)}">근거 변경</span>` : "") +
+    (stale ? `<span class="r-stale no-print" title="직접 고친 뒤 분석 결과(근거 수치)가 바뀌었습니다. 새 자동 문장: ${esc(stripInlineMarks(auto))}">근거 변경</span>` : "") +
     `<span class="r-tools">${edited ? `<button class="r-tool" data-act="reset-item" data-key="${esc(key)}" title="자동 문장으로 되돌리기">↺</button>` : ""}<button class="r-tool" data-act="hide-item" data-key="${esc(key)}" title="이 문장 빼기">✕</button></span>`;
 }
 

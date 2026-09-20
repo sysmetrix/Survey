@@ -37,6 +37,8 @@ export function scoreBasisExample(mean, min, max) {
 
 /** 수치 표기 */
 export const f2 = x => (Number.isFinite(x) ? round(x, 2).toFixed(2) : "-");
+/** -1~1 범위로 정해진 수치(상관·신뢰도 계수 등) 표기 — APA 관행대로 앞자리 0을 뗌: 0.67→.67, -0.37→-.37 */
+export const f2b = x => (Number.isFinite(x) ? round(x, 2).toFixed(2).replace(/^(-?)0\./, "$1.") : "-");
 export const f1 = x => (Number.isFinite(x) ? round(x, 1).toFixed(1) : "-");
 export const f0 = x => (Number.isFinite(x) ? String(Math.round(x)) : "-");
 export const signed = (x, d = 2) => (Number.isFinite(x) ? (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(round(x, d)).toFixed(d) : "-");

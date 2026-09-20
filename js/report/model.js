@@ -3,7 +3,7 @@
 //       box{lines:[{text,key}]} | table{caption,unit,columns,rows,headerRows,notes,compact}
 //       figure{caption,chart:{kind,data,opts},widthMm,notes} | pageBreak
 import * as C from "../charts/svg.js";
-import { stripBold } from "./hwpx/writer.js";
+import { stripInlineMarks as stripBold } from "./inline-marks.js";
 
 const ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "Ⅺ", "Ⅻ"];
 const GANADA = "가나다라마바사아자차카타파하";
