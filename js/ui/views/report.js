@@ -10,7 +10,7 @@ import { esc, toast, busy, download, safeFileName, nextFrame, option } from "../
 import { withWeekday } from "../../core/util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
-import { isFontInstalled } from "../fontcheck.js";
+import { isFontInstalled, fontNameCandidates } from "../fontcheck.js";
 
 let includeData = false;
 let fontStatus = {}; // 글꼴 이름 → true/false/null (설치 확인 결과)
@@ -41,9 +41,19 @@ const docOptions = () => {
 };
 
 /** 미리보기 용지에 서식 반영 (CSS 변수) */
+/**
+ * 화면(CSS)에서 쓸 글꼴 스택 — 실제 설치된 글꼴은 이름 표기가 조금씩 다를 수 있어(예:
+ * "KoPub돋움체 Medium" vs "KoPub Dotum Medium"), 설치 확인(fontcheck.js)과 같은 별칭 목록을
+ * 그대로 후보로 나열해야 브라우저가 실제 설치된 이름을 찾아 화면에도 적용함(HWPX는 한글 자체
+ * 별칭 처리가 있어 이 문제가 없었음).
+ */
+function fontStack(name) {
+  return fontNameCandidates(name).map(n => `"${cleanFontName(n)}"`).join(", ");
+}
+
 function paperStyle() {
   const f = resolveFonts(state.settings);
-  const q = n => `"${cleanFontName(n)}"`;
+  const qAll = fontStack;
   const baseSize = Number(state.settings.baseSize) || DEFAULT_BASE_SIZE;
   const zoom = zoomPct / 100; // 화면 미리보기 전용 배율 — 내보내기(HWPX·인쇄)는 항상 baseSize 그대로
   const size = baseSize * 1.36 * zoom;
@@ -51,7 +61,7 @@ function paperStyle() {
   const scaled = px => `${(px * baseSize * zoom / 11).toFixed(1)}px`; // 11pt 기준으로 그려둔 제목·표 크기 배율(고정값, 기본 글자 크기와 무관)
   // 공문서형처럼 제목 글꼴을 큰 제목에만 쓰는 조합에서는 표·캡션·요약상자를 본문 글꼴로
   const sub = f.headingOnly ? f.body : f.heading;
-  return `--paper-body:${q(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${q(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-sub-font:${q(sub)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-size-print:${baseSize}pt; --paper-title-size:${scaled(26)}; --paper-h1-size:${scaled(20)}; --paper-h2-size:${scaled(17)}; --paper-small-size:${scaled(14)}; --paper-table-size:${scaled(12.5)}; --paper-compact-size:${scaled(11.5)}; --paper-note-size:${scaled(12)}; --paper-lh:${lh}; --paper-maxw:${(900 * zoom).toFixed(0)}px; --paper-pad-y:${(56 * zoom).toFixed(0)}px; --paper-pad-x:${(64 * zoom).toFixed(0)}px`;
+  return `--paper-body:${qAll(f.body)}, "함초롬바탕", "Batang", serif; --paper-heading:${qAll(f.heading)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-sub-font:${qAll(sub)}, "함초롬돋움", "Malgun Gothic", sans-serif; --paper-size:${size.toFixed(1)}px; --paper-size-print:${baseSize}pt; --paper-title-size:${scaled(26)}; --paper-h1-size:${scaled(20)}; --paper-h2-size:${scaled(17)}; --paper-small-size:${scaled(14)}; --paper-table-size:${scaled(12.5)}; --paper-compact-size:${scaled(11.5)}; --paper-note-size:${scaled(12)}; --paper-lh:${lh}; --paper-maxw:${(900 * zoom).toFixed(0)}px; --paper-pad-y:${(56 * zoom).toFixed(0)}px; --paper-pad-x:${(64 * zoom).toFixed(0)}px`;
 }
 
 function fontBadge(name) {
@@ -63,7 +73,7 @@ function fontBadge(name) {
 /** 글꼴 조합 선택 — 이름 글자 자체를 그 글꼴로 보여주는 칩(드롭다운 대신) */
 function fontPicker(p) {
   return `<div class="fontpick" role="listbox" aria-label="글꼴 조합">
-    ${FONT_PRESETS.filter(x => !x.hidden || x.id === p.id).map(x => `<button type="button" class="chip-btn fontpick-chip${x.id === p.id ? " on" : ""}" data-act="doc-preset" data-id="${x.id}" style="font-family:'${esc(x.body || "inherit")}', var(--font)" role="option" aria-selected="${x.id === p.id}">${x.id === p.id ? icon("check", 13) : ""}${esc(x.name)}</button>`).join("")}
+    ${FONT_PRESETS.filter(x => !x.hidden || x.id === p.id).map(x => `<button type="button" class="chip-btn fontpick-chip${x.id === p.id ? " on" : ""}" data-act="doc-preset" data-id="${x.id}" style="${esc(`font-family:${x.body ? fontStack(x.body) : "inherit"}, var(--font)`)}" role="option" aria-selected="${x.id === p.id}">${x.id === p.id ? icon("check", 13) : ""}${esc(x.name)}</button>`).join("")}
   </div>`;
 }
 
@@ -119,7 +129,7 @@ export function render() {
     </div>
     <div class="rt-sep" aria-hidden="true"></div>
     <div class="rt-pop-wrap">
-      <button class="rt-btn rt-fmt-trigger" data-act="format-toggle" aria-expanded="${formatOpen}" aria-haspopup="true" style="font-family:'${esc(docFonts.body)}', var(--font)"><span class="glyph">가</span> ${esc(docPreset.name)} · ${state.settings.baseSize}pt</button>
+      <button class="rt-btn rt-fmt-trigger" data-act="format-toggle" aria-expanded="${formatOpen}" aria-haspopup="true" style="${esc(`font-family:${fontStack(docFonts.body)}, var(--font)`)}"><span class="glyph">가</span> ${esc(docPreset.name)} · ${state.settings.baseSize}pt</button>
       ${formatOpen ? `<div class="rt-pop wide" role="dialog" aria-label="한글 문서 서식">${formatPanel()}</div>` : ""}
     </div>
     <div class="rt-sep" aria-hidden="true"></div>

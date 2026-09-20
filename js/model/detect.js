@@ -12,6 +12,9 @@ const ID_RE = /^\s*(id|#|no\.?|번호|순번|연번|학번|참여자\s*(번호|�
 const PII_RE = /이름|성명|연락처|전화|휴대|핸드폰|이메일|e-?mail|메일\s*주소|주소|생년월일|카카오/i;
 const NPS_RE = /추천/;
 const DEMOG_RE = /^\s*(\d+[.)]\s*)?(성별|학년|연령(대)?|나이|지역|거주\s*지역|학교(급|명)?|소속|신분|구분|참여자\s*유형|유형|참여\s*(횟수|경로|기간|회차)|직업|가구\s*형태|학급|반|기수|회차|프로그램(명)?|참여\s*프로그램)\s*$/;
+const YEAR_WORD_RE = /연도|년도/;
+const BIRTH_YEAR_RE = /출생|생년|태어난/;
+const TENURE_YEAR_RE = /시작|가입|입사|등록|활동\s*시작/;
 const TEXT_RE = /의견|건의|바라는|좋았던|아쉬운|개선|자유|하고\s*싶은|이유|소감|제안|느낀\s*점|기타/;
 const OVERALL_RE = /전반적|전체적|종합\s*만족|총체적|전체\s*만족|전반\s*만족/;
 const DATE_VALUE_RE = /^\d{4}[./-]\s?\d{1,2}[./-]\s?\d{1,2}/;
@@ -64,6 +67,17 @@ export function gridParent(header) {
   return g && g[1].trim() ? g[1].trim().replace(/^\s*(Q|문항|문)?\s*\d+\s*[.)]\s*/i, "") : null;
 }
 
+/** 헤더 텍스트로 연도 열의 의미(출생/활동시작) 추정. 매칭 안 되면 null */
+export function detectYearKind(header) {
+  const h = String(header ?? "");
+  if (!YEAR_WORD_RE.test(h)) return null;
+  if (BIRTH_YEAR_RE.test(h)) return "birth";
+  if (TENURE_YEAR_RE.test(h)) return "tenure";
+  return null;
+}
+export const YEAR_PLAUSIBLE_MIN = 1940;
+export const yearPlausibleMax = () => new Date().getFullYear() + 1;
+
 const SCALE_CANDIDATES = [[1, 4], [1, 5], [1, 7], [0, 10], [1, 10]];
 function inferScale(min, max) {
   for (const [a, b] of SCALE_CANDIDATES) if (min >= a && max <= b) return { min: a, max: b };
@@ -94,6 +108,14 @@ export function detectColumn(header, values) {
     const ints = finite.every(Number.isInteger);
     const min = Math.min(...finite), max = Math.max(...finite);
     const d = new Set(finite).size;
+    const yearKind = detectYearKind(h);
+    if (yearKind && ints) {
+      const plausible = finite.filter(v => v >= YEAR_PLAUSIBLE_MIN && v <= yearPlausibleMax()).length;
+      if (plausible / finite.length >= 0.9) {
+        return { role: "demographic", yearKind, confidence: 0.85,
+          reason: `${yearKind === "birth" ? "출생연도" : "활동 시작연도"} 열 이름 · 연도값(${min}~${max})` };
+      }
+    }
     if (DEMOG_RE.test(h) && d <= 20) return { role: "demographic", confidence: 0.7, reason: "응답자 특성 열 이름(숫자 코드)" };
     if (ints && d <= 11 && min >= 0 && max <= 10) {
       if (NPS_RE.test(h) && (max >= 7 || min === 0)) return { role: "nps", scale: { min: 0, max: 10 }, confidence: 0.85, reason: "추천의향 0~10점" };

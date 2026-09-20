@@ -21,6 +21,19 @@ export function render() {
       <p class="small muted">시스템 설정은 Windows 또는 브라우저의 밝은·어두운 화면 설정을 따릅니다.</p>
       <button class="btn sm" data-act="tutorial">3분 화면 가이드 다시 보기</button>
     </section>
+    <section class="card"><h2>단축키</h2>
+      <p class="small muted">입력창에 글자를 쓰는 중에는 동작하지 않습니다.</p>
+      <dl class="rt-keys">
+        <dt><kbd>Shift</kbd>+<kbd>D</kbd></dt><dd>화면 테마 전환(밝게·어둡게·시스템)</dd>
+        <dt><kbd>Shift</kbd>+<kbd>H</kbd></dt><dd>작업 내역 화면으로 이동</dd>
+        <dt><kbd>Shift</kbd>+<kbd>P</kbd></dt><dd>발표 모드로 이동(설문 자료를 불러온 뒤)</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>되돌리기</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></dt><dd>다시 실행</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>B</kbd></dt><dd>보고서 문장 편집 중 선택한 글자를 굵게</dd>
+        <dt><kbd>Enter</kbd></dt><dd>보고서 문장 편집 확정</dd>
+        <dt><kbd>Ctrl</kbd>+<kbd>F5</kbd></dt><dd>앱 캐시 비우고 새로고침(아래 '앱 파일 새로고침' 참고)</dd>
+      </dl>
+    </section>
     <section class="card"><h2>자동 저장과 보관</h2>
       <label class="check"><input type="checkbox" ${prefs.autosave ? "checked" : ""} data-change="local-autosave"> 변경 사항 자동 저장</label>
       <div class="grid-2in"><label class="field">자동 버전 수<select class="in" data-change="local-max">${[10, 30, 100].map(v => option(v, `${v}개`, prefs.maxAuto === v)).join("")}</select></label>

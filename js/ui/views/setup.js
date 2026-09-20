@@ -4,6 +4,7 @@ import { ROLES, normKey } from "../../model/detect.js";
 import { DESIGN_LABELS, rawColumn } from "../../model/codebook.js";
 import { LABEL_SETS, matchLabelSet, mapWithSet } from "../../model/label-sets.js";
 import { unmappedValues } from "../../model/recode.js";
+import { YEAR_SCHEMES, DEFAULT_YEAR_SCHEME, REF_YEAR, yearToBucket } from "../../model/year-bucket.js";
 import { maskPII, isBlank } from "../../core/util.js";
 import { esc, option, levelBadge, toast } from "../util.js";
 import { refresh, go } from "../router.js";
@@ -36,6 +37,39 @@ function labelPanel(c, unm) {
       <button class="btn sm" data-act="labelmap-apply-all" data-key="${key}">같은 보기를 쓰는 문항에 모두 적용</button>
       <button class="btn sm ghost" data-act="toggle-labels" data-key="${key}">닫기</button>
     </div></div></td></tr>`;
+}
+
+function yearBucketPanel(c) {
+  const kind = c.detected.yearKind;
+  const schemes = YEAR_SCHEMES[kind];
+  const refYear = c.yearRefYear || REF_YEAR;
+  const active = c.yearScheme ?? DEFAULT_YEAR_SCHEME[kind];
+  const raw = rawColumn(state.dataset, c);
+  const counts = new Map();
+  raw.forEach(v => {
+    if (isBlank(v)) return;
+    const label = yearToBucket(v, kind, active, refYear);
+    if (label !== null) counts.set(label, (counts.get(label) || 0) + 1);
+  });
+  const groupList = [...counts.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), "ko"));
+  const activeObj = schemes.find(s => s.id === active);
+  const key = esc(c.key);
+  return `<tr class="labelrow"><td colspan="9"><div class="labelpanel">
+    <div class="row between wrap"><b>‘${esc(c.label)}’ 연도 → 구간 설정</b>
+      <span class="small muted">${kind === "birth" ? "출생연도를 연령대로 바꿔 응답자 특성별 비교에 사용합니다" : "활동 시작연도를 년차로 바꿔 응답자 특성별 비교에 사용합니다"}</span></div>
+    <div class="row gap wrap">
+      <label class="small">구간 방식 <select class="in" data-change="yearscheme" data-key="${key}">${schemes.map(s => option(s.id, s.name, active === s.id)).join("")}</select></label>
+      <label class="small">기준 연도 <input class="in num" type="number" style="width:5.5em" value="${refYear}" data-change="yearref" data-key="${key}"></label>
+      <button class="btn sm ghost" data-act="toggle-yearbucket" data-key="${key}">닫기</button>
+    </div>
+    <table class="tbl mini"><tr><th>구간</th><th class="c">인원</th></tr>${groupList.map(([lb, n]) =>
+      `<tr><td>${esc(lb)}</td><td class="c">${n}${n < 10 ? ` <span class="small warn-text">10명 미만</span>` : ""}</td></tr>`).join("")}
+    </table>
+    ${groupList.length > 12 ? `<p class="small bad-text">구간이 ${groupList.length}개로 12개를 넘어 이 방식으로는 특성별 비교에서 제외됩니다. 다른 구간 방식을 선택하세요.</p>` : ""}
+    <p class="small muted">${activeObj?.law
+      ? "※ 청소년기본법 제3조(9~24세)·청년기본법 제3조(19~34세) 기준을 인용했습니다. 두 법의 적용 연령이 19~24세에서 겹치므로, 이 앱에서는 24세 이하=청소년, 25~34세=청년으로 겹치지 않게 재구성했습니다."
+      : "※ 이 구간은 법적·통계적 표준이 아니라 이 앱이 정한 편집 기본값입니다. 필요하면 다른 방식을 선택하세요."}</p>
+  </div></td></tr>`;
 }
 
 /** 역할을 척도로 바꿀 때 문자 응답 자동 매핑 시도 */
@@ -78,18 +112,24 @@ export function render() {
     const nUnm = unm.reduce((s, u) => s + u.n, 0);
     if (nUnm) unmappedCols.push({ c, n: nUnm });
     const labelBtn = scaled ? `<div><button class="btn sm ${nUnm ? "" : "ghost"}" data-act="toggle-labels" data-key="${esc(c.key)}">보기 점수${nUnm ? ` <span class="badge bad">미변환 ${nUnm}</span>` : c.labelMap ? ` <span class="badge info">문구 ${Object.keys(c.labelMap).length}</span>` : ""}</button>${c.labelAmbiguous ? `<div class="small warn-text">4점/5점 확인</div>` : ""}</div>` : "";
+    const yearKind = c.role === "demographic" ? c.detected?.yearKind : null;
+    const yScheme = yearKind ? (c.yearScheme ?? DEFAULT_YEAR_SCHEME[yearKind]) : null;
+    const ySchemeObj = yearKind ? YEAR_SCHEMES[yearKind].find(s => s.id === yScheme) : null;
+    const yearBtn = yearKind
+      ? `<div><button class="btn sm ${yScheme !== "raw" ? "" : "ghost"}" data-act="toggle-yearbucket" data-key="${esc(c.key)}">연도 구간${yScheme !== "raw" ? ` <span class="badge info">${esc((ySchemeObj?.name || "").split("(")[0])}</span>` : ` <span class="badge">구간 없음</span>`}</button></div>`
+      : "";
     return (`<tr class="${c.role === "ignore" ? "dim" : ""}">
       <td class="small muted">${multiSheet ? esc(cb.sheets[c.sheet].name) + "<br>" : ""}${c.index + 1}</td>
       <td class="hdr" title="${esc(c.header)}">${esc(c.header)}<div class="small muted">${esc(sampleValues(c))}</div></td>
       <td><input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label"></td>
       <td><select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role">${Object.entries(ROLES).map(([k, v]) => option(k, v, c.role === k)).join("")}</select>
-        ${conf < 0.7 && !c.labelAmbiguous ? `<div class="small warn-text" title="${esc(c.detected.reason)}">판별 불확실</div>` : ""}${c.pii ? `<div class="small warn-text">개인정보 추정</div>` : ""}${labelBtn}</td>
+        ${conf < 0.7 && !c.labelAmbiguous ? `<div class="small warn-text" title="${esc(c.detected.reason)}">판별 불확실</div>` : ""}${c.pii ? `<div class="small warn-text">개인정보 추정</div>` : ""}${labelBtn}${yearBtn}</td>
       <td class="nowrap">${numeric ? `<input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min">~<input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max">` : ""}</td>
       <td class="c">${c.role === "likert" ? `<input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse">` : ""}</td>
       <td>${c.role === "likert" ? `<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="(없음)" data-change="col" data-key="${esc(c.key)}" data-field="domain">` : ""}</td>
       <td>${numeric ? `<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time">${option("", "-", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select>` : ""}</td>
       <td class="c">${c.role === "likert" && c.time !== "pre" ? `<input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall">` : ""}</td>
-    </tr>`) + (scaled && expanded === c.key ? labelPanel(c, unm) : "");
+    </tr>`) + (scaled && expanded === c.key ? labelPanel(c, unm) : "") + (yearKind && expanded === c.key ? yearBucketPanel(c) : "");
   }).join("");
   const unmappedWarn = unmappedCols.length ? `<li>${levelBadge("error")} 점수로 바뀌지 않은 응답이 있는 문항 ${unmappedCols.length}개: ${unmappedCols.slice(0, 4).map(u => `${esc(u.c.label)}(${u.n}건)`).join(", ")}${unmappedCols.length > 4 ? " 등" : ""} — 아래 표의 <b>보기 점수</b>에서 문구별 점수를 지정하세요(지정 전에는 무응답으로 처리).</li>` : "";
 
@@ -133,7 +173,7 @@ export function render() {
 
   <section class="card">
     <div class="row between wrap"><h2>문항(열) 설정</h2>
-      <span class="small muted">역할: 척도 문항=리커트, 응답자 특성=집단 비교 기준, 복수응답=쉼표 구분 선택형 · 영역: 같은 이름끼리 묶어 영역 점수 계산</span></div>
+      <span class="small muted">역할: 척도 문항=리커트, 응답자 특성=집단 비교 기준, 복수응답=쉼표 구분 선택형 · 영역: 같은 이름끼리 묶어 영역 점수 계산 · 출생연도·활동 시작연도 등 연도 열은 연령대·년차 구간으로 바꿔 특성 비교에 사용합니다('연도 구간' 버튼에서 방식 변경)</span></div>
     <datalist id="domainList">${cb.domains.map(d => `<option value="${esc(d.name)}">`).join("")}</datalist>
     <div class="tblwrap"><table class="tbl setup">
       <thead><tr><th>#</th><th>원래 열 이름 · 응답 예</th><th>표시 이름</th><th>역할</th><th>척도 범위</th><th>역문항</th><th>영역</th><th>시점</th><th>전반 만족</th></tr></thead>
@@ -147,6 +187,14 @@ const colByKey = key => state.codebook.columns.find(x => x.key === key);
 
 export const actions = {
   "toggle-labels": el => { expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },
+  "toggle-yearbucket": el => { expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },
+  yearscheme: el => { const c = colByKey(el.dataset.key); if (!c) return; c.yearScheme = el.value; invalidate(); refresh(); },
+  yearref: el => {
+    const c = colByKey(el.dataset.key); if (!c) return;
+    const v = Number(el.value);
+    c.yearRefYear = Number.isFinite(v) && v > 1900 ? v : null;
+    invalidate(); refresh();
+  },
   labelmap: el => {
     const c = colByKey(el.dataset.key); if (!c) return;
     const raw = el.dataset.raw;
@@ -200,6 +248,7 @@ export const actions = {
     if (f === "label") c.label = el.value.trim() || c.header;
     else if (f === "role") {
       c.role = el.value;
+      if (c.role === "demographic" && c.detected?.yearKind && c.yearScheme === undefined) c.yearScheme = DEFAULT_YEAR_SCHEME[c.detected.yearKind];
       if (["likert", "nps"].includes(c.role) && !c.scale) c.scale = c.role === "nps" ? { min: 0, max: 10 } : { min: 1, max: 5 };
       if (c.role === "likert") autoMapLabels(c);
       if (c.role === "multi" && !c.options) c.options = [];

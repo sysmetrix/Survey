@@ -1,6 +1,7 @@
 // 원자료 → 분석값 변환 (결측 null 통일, 라벨→숫자, 범위 밖 값 제거, 역문항, 복수응답 분해)
 import { toNum, isBlank } from "../core/util.js";
 import { leadingNumber } from "./label-sets.js";
+import { yearToBucket } from "./year-bucket.js";
 
 /**
  * 척도/NPS/숫자 열 재코딩
@@ -55,9 +56,15 @@ export function unmappedValues(col, rawValues) {
 export function recodeCategory(col, rawValues) {
   const miss = new Set((col.missingCodes || []).map(s => String(s).trim()));
   const labels = col.valueLabels || {};
+  const yk = col.detected?.yearKind;
   let missing = 0;
   const values = rawValues.map(v => {
     if (isBlank(v)) { missing++; return null; }
+    if (yk && col.yearScheme !== "raw") {
+      const b = yearToBucket(v, yk, col.yearScheme, col.yearRefYear || undefined);
+      if (b === null) { missing++; return null; }
+      return b;
+    }
     let s = v instanceof Date ? v.toISOString().slice(0, 10) : String(v).trim();
     if (miss.has(s)) { missing++; return null; }
     if (Object.prototype.hasOwnProperty.call(labels, s)) s = labels[s];

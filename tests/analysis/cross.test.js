@@ -1,7 +1,8 @@
 // 교차분석 소표본 경고·rank-biserial 효과크기 연결(js/analysis/cross.js)
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compareGroups } from "../../js/analysis/cross.js";
+import { compareGroups, crossAnalysis } from "../../js/analysis/cross.js";
+import { yearToBucket } from "../../js/model/year-bucket.js";
 
 test("compareGroups: 집단 인원이 10명 미만이면 smallGroupN 플래그가 붙음(배제는 아님)", () => {
   const small = compareGroups([[4, 5, 4, 5, 5], [3, 3, 4, 3, 4]], ["A", "B"]);
@@ -24,4 +25,20 @@ test("compareGroups: 2집단 비교 시 Mann-Whitney 효과크기(rank-biserial)
 test("compareGroups: Welch t 결과에 신뢰구간(ci)이 포함됨", () => {
   const res = compareGroups([[1, 2, 3, 4, 5], [3, 4, 5, 6, 7]], ["A", "B"]);
   assert.ok(Array.isArray(res.test.ci) && res.test.ci.length === 2);
+});
+
+test("crossAnalysis: 넓은 출생연도 범위를 구간화하면 특성별 비교 상한(12개)을 넘지 않음", () => {
+  const n = 60;
+  const birthYears = Array.from({ length: n }, (_, i) => 1966 + i); // 1966~2025, 서로 다른 값 60개
+  const birthBuckets = birthYears.map(y => yearToBucket(y, "birth", "age10", 2026));
+  const itemVals = Array.from({ length: n }, (_, i) => 1 + (i % 5));
+  const survey = {
+    demographics: [{ key: "birth", label: "출생연도" }],
+    scales: [{ key: "item1", scale: { min: 1, max: 5 } }],
+    values: key => (key === "birth" ? birthBuckets : itemVals),
+  };
+  const items = [{ key: "item1", label: "만족도" }];
+  const out = crossAnalysis(survey, items, null);
+  assert.equal(out.length, 1);
+  assert.ok(out[0].groups.length <= 12, `구간 수 ${out[0].groups.length}는 12 이하여야 함`);
 });

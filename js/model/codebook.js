@@ -1,6 +1,7 @@
 // 코드북: 열 역할·척도·영역·사전사후 짝·성과지표 연결 — 모든 분석의 기준
 import { detectColumn, harmonizeScales, parseTime, shortLabel, gridParent, isOverallHeader, normKey } from "./detect.js";
 import { LABEL_SETS, matchLabelSet, mapWithSet } from "./label-sets.js";
+import { DEFAULT_YEAR_SCHEME } from "./year-bucket.js";
 import { isBlank, hash } from "../core/util.js";
 
 /**
@@ -82,7 +83,9 @@ export function buildCodebook(dataset) {
         isOverall: det.role === "likert" && isOverallHeader(header),
         pii: !!det.pii, kpiIds: [],
         observedMax: nums.length ? Math.max(...nums) : undefined,
-        detected: { role: det.role, confidence: det.confidence, reason: det.reason },
+        detected: { role: det.role, confidence: det.confidence, reason: det.reason, yearKind: det.yearKind || null },
+        yearScheme: det.yearKind ? DEFAULT_YEAR_SCHEME[det.yearKind] : null,
+        yearRefYear: null, // null = REF_YEAR(현재 연도) 사용
       });
     });
   });

@@ -20,7 +20,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.13.1";
+export const APP_VERSION = "5.15.0";
 const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -179,6 +179,12 @@ document.addEventListener("keydown", e => {
     e.preventDefault();
     (e.code === "KeyY" || e.shiftKey ? GLOBAL.redo : GLOBAL.undo)();
     return;
+  }
+  // 주요 기능 단축키(Shift+문자, 입력 중에는 동작 안 함) — 로컬 설정 화면에 안내
+  if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && !isTyping(e.target)) {
+    if (e.code === "KeyD") { e.preventDefault(); GLOBAL.theme(); return; }
+    if (e.code === "KeyH") { e.preventDefault(); go("history"); return; }
+    if (e.code === "KeyP" && state.dataset) { e.preventDefault(); go("present", "1"); return; }
   }
   current.onKey?.(e);
 });

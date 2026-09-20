@@ -38,6 +38,15 @@ test("열 역할 판별", () => {
   assert.equal(detectColumn("5. 강사가 친절했다", ["5. 매우 그렇다", "4. 그렇다", "3. 보통"]).role, "likert");
 });
 
+test("연도 열 판별: 출생연도·활동 시작연도는 응답자 특성으로, 무관한 열은 영향 없음", () => {
+  const birth = detectColumn("출생연도", [2000, 2001, 2002, 2000, 2003, 2001]);
+  assert.equal(birth.role, "demographic"); assert.equal(birth.yearKind, "birth"); assert.ok(birth.confidence >= 0.7);
+  const tenure = detectColumn("청년활동 시작연도", [2023, 2024, 2025, 2026, 2023]);
+  assert.equal(tenure.role, "demographic"); assert.equal(tenure.yearKind, "tenure");
+  assert.equal(detectColumn("졸업연도", [1345, 6789, 2233, 9081, 5566, 1122]).yearKind, undefined);
+  assert.equal(detectColumn("성별", ["남", "여", "남"]).yearKind, undefined);
+});
+
 test("사전·사후 표기 파싱과 문항명", () => {
   assert.deepEqual(parseTime("사전_자기효능감1"), { time: "pre", retrospective: false, pairKey: "자기효능감1" });
   assert.equal(parseTime("[사후] 자기효능감1").time, "post");
