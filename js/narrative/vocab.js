@@ -16,6 +16,24 @@ export function levelWord(score, t = DEFAULT_THRESHOLDS) {
   return score >= a ? "매우 높은 수준" : score >= b ? "높은 수준" : score >= c ? "보통 이상 수준" : score >= d ? "보통 수준" : "낮은 수준";
 }
 
+/** 100점 환산 기준 — exact: 반올림 전 평균으로 계산(기본), rounded: 표에 표시된 평균(소수 둘째 자리)으로 환산 */
+export const SCORE_BASES = [
+  { id: "exact", label: "반올림 전 평균으로 환산 (정확한 값, 기본)" },
+  { id: "rounded", label: "표시된 평균(소수 둘째 자리)으로 환산 (기존 수기 보고서와 동일)" },
+];
+export const cleanScoreBasis = v => (v === "rounded" ? "rounded" : "exact");
+
+/**
+ * 화면·보고서에 보여줄 100점 환산값. 표시 전용이며 수준 판정·성과지표 판정·정렬은 항상 원값(score100)을 쓴다.
+ * o = {mean, min, max, score100} (문항·영역·전체 공통)
+ */
+export function shown100(o, basis) {
+  if (!o) return NaN;
+  if (basis !== "rounded" || !Number.isFinite(o.mean)) return o.score100;
+  const { min, max } = o;
+  return Number.isFinite(min) && Number.isFinite(max) && max > min ? (round(o.mean, 2) - min) / (max - min) * 100 : o.score100;
+}
+
 /** 수치 표기 */
 export const f2 = x => (Number.isFinite(x) ? round(x, 2).toFixed(2) : "-");
 export const f1 = x => (Number.isFinite(x) ? round(x, 1).toFixed(1) : "-");

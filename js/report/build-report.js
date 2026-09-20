@@ -1,5 +1,5 @@
 // 분석 결과 → 보고서 블록 (규칙 기반 개조식 서술)
-import { levelWord, f1, f2, signed, pText, statParen, statNum, sigPhrase, sigStar, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
+import { levelWord, f1, f2, signed, pText, statParen, statNum, sigPhrase, sigStar, shown100, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { josa } from "../narrative/josa.js";
 import { DESIGN_LABELS } from "../model/codebook.js";
 import { hasLogicModel, hasProgramInfo, LOGIC_STAGES } from "../evaluation/logic-model.js";
@@ -45,6 +45,8 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   const colOf = key => CB.columns.find(c => c.key === key);
   const P = A.prepost, ALLP = P?.domains.find(d => d.id === "ALL") || (P?.items.length === 1 ? P.items[0] : null);
   const overall = A.overallItem, tot = A.total;
+  const D = o => shown100(o, S.scoreBasis); // 화면 표시용 환산값 (수준 판정·정렬은 원값 score100 사용)
+  const itemOf = key => A.items.find(it => it.key === key);
   const detailItems = A.items.filter(it => !it.isOverall).sort((a, b) => b.score100 - a.score100);
   const kpiOn = E && E.results?.length;
 
@@ -58,10 +60,10 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     sum.push(B("sum.kpi", 1, `□ 성과지표: ${s.measured}개 중 **${s.achieved}개 달성**${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}${s.notAchieved ? `, ${s.notAchieved}개 미달성` : ""} (종합 **${s.grade}**)`));
   }
   if (ALLP) sum.push(B("sum.prepost", 1, `□ 성과 변화: 사전 ${f2(ALLP.mPre)}점 → 사후 ${f2(ALLP.mPost)}점(**${signed(ALLP.diff)}점**), ${sigPhrase(ALLP.primary.p)}`));
-  if (overall) sum.push(B("sum.overall", 1, `□ 만족도: ${overall.label} ${f2(overall.mean)}점(100점 환산 **${f2(overall.score100)}점**, ${levelWord(overall.score100, t)})`));
-  else if (tot && Number.isFinite(tot.score100)) sum.push(B("sum.total", 1, `□ 만족도: 척도 문항 평균 100점 환산 **${f2(tot.score100)}점**(${levelWord(tot.score100, t)})`));
+  if (overall) sum.push(B("sum.overall", 1, `□ 만족도: ${overall.label} ${f2(overall.mean)}점(100점 환산 **${f2(D(overall))}점**, ${levelWord(overall.score100, t)})`));
+  else if (tot && Number.isFinite(tot.score100)) sum.push(B("sum.total", 1, `□ 만족도: 척도 문항 평균 100점 환산 **${f2(D(tot))}점**(${levelWord(tot.score100, t)})`));
   if (A.nps.length) sum.push(B("sum.nps", 1, `□ 순추천지수(NPS): ${signed(A.nps[0].nps, 1)}점`));
-  if (detailItems.length >= 2) sum.push(B("sum.items", 1, `□ 최고 문항 ${q(detailItems[0].label)}(${f2(detailItems[0].score100)}점), 최저 문항 ${q(detailItems.at(-1).label)}(${f2(detailItems.at(-1).score100)}점)`));
+  if (detailItems.length >= 2) sum.push(B("sum.items", 1, `□ 최고 문항 ${q(detailItems[0].label)}(${f2(D(detailItems[0]))}점), 최저 문항 ${q(detailItems.at(-1).label)}(${f2(D(detailItems.at(-1)))}점)`));
   const impTheme = A.text.flatMap(tx => tx.themes.filter(th => th.negative >= 2)).sort((a, b) => b.negative - a.negative)[0]?.name;
   if (impTheme) sum.push(B("sum.text", 1, `□ 주요 개선 요구: ${q(impTheme)} 관련 의견`));
   push({ type: "box", lines: sum.map(s => ({ key: s.key, text: s.text })) });
@@ -109,7 +111,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   ];
   if (P?.matching) ov.push(B("s.match", 2, `사전·사후 매칭 ${P.matching.pairs}명(사전만 응답 ${P.matching.preOnly}명, 사후만 응답 ${P.matching.postOnly}명) — 매칭 기준: ${P.matching.keyDesc}`));
   ov.push(B("s.items", 1, `조사 내용: ${parts.join(", ")}`));
-  if (scaleRange) ov.push(B("s.scale", 1, `척도: ${scaleRange.min}~${scaleRange.max}점(점수가 높을수록 긍정)`), B("s.score100", 2, "100점 환산 점수 = (평균 − 최소점) ÷ (최대점 − 최소점) × 100, 긍정응답률 = 상위 2개 척도 응답 비율"));
+  if (scaleRange) ov.push(B("s.scale", 1, `척도: ${scaleRange.min}~${scaleRange.max}점(점수가 높을수록 긍정)`), B("s.score100", 2, `100점 환산 점수 = (평균 − 최소점) ÷ (최대점 − 최소점) × 100${S.scoreBasis === "rounded" ? "(보고서에 표시된 소수 둘째 자리 평균으로 계산)" : "(반올림 전 평균으로 계산)"}, 긍정응답률 = 상위 2개 척도 응답 비율`));
   if (A.reliability && Number.isFinite(A.reliability.alpha)) {
     const [aLo, aHi] = A.reliability.alphaCi || [];
     ov.push(B("s.alpha", 1, `신뢰도: Cronbach α = ${f2(A.reliability.alpha)}(${alphaLabel(A.reliability.alpha)})${Number.isFinite(aLo) ? `, 95%CI[${f2(aLo)}, ${f2(aHi)}]` : ""}`));
@@ -227,16 +229,16 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     push(H(1, "만족도 분석"));
     push(H(2, "전반적 만족도"));
     const sb = [];
-    if (overall) sb.push(B("sat.overall", 1, `${josa(q(overall.label), "은")} 평균 ${f2(overall.mean)}점(100점 환산 **${f2(overall.score100)}점**)으로 ${levelWord(overall.score100, t)}이며, 긍정응답률은 ${f1(overall.top2)}%임`));
-    if (tot && Number.isFinite(tot.score100)) sb.push(B("sat.total", 1, `세부 문항 ${tot.nItems}개의 100점 환산 평균은 ${f2(tot.score100)}점으로 ${levelWord(tot.score100, t)}임`));
-    if (A.domains.length) sb.push(B("sat.domains", 1, `영역별 점수: ${A.domains.map(d => `${d.name} ${f2(d.score100)}점`).join(", ")}`));
+    if (overall) sb.push(B("sat.overall", 1, `${josa(q(overall.label), "은")} 평균 ${f2(overall.mean)}점(100점 환산 **${f2(D(overall))}점**)으로 ${levelWord(overall.score100, t)}이며, 긍정응답률은 ${f1(overall.top2)}%임`));
+    if (tot && Number.isFinite(tot.score100)) sb.push(B("sat.total", 1, `세부 문항 ${tot.nItems}개의 100점 환산 평균은 ${f2(D(tot))}점으로 ${levelWord(tot.score100, t)}임`));
+    if (A.domains.length) sb.push(B("sat.domains", 1, `영역별 점수: ${A.domains.map(d => `${d.name} ${f2(D(d))}점`).join(", ")}`));
     bullets(sb);
 
     push(H(2, "문항별 만족도"));
     const ib = [];
     if (detailItems.length >= 2) {
       const hi = detailItems[0], lo = detailItems.at(-1);
-      ib.push(B("sat.hilo", 1, `문항별로는 ${josa(q(hi.label), "이")} ${f2(hi.score100)}점으로 가장 높고, ${josa(q(lo.label), "이")} ${f2(lo.score100)}점으로 가장 낮음`));
+      ib.push(B("sat.hilo", 1, `문항별로는 ${josa(q(hi.label), "이")} ${f2(D(hi))}점으로 가장 높고, ${josa(q(lo.label), "이")} ${f2(D(lo))}점으로 가장 낮음`));
       const high = detailItems.filter(i => i.score100 >= t.level[1]), low = detailItems.filter(i => i.score100 < t.level[2]);
       if (high.length) ib.push(B("sat.high", 2, `높은 수준(${t.level[1]}점 이상): ${high.map(i => q(i.label)).join(", ")}`));
       if (low.length) ib.push(B("sat.low", 2, `보통 이하(${t.level[2]}점 미만): ${low.map(i => q(i.label)).join(", ")} — 개선 검토 필요`));
@@ -245,12 +247,12 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     }
     bullets(ib);
     const rows = [["문항", "n", "평균", "표준편차", "100점 환산", "긍정응답률(%)", "부정응답률(%)"].map(cellH)];
-    const itemRow = (it, shade) => [{ text: it.label, align: "LEFT", shade, bold: !!shade }, { text: String(it.n), shade }, { text: f2(it.mean), shade }, { text: f2(it.sd), shade }, { text: f2(it.score100), shade, bold: true }, { text: f1(it.top2), shade }, { text: f1(it.bottom2), shade }];
+    const itemRow = (it, shade) => [{ text: it.label, align: "LEFT", shade, bold: !!shade }, { text: String(it.n), shade }, { text: f2(it.mean), shade }, { text: f2(it.sd), shade }, { text: f2(D(it)), shade, bold: true }, { text: f1(it.top2), shade }, { text: f1(it.bottom2), shade }];
     if (overall) rows.push(itemRow(overall, "sub"));
     detailItems.forEach(it => rows.push(itemRow(it, null)));
-    if (tot && Number.isFinite(tot.score100)) rows.push([{ text: "세부 문항 전체", align: "LEFT", shade: "total", bold: true }, { text: String(tot.n), shade: "total" }, { text: f2(tot.mean), shade: "total" }, { text: "-", shade: "total" }, { text: f2(tot.score100), shade: "total", bold: true }, { text: f1(tot.top2), shade: "total" }, { text: "-", shade: "total" }]);
-    push({ type: "table", caption: "문항별 만족도", unit: "(단위: 명, 점, %)", columns: [{ weight: 3.2, align: "LEFT" }, { weight: 0.8 }, { weight: 0.9 }, { weight: 1 }, { weight: 1.1 }, { weight: 1.2 }, { weight: 1.2 }], rows, notes: ["주: 문항은 100점 환산 점수가 높은 순으로 정렬, 긍정응답률은 상위 2개 척도, 부정응답률은 하위 2개 척도 응답 비율"] });
-    if (detailItems.length) push({ type: "figure", caption: "문항별 만족도(100점 환산)", chart: { kind: "hbar", data: detailItems.map(i => ({ label: i.label, value: i.score100 })), opts: { max: 100, refValue: tot?.score100 ?? null, refLabel: "평균", unit: "점", valueFmt: f2 } } });
+    if (tot && Number.isFinite(tot.score100)) rows.push([{ text: "세부 문항 전체", align: "LEFT", shade: "total", bold: true }, { text: String(tot.n), shade: "total" }, { text: f2(tot.mean), shade: "total" }, { text: "-", shade: "total" }, { text: f2(D(tot)), shade: "total", bold: true }, { text: f1(tot.top2), shade: "total" }, { text: "-", shade: "total" }]);
+    push({ type: "table", caption: "문항별 만족도", unit: "(단위: 명, 점, %)", columns: [{ weight: 3.2, align: "LEFT" }, { weight: 0.8 }, { weight: 0.9 }, { weight: 1 }, { weight: 1.1 }, { weight: 1.2 }, { weight: 1.2 }], rows, notes: ["주: 문항은 100점 환산 점수가 높은 순으로 정렬, 긍정응답률은 상위 2개 척도, 부정응답률은 하위 2개 척도 응답 비율", S.scoreBasis === "rounded" ? "주: 100점 환산은 표에 표시된 평균(소수 둘째 자리)으로 계산한 값이며, 정렬·수준 판정·성과지표 판정은 반올림 전 값 기준" : "주: 100점 환산은 반올림 전 평균으로 계산하므로, 표의 평균(소수 둘째 자리)으로 직접 환산한 값과 ±0.1점 안팎 차이가 날 수 있음"] });
+    if (detailItems.length) push({ type: "figure", caption: "문항별 만족도(100점 환산)", chart: { kind: "hbar", data: detailItems.map(i => ({ label: i.label, value: D(i) })), opts: { max: 100, refValue: tot ? D(tot) : null, refLabel: "평균", unit: "점", valueFmt: f2 } } });
     // 분포 (가장 흔한 척도 범위)
     const rangeKey = it => `${it.min}-${it.max}`;
     const counts = {}; A.items.forEach(it => { counts[rangeKey(it)] = (counts[rangeKey(it)] || 0) + 1; });
@@ -351,7 +353,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   if (ALLP) ev.push(B("ev.pp", 1, `(성과 변화) 참여 후 성과 점수가 ${signed(ALLP.diff)}점 변화하여 ${ALLP.primary.p < 0.05 && ALLP.diff > 0 ? `사업 참여에 따른 긍정적 변화가 확인됨(${ALLP.primary.effectLabel})` : "통계적으로 유의한 변화는 확인되지 않음"}`));
   if (overall || tot) {
     const s100 = overall ? overall.score100 : tot.score100;
-    ev.push(B("ev.sat", 1, `(만족도) ${overall ? "전반적 만족도" : "만족도"}는 100점 환산 ${f1(s100)}점으로 ${levelWord(s100, t)}임`));
+    ev.push(B("ev.sat", 1, `(만족도) ${overall ? "전반적 만족도" : "만족도"}는 100점 환산 ${f1(D(overall || tot))}점으로 ${levelWord(s100, t)}임`));
   }
   bullets(ev);
 
@@ -359,8 +361,8 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   const imp = [];
   const used = new Set();
   if (kpiOn) E.results.filter(r => r.judgment === "미달성").forEach(r => imp.push(B(`imp.kpi.${r.id}`, 1, `${q(r.name)} 목표 미달성(달성률 ${f1(r.rate)}%): 원인 분석을 통한 운영 방식 보완 및 차년도 목표 재설정 검토`)));
-  (A.ipa?.points || []).filter(p => p.quadrant === "집중 개선").forEach(p => { used.add(p.key); imp.push(B(`imp.ipa.${p.key}`, 1, `${q(p.label)}: 전반 만족도와의 관련성이 높으나 만족도(${f1(p.performance)}점)가 상대적으로 낮아 우선 개선 필요`)); });
-  detailItems.filter(i => i.score100 < t.level[2] && !used.has(i.key)).forEach(i => imp.push(B(`imp.low.${i.key}`, 1, `${q(i.label)}(${f2(i.score100)}점): 만족도가 낮아 세부 원인 점검 및 개선 필요`)));
+  (A.ipa?.points || []).filter(p => p.quadrant === "집중 개선").forEach(p => { used.add(p.key); imp.push(B(`imp.ipa.${p.key}`, 1, `${q(p.label)}: 전반 만족도와의 관련성이 높으나 만족도(${f1(itemOf(p.key) ? D(itemOf(p.key)) : p.performance)}점)가 상대적으로 낮아 우선 개선 필요`)); });
+  detailItems.filter(i => i.score100 < t.level[2] && !used.has(i.key)).forEach(i => imp.push(B(`imp.low.${i.key}`, 1, `${q(i.label)}(${f2(D(i))}점): 만족도가 낮아 세부 원인 점검 및 개선 필요`)));
   A.text.forEach(tx => [...tx.themes].filter(th => th.negative >= 2).sort((a, b) => b.negative - a.negative).slice(0, 2).forEach(th => {
     imp.push(B(`imp.text.${tx.key}.${th.id}`, 1, `${q(th.name)} 관련 개선 요구 ${th.negative}건(주관식 ${q(tx.label)})`));
     const qt = tx.themeQuotes?.[th.id]?.[0];

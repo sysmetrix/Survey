@@ -54,8 +54,10 @@ export function domainStats(survey, items) {
     const its = items.filter(it => cols.some(c => c.key === it.key));
     const rel = cols.length >= 2 ? cronbachAlpha(cols.map(c => ({ name: c.label, values: survey.values(c.key) }))) : null;
     const d = describe(comp.map(x => x * 100));
+    const sameScale = cols.length && cols.every(c => c.scale.min === cols[0].scale.min && c.scale.max === cols[0].scale.max);
     return {
       id, name, keys: cols.map(c => c.key), nItems: cols.length, n: d.n,
+      min: sameScale ? cols[0].scale.min : null, max: sameScale ? cols[0].scale.max : null, // 척도가 섞이면 null (표시용 환산에서 제외)
       score100: d.mean, sd100: d.sd,
       mean: mean(its.map(it => it.mean)), // 문항 평균의 평균 (원척도)
       top2: mean(its.map(it => it.top2)),

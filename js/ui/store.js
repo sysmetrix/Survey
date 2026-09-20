@@ -9,7 +9,7 @@ import { lintEvaluation } from "../evaluation/linkage.js";
 import { buildReport } from "../report/build-report.js";
 import { finalizeBlocks } from "../report/model.js";
 import { buildDeck } from "../present/deck.js";
-import { DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
+import { DEFAULT_THRESHOLDS, cleanScoreBasis } from "../narrative/vocab.js";
 import { koDate } from "../core/util.js";
 import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, DEFAULT_FONT_PRESET, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING, cleanFontName } from "../report/hwpx/fonts.js";
 
@@ -20,6 +20,7 @@ function loadSettings() {
   return {
     orgName: saved.orgName ?? "부천여성청소년재단", author: saved.author || "",
     reportTitle: "", date: koDate(), thresholds: { ...DEFAULT_THRESHOLDS, ...(saved.thresholds || {}) },
+    scoreBasis: cleanScoreBasis(saved.scoreBasis),
     ...pickDocSettings(saved),
   };
 }
@@ -35,7 +36,7 @@ export function pickDocSettings(o = {}) {
 const DOC_KEYS = ["fontPreset", "fontBody", "fontHeading", "baseSize", "lineSpacing"];
 export function persistSettings() {
   const s = state.settings;
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ orgName: s.orgName, author: s.author, thresholds: s.thresholds, ...Object.fromEntries(DOC_KEYS.map(k => [k, s[k]])) })); return true; } catch { return false; }
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ orgName: s.orgName, author: s.author, thresholds: s.thresholds, scoreBasis: s.scoreBasis, ...Object.fromEntries(DOC_KEYS.map(k => [k, s[k]])) })); return true; } catch { return false; }
 }
 
 export const state = {
@@ -82,6 +83,7 @@ function applySettingsFrom(s) {
   if (!s || typeof s !== "object") return;
   ["orgName", "author", "reportTitle", "date"].forEach(k => { if (typeof s[k] === "string") state.settings[k] = s[k].slice(0, 200); });
   if (s.thresholds && typeof s.thresholds === "object" && !Array.isArray(s.thresholds)) state.settings.thresholds = { ...DEFAULT_THRESHOLDS, ...s.thresholds };
+  if (s.scoreBasis !== undefined) state.settings.scoreBasis = cleanScoreBasis(s.scoreBasis);
   Object.assign(state.settings, pickDocSettings({ ...state.settings, ...s }));
 }
 
@@ -147,7 +149,7 @@ let deckCache = { results: null, settingsKey: "", slides: [] };
 export function deckSlides() {
   const r = compute();
   if (!r) return [];
-  const settingsKey = JSON.stringify([state.settings.orgName, state.settings.author, state.settings.reportTitle, state.settings.date]);
+  const settingsKey = JSON.stringify([state.settings.orgName, state.settings.author, state.settings.reportTitle, state.settings.date, state.settings.scoreBasis]);
   if (deckCache.results !== r || deckCache.settingsKey !== settingsKey) {
     deckCache = { results: r, settingsKey, slides: buildDeck({ analysis: r.analysis, evaluation: r.evaluation, logicModel: state.logicModel, codebook: state.codebook, settings: state.settings }) };
   }

@@ -2,7 +2,7 @@
 // 원자료(응답 데이터)는 포함하지 않는다. 편집 가능한 설정만 담아 되돌리기·버전 비교·복원에 사용.
 import { ROLES } from "../model/detect.js";
 
-export const SETTINGS_KEYS = ["orgName", "author", "reportTitle", "date", "thresholds", "fontPreset", "fontBody", "fontHeading", "baseSize", "lineSpacing"];
+export const SETTINGS_KEYS = ["orgName", "author", "reportTitle", "date", "thresholds", "scoreBasis", "fontPreset", "fontBody", "fontHeading", "baseSize", "lineSpacing"];
 
 /** 상태 → 편집 가능한 값만 복제 */
 export function captureEditable(state) {
@@ -131,7 +131,7 @@ export function diffEditable(older, newer) {
   diffSet(a.deckHidden, b.deckHidden, "발표 슬라이드");
 
   const sa = a.settings || {}, sb = b.settings || {};
-  const SET_LABEL = { orgName: "기관·부서명", author: "담당자명", reportTitle: "보고서 제목", date: "작성일", thresholds: "판정 기준", fontPreset: "글꼴", fontBody: "본문 글꼴", fontHeading: "제목 글꼴", baseSize: "글자 크기", lineSpacing: "줄 간격" };
+  const SET_LABEL = { orgName: "기관·부서명", author: "담당자명", reportTitle: "보고서 제목", date: "작성일", thresholds: "판정 기준", scoreBasis: "100점 환산 기준", fontPreset: "글꼴", fontBody: "본문 글꼴", fontHeading: "제목 글꼴", baseSize: "글자 크기", lineSpacing: "줄 간격" };
   const setChanged = SETTINGS_KEYS.filter(k => !same(sa[k], sb[k]));
   if (setChanged.length) add("보고서 설정", `${setChanged.map(k => SET_LABEL[k]).join(", ")} 변경`);
   return out;
