@@ -24,7 +24,7 @@ export function levelWord(score, t = DEFAULT_THRESHOLDS) {
  */
 export const SCORE_BASES = [
   { id: "exact", label: "반올림 전 평균으로 환산", short: "반올림 전 평균", tag: "기본" },
-  { id: "rounded", label: "반올림 후 평균으로 환산 (표에 적힌 소수 둘째 자리 평균 기준)", short: "반올림 후 평균", tag: "경영평가" },
+  { id: "rounded", label: "반올림 후 평균으로 환산 (표에 적힌 소수 둘째 자리 평균 기준)", short: "반올림 후 평균", tag: "조정" },
 ];
 export const cleanScoreBasis = v => (v === "rounded" ? "rounded" : "exact");
 

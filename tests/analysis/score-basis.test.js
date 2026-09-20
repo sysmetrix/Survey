@@ -122,10 +122,11 @@ test("선택 화면: 데이터 설정·로컬 설정에 두 방식과 차이 설
       assert.ok(html.includes("반올림 전 평균으로 환산") && html.includes("반올림 후 평균으로 환산"), `${name}: 두 선택지 문구`);
       assert.ok(html.includes("최대 ±0.125점"), `${name}: 오차 크기 설명`);
       assert.equal((html.match(/badge info">기본</g) || []).length, 1, `${name}: '기본' 태그는 한 번만`);
-      assert.ok(html.includes('badge info">경영평가<'), `${name}: 반올림 후 선택지의 '경영평가' 태그`);
+      assert.ok(html.includes('badge info">조정<'), `${name}: 반올림 후 선택지의 '조정' 태그`);
       assert.ok(!html.includes("(기본)"), `${name}: 태그와 중복되는 '(기본)' 문구 없음`);
       assert.ok(html.includes("높아질 수도(올림), 낮아질 수도(내림)"), `${name}: 방향이 다를 수 있다는 설명`);
-      assert.ok(html.includes("올림,") && html.includes("내림,") && html.includes("예 1.") && html.includes("예 2."), `${name}: 올림·내림 예시 두 개`);
+      assert.ok(html.includes("· 올림") && html.includes("· 내림") && html.includes("예 1.") && html.includes("예 2."), `${name}: 올림·내림 예시 두 개(산식 그림)`);
+      assert.ok(html.includes("basis-formula") && html.includes("반올림 후(조정)"), `${name}: 반올림 전·후 산식이 그림으로 보임`);
       assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(html), `${name}: 이 파일에서의 영향 수`);
       assert.ok(html.includes("로컬 설정"), `${name}: 나중에 바꿀 수 있다는 안내`);
       const checked = html.match(/value="(exact|rounded)" checked/g);
