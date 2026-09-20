@@ -6,6 +6,7 @@ export const DEFAULT_THRESHOLDS = {
   kpiAchieved: 100, kpiMostly: 90, // 달성률 판정
   overallGood: 80, overallFair: 60, // 지표 달성 비율(%)로 종합 등급
   minN: 30, lowAlpha: 0.6, highMissing: 20,
+  minGroupN: 10, // 교차분석에서 이 인원 미만인 집단이 있으면 소표본 경고(BMJ/Cochrane 소집단 분석 관행)
 };
 
 /** 100점 환산 점수 → 수준 표현 */
@@ -26,13 +27,14 @@ export const sigStar = p => (!Number.isFinite(p) ? "" : p < 0.001 ? "***" : p < 
 /** 검정통계량 숫자 (순위합 V·W 는 정수 표기) */
 export const statNum = test => (["V", "W", "U"].includes(test.statLabel) && Number.isFinite(test.stat) ? String(Math.round(test.stat * 2) / 2) : round(test.stat, 2).toFixed(2));
 
-/** 검정 결과 괄호 표기: (t=4.12, p<.001, d=0.71) */
+/** 검정 결과 괄호 표기: (t=4.12, p<.001, d=0.71, 95%CI[0.32, 1.10]) */
 export function statParen(test) {
   if (!test) return "";
   const parts = [];
   if (Number.isFinite(test.stat)) parts.push(`${test.statLabel}=${statNum(test)}`);
   parts.push(pText(test.p));
   if (Number.isFinite(test.effect)) parts.push(`${test.effectName}=${round(test.effect, 2).toFixed(2)}`);
+  if (Array.isArray(test.ci) && test.ci.every(Number.isFinite)) parts.push(`95%CI[${round(test.ci[0], 2).toFixed(2)}, ${round(test.ci[1], 2).toFixed(2)}]`);
   return `(${parts.join(", ")})`;
 }
 

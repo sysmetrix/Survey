@@ -141,6 +141,13 @@ export function pchisqUpper(x, df) {
   return gammaPQ(df / 2, x / 2).q;
 }
 
+/** F분포 CDF P(F ≤ f) */
+export function pf(f, df1, df2) {
+  if (!(f > 0)) return 0;
+  if (!Number.isFinite(f)) return 1;
+  return 1 - pfUpper(f, df1, df2);
+}
+
 /** 단조증가 CDF의 역함수 (이분법) */
 function invert(cdf, p, lo, hi) {
   if (!(p > 0 && p < 1)) return NaN;
@@ -246,3 +253,6 @@ export function ptukey(q, cc, df, rr = 1) {
 
 /** 스튜던트화 범위분포 분위수 */
 export const qtukey = (p, cc, df) => invert(q => ptukey(q, cc, df), p, 0.01, 20);
+
+/** F분포 분위수 */
+export const qf = (p, df1, df2) => invert(f => pf(f, df1, df2), p, 1e-8, 10);

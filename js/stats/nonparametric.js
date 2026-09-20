@@ -48,11 +48,13 @@ export function mannWhitney(x, y) {
     const tieAdj = sum(ties.map(t => t ** 3 - t)) / (N * (N - 1));
     const sigma = Math.sqrt((n1 * n2 / 12) * ((N + 1) - tieAdj));
     const zc = W - n1 * n2 / 2;
-    if (sigma === 0) return { test: "Mann-Whitney U", W, U: W, p: 1, z: 0, r: 0, exact, n1, n2 };
+    if (sigma === 0) return { test: "Mann-Whitney U", W, U: W, p: 1, z: 0, r: 0, rb: 0, exact, n1, n2 };
     z = (zc - Math.sign(zc) * 0.5) / sigma;
     p = Math.min(1, 2 * Math.min(pnorm(z), pnorm(z, false)));
   }
-  return { test: "Mann-Whitney U", W, U: W, p, z, r: Math.abs(z) / Math.sqrt(N), exact, n1, n2 };
+  // rank-biserial correlation(Kerby 2014) — (호의적−비호의적 쌍 비율)로 직접 해석 가능한 순위형 효과크기
+  const rb = 1 - 2 * W / (n1 * n2);
+  return { test: "Mann-Whitney U", W, U: W, p, z, r: Math.abs(z) / Math.sqrt(N), rb, exact, n1, n2 };
 }
 
 /** 대응 2시점 Wilcoxon 부호순위 (d = post − pre). 0 차이는 제외 */
@@ -65,9 +67,12 @@ export function wilcoxonSignedRank(pre, post) {
   const nAll = d.length;
   const nz = d.filter(v => v !== 0);
   const n = nz.length;
-  if (n < 1) return { test: "Wilcoxon 부호순위", V: 0, p: 1, z: 0, r: 0, n: nAll, nNonZero: 0, exact: false };
+  if (n < 1) return { test: "Wilcoxon 부호순위", V: 0, p: 1, z: 0, r: 0, rb: 0, n: nAll, nNonZero: 0, exact: false };
   const { ranks, ties } = rank(nz.map(Math.abs));
   const V = sum(ranks.filter((_, i) => nz[i] > 0));
+  const totalRank = n * (n + 1) / 2;
+  // rank-biserial correlation(Kerby 2014): (V⁺−V⁻)/(V⁺+V⁻)
+  const rb = totalRank > 0 ? (2 * V - totalRank) / totalRank : 0;
   let p, z, exact = false;
   if (n < 50 && ties.length === 0 && n === nAll) {
     exact = true;
@@ -78,11 +83,11 @@ export function wilcoxonSignedRank(pre, post) {
   } else {
     const zc = V - n * (n + 1) / 4;
     const sigma = Math.sqrt(n * (n + 1) * (2 * n + 1) / 24 - sum(ties.map(t => t ** 3 - t)) / 48);
-    if (sigma === 0) return { test: "Wilcoxon 부호순위", V, p: 1, z: 0, r: 0, n: nAll, nNonZero: n, exact };
+    if (sigma === 0) return { test: "Wilcoxon 부호순위", V, p: 1, z: 0, r: 0, rb, n: nAll, nNonZero: n, exact };
     z = (zc - Math.sign(zc) * 0.5) / sigma;
     p = Math.min(1, 2 * Math.min(pnorm(z), pnorm(z, false)));
   }
-  return { test: "Wilcoxon 부호순위", V, p, z, r: Math.abs(z) / Math.sqrt(n), n: nAll, nNonZero: n, exact };
+  return { test: "Wilcoxon 부호순위", V, p, z, r: Math.abs(z) / Math.sqrt(n), rb, n: nAll, nNonZero: n, exact };
 }
 
 /** Kruskal-Wallis (동점 보정) */

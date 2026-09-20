@@ -25,8 +25,8 @@ export function pairedComparison(pre, post, { min, max }) {
   for (let i = 0; i < pre.length; i++) if (pre[i] !== null && post[i] !== null) pairsArr.push([pre[i], post[i]]);
   const gains = pairsArr.filter(([a]) => max - a > 0).map(([a, b]) => (b - a) / (max - a));
   const primary = useW
-    ? { name: "Wilcoxon 부호순위", stat: wx.V, statLabel: "V", z: wx.z, p: wx.p, effect: wx.r, effectName: "r", effectLabel: rLabel(wx.r) }
-    : { name: "대응표본 t", stat: pt.t, statLabel: "t", df: pt.df, p: pt.p, effect: pt.dz, effectName: "d", effectLabel: dLabel(pt.dz) };
+    ? { name: "Wilcoxon 부호순위", stat: wx.V, statLabel: "V", z: wx.z, p: wx.p, effect: wx.rb, effectName: "r", effectLabel: rLabel(wx.rb) }
+    : { name: "대응표본 t", stat: pt.t, statLabel: "t", df: pt.df, p: pt.p, ci: pt.ci, effect: pt.dz, effectName: "d", effectLabel: dLabel(pt.dz) };
   return {
     n, mPre: pt.mPre, mPost: pt.mPost, sdPre: pt.sdPre, sdPost: pt.sdPost, diff: pt.diff, ci: pt.ci,
     score100Pre: (pt.mPre - min) / range * 100, score100Post: (pt.mPost - min) / range * 100, diff100: pt.diff / range * 100,
@@ -51,8 +51,8 @@ export function unpairedComparison(pre, post, { min, max }) {
     mPre: t.m2, mPost: t.m1, sdPre: t.sd2, sdPost: t.sd1, diff: t.diff, ci: t.ci,
     score100Pre: (t.m2 - min) / range * 100, score100Post: (t.m1 - min) / range * 100, diff100: t.diff / range * 100,
     changePct: t.m2 ? t.diff / t.m2 * 100 : NaN,
-    primary: { name: "Welch t (비매칭)", stat: t.t, statLabel: "t", df: t.df, p: t.p, effect: t.g, effectName: "g", effectLabel: dLabel(t.g) },
-    mannWhitney: mw && { W: mw.W, p: mw.p },
+    primary: { name: "Welch t (비매칭)", stat: t.t, statLabel: "t", df: t.df, p: t.p, ci: t.ci, effect: t.g, effectName: "g", effectLabel: dLabel(t.g) },
+    mannWhitney: mw && { W: mw.W, p: mw.p, effect: mw.rb, effectName: "r" },
   };
 }
 

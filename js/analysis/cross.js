@@ -5,33 +5,48 @@ import { welchAnova, oneWayAnova } from "../stats/anova.js";
 import { gamesHowell } from "../stats/posthoc.js";
 import { mannWhitney, kruskalWallis } from "../stats/nonparametric.js";
 import { chiSquare, crosstab } from "../stats/categorical.js";
-import { holm } from "../stats/adjust.js";
+import { holm, benjaminiHochberg } from "../stats/adjust.js";
 import { dLabel, etaLabel, vLabel } from "../stats/effectsize.js";
+import { DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { compositeScores, naturalOrder } from "./items.js";
 
-/** 집단 비교 1회 */
-export function compareGroups(groupVals, groupNames, { minN = 2 } = {}) {
+/**
+ * 집단 비교 1회.
+ * @param {number} minN 이 인원 미만인 집단은 비교에서 제외
+ * @param {number} smallN 비교는 하되, 집단 중 이 인원 미만이 있으면 결과에 smallGroupN 플래그를 붙여
+ *   해석에 주의가 필요함을 표시(BMJ/Cochrane 소집단 분석 관행: 최소 10명 권장)
+ */
+export function compareGroups(groupVals, groupNames, { minN = 2, smallN = DEFAULT_THRESHOLDS.minGroupN } = {}) {
   const idx = groupVals.map((g, i) => i).filter(i => groupVals[i].length >= minN);
   const gs = idx.map(i => groupVals[i]), names = idx.map(i => groupNames[i]);
   const stats = groupNames.map((name, i) => ({ group: name, ...describe(groupVals[i]) }));
   if (gs.length < 2) return { stats, test: null };
+  const smallGroupN = gs.some(g => g.length < smallN);
   if (gs.length === 2) {
     const t = welchT(gs[0], gs[1]);
     const mw = mannWhitney(gs[0], gs[1]);
-    if (!t) return { stats, test: null, nonparam: mw };
-    return { stats, test: { name: "Welch t", stat: t.t, statLabel: "t", df: t.df, p: t.p, effect: t.g, effectName: "g", effectLabel: dLabel(t.g) }, nonparam: mw && { name: "Mann-Whitney", p: mw.p, stat: mw.W } };
+    if (!t) return { stats, test: null, nonparam: mw, smallGroupN };
+    return {
+      stats, smallGroupN,
+      test: { name: "Welch t", stat: t.t, statLabel: "t", df: t.df, p: t.p, ci: t.ci, effect: t.g, effectName: "g", effectLabel: dLabel(t.g) },
+      nonparam: mw && { name: "Mann-Whitney", p: mw.p, stat: mw.W, effect: mw.rb, effectName: "r" },
+    };
   }
   const w = welchAnova(gs), a = oneWayAnova(gs), kw = kruskalWallis(gs);
   const main = w || a;
-  if (!main) return { stats, test: null, nonparam: kw };
+  if (!main) return { stats, test: null, nonparam: kw, smallGroupN };
   const omega = a ? a.omegaSq : NaN;
   const res = {
-    stats,
+    stats, smallGroupN,
     test: { name: w ? "Welch F" : "F", stat: main.F, statLabel: "F", df: [main.df1, main.df2], p: main.p, effect: omega, effectName: "ω²", effectLabel: etaLabel(omega) },
     classic: a && { F: a.F, df1: a.df1, df2: a.df2, p: a.p, etaSq: a.etaSq },
     nonparam: kw && { name: "Kruskal-Wallis", stat: kw.H, df: kw.df, p: kw.p },
   };
-  if (main.p < 0.05) res.posthoc = gamesHowell(gs, names).filter(x => x.p < 0.05);
+  if (main.p < 0.05) {
+    const gh = gamesHowell(gs, names);
+    res.posthocExcluded = gh.excluded;
+    res.posthoc = gh.filter(x => x.p < 0.05);
+  }
   return res;
 }
 
@@ -63,8 +78,8 @@ export function crossAnalysis(survey, items, domainsRes, { maxGroups = 12, minGr
       total = { key: "ALL", label: "전체 만족도(100점)", ...cmp };
     }
     const ps = rows.map(r => r.test?.p ?? 1);
-    const adj = holm(ps);
-    rows.forEach((r, i) => { r.pHolm = r.test ? adj[i] : null; });
+    const adj = holm(ps), adjBH = benjaminiHochberg(ps);
+    rows.forEach((r, i) => { r.pHolm = r.test ? adj[i] : null; r.pBH = r.test ? adjBH[i] : null; });
     out.push({
       key: demo.key, label: demo.label, groups: names.map((nm, i) => ({ name: nm, n: counts[i] })),
       rows, total, significant: rows.filter(r => r.test && r.test.p < 0.05).map(r => r.key),

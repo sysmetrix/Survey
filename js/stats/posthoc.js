@@ -20,19 +20,23 @@ export function tukeyHSD(groups, labels) {
   return out;
 }
 
+/** 표본이 너무 작아 계산할 수 없는 쌍은 조용히 빼지 않고 반환 배열의 .excluded 에 사유와 함께 남김 */
 export function gamesHowell(groups, labels) {
   const k = groups.length, ns = groups.map(g => g.length), means = groups.map(mean), vars = groups.map(variance);
   const out = [];
+  const excluded = [];
   for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++) {
+    if (ns[i] < 2 || ns[j] < 2) { excluded.push({ g1: labels[j], g2: labels[i], reason: "n<2" }); continue; }
     const a = vars[i] / ns[i], b = vars[j] / ns[j];
-    if (!(a + b > 0) || ns[i] < 2 || ns[j] < 2) continue;
+    if (!(a + b > 0)) { excluded.push({ g1: labels[j], g2: labels[i], reason: "분산 0" }); continue; }
     const diff = means[j] - means[i];
     const se = Math.sqrt((a + b) / 2);
     const df = (a + b) ** 2 / (a * a / (ns[i] - 1) + b * b / (ns[j] - 1));
-    if (!(df >= 2)) continue;
+    if (!(df >= 2)) { excluded.push({ g1: labels[j], g2: labels[i], reason: "df<2" }); continue; }
     const q = Math.abs(diff) / se;
     const qc = qtukey(0.95, k, df);
     out.push({ g1: labels[j], g2: labels[i], diff, lwr: diff - qc * se, upr: diff + qc * se, q, df, p: Math.max(0, 1 - ptukey(q, k, df)) });
   }
+  out.excluded = excluded;
   return out;
 }

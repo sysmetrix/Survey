@@ -1,12 +1,14 @@
 // 사업 논리모형 (투입 → 활동 → 산출 → 성과(단기·중기) → 영향)
+// 성과 단계 예시 문구는 여성가족부·한국청소년정책연구원(청소년정책분석평가센터)
+// 「인구감소지역 청소년 성장지원 성과지표 개발」 토론회 자료집(2024.12.23)의 청소년 성장지원 outcome 지표를 참고함.
 
 export const LOGIC_STAGES = [
   { key: "inputs", label: "투입", hint: "예산, 인력, 시설, 협력기관" },
   { key: "activities", label: "활동", hint: "프로그램 운영 내용 (회차·인원)" },
   { key: "outputs", label: "산출", hint: "활동의 직접 결과: 운영 횟수, 참여 인원, 수료자 수" },
-  { key: "outcomesShort", label: "단기성과", hint: "참여 직후 변화: 지식·태도·역량, 만족" },
-  { key: "outcomesMid", label: "중기성과", hint: "행동 변화: 진로 계획 수립, 활동 지속" },
-  { key: "impact", label: "영향", hint: "장기·지역사회 변화" },
+  { key: "outcomesShort", label: "단기성과", hint: "참여 직후 변화: 지식·태도·역량, 만족, 소속감·지역 만족도·지역에 대한 인식 향상" },
+  { key: "outcomesMid", label: "중기성과", hint: "행동 변화: 진로 계획 수립, 활동 지속, 삶의 만족도·사회연결성 향상" },
+  { key: "impact", label: "영향", hint: "장기·지역사회 변화: 학업성취도 변화, 상급학교 진학률 등" },
 ];
 
 export const KPI_STAGES = ["산출", "단기성과", "중기성과", "영향"];

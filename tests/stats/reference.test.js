@@ -5,13 +5,13 @@ import assert from "node:assert/strict";
 import * as D from "../../js/stats/distributions.js";
 import { welchT, pairedT } from "../../js/stats/ttest.js";
 import { oneWayAnova, welchAnova } from "../../js/stats/anova.js";
-import { tukeyHSD } from "../../js/stats/posthoc.js";
+import { tukeyHSD, gamesHowell } from "../../js/stats/posthoc.js";
 import { wilcoxonSignedRank, kruskalWallis, mannWhitney } from "../../js/stats/nonparametric.js";
 import { shapiroWilk } from "../../js/stats/normality.js";
 import { chiSquare, fisherExact2x2 } from "../../js/stats/categorical.js";
-import { pearson } from "../../js/stats/correlation.js";
+import { pearson, spearman } from "../../js/stats/correlation.js";
 import { ols } from "../../js/stats/regression.js";
-import { holm } from "../../js/stats/adjust.js";
+import { holm, benjaminiHochberg } from "../../js/stats/adjust.js";
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: got ${a}, expected ${b}`);
 
@@ -91,4 +91,48 @@ test("Mann-Whitney 정확분포는 순열 전수와 일치", () => {
 test("Holm 보정", () => {
   const r = holm([0.01, 0.04, 0.03]);
   near(r[0], 0.03, 1e-12, "h1"); near(r[1], 0.06, 1e-12, "h2"); near(r[2], 0.06, 1e-12, "h3");
+});
+
+test("Benjamini-Hochberg 보정 (표준 step-up 정의식으로 손 계산 대조)", () => {
+  const r = benjaminiHochberg([0.01, 0.04, 0.03]);
+  near(r[0], 0.03, 1e-12, "bh1"); near(r[1], 0.04, 1e-12, "bh2"); near(r[2], 0.04, 1e-12, "bh3");
+  const r2 = benjaminiHochberg([0.001, 0.02, 0.03, 0.04, 0.5]);
+  near(r2[0], 0.005, 1e-9, "bh2-1"); near(r2[1], 0.05, 1e-9, "bh2-2"); near(r2[4], 0.5, 1e-12, "bh2-5");
+});
+
+test("F분포 qf/pf — t분포와의 수학적 항등식으로 검증 (F(1,df)=T(df)², F(df1,df2,p)=1/F(df2,df1,1-p))", () => {
+  near(D.qf(0.95, 1, 10), D.qt(0.975, 10) ** 2, 1e-4, "qf(.95,1,10)=qt(.975,10)^2");
+  near(D.pf(D.qt(0.975, 10) ** 2, 1, 10), 0.95, 1e-6, "pf 항등식");
+  const f = D.qf(0.9, 5, 12);
+  near(f, 1 / D.qf(0.1, 12, 5), 1e-4, "F 역수 항등식");
+});
+
+test("Yates 연속성 보정 — 2×2 는 정의식 Σ(|O−E|−0.5)²/E 대로 계산되고(R chisq.test 기본값과 동일 공식), 보정 전 값도 별도 보존", () => {
+  // 정의식을 소스와 별도로 직접 재계산(테이블 합=70): 보정 전 χ²=0.129630, Yates 보정 χ²=0.011667
+  const c = chiSquare([[10, 15], [20, 25]]);
+  near(c.chi2Uncorrected, 0.1296296296296296, 1e-9, "uncorrected chi2");
+  near(c.chi2, 0.011666666666666653, 1e-9, "yates chi2");
+  near(c.pUncorrected, 0.7188163610152827, 1e-9, "uncorrected p");
+  near(c.p, 0.9139858996305869, 1e-9, "yates p");
+});
+
+test("Games-Howell — PlantGrowth, 정의식(Welch-Satterthwaite df·studentized range)으로 독립 재계산한 값과 대조", () => {
+  const gh = gamesHowell([ctrl, trt1, trt2], ["ctrl", "trt1", "trt2"]);
+  // diff는 방법과 무관하게 평균 차이이므로 위 TukeyHSD 참조값(R)과 그대로 일치해야 함
+  const byPair = Object.fromEntries(gh.map(x => [`${x.g1}-${x.g2}`, x]));
+  near(byPair["trt1-ctrl"].diff, -0.371, 1e-9, "gh diff trt1-ctrl");
+  near(byPair["trt1-ctrl"].q, 1.6846965883281886, 1e-6, "gh q trt1-ctrl");
+  near(byPair["trt1-ctrl"].df, 16.523585056859297, 1e-6, "gh df trt1-ctrl");
+  near(byPair["trt1-ctrl"].p, 0.4745549221939831, 1e-6, "gh p trt1-ctrl");
+  near(byPair["trt2-trt1"].q, 4.256922182351753, 1e-6, "gh q trt2-trt1");
+  near(byPair["trt2-trt1"].p, 0.02370345473920976, 1e-6, "gh p trt2-trt1");
+  assert.deepEqual(gh.excluded, [], "표본이 충분해 제외되는 쌍이 없어야 함");
+});
+
+test("Spearman n<10 정확법 — 완전 단조 자료는 |rho|=1을 만드는 순열이 정확히 2개(항등·완전반전)이므로 p=2/n!", () => {
+  const x = [1, 2, 3, 4, 5], y = [1, 2, 3, 4, 5];
+  const r = spearman(x, y);
+  assert.equal(r.exact, true);
+  near(r.r, 1, 1e-12, "rho=1");
+  near(r.p, 2 / 120, 1e-12, "exact p = 2/5!");
 });

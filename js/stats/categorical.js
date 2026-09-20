@@ -15,7 +15,10 @@ export function crosstab(rowVals, colVals, rowLevels, colLevels) {
   return { rows, cols, table };
 }
 
-/** Pearson χ² (연속성 보정 없음) */
+/**
+ * Pearson χ². 2×2 표는 R chisq.test() 기본값(correct=TRUE)과 동일하게 Yates 연속성 보정을
+ * 기본 chi2/p로 삼고, 보정 전 값은 chi2Uncorrected/pUncorrected 로 남겨 둠(Yates 1934).
+ */
 export function chiSquare(table) {
   // 합계가 0인 행/열 제거
   let t = table.filter(r => r.some(v => v > 0));
@@ -26,17 +29,22 @@ export function chiSquare(table) {
   const rowT = t.map(r => r.reduce((s, v) => s + v, 0));
   const colT = t[0].map((_, j) => t.reduce((s, r) => s + r[j], 0));
   const N = rowT.reduce((s, v) => s + v, 0);
-  let chi2 = 0, low = 0;
+  const yates = R === 2 && C === 2;
+  let chi2 = 0, chi2Yates = 0, low = 0;
   const expected = t.map((r, i) => r.map((o, j) => {
     const e = rowT[i] * colT[j] / N;
     if (e < 5) low++;
     chi2 += (o - e) ** 2 / e;
+    if (yates) chi2Yates += (Math.max(0, Math.abs(o - e) - 0.5)) ** 2 / e;
     return e;
   }));
   const df = (R - 1) * (C - 1);
   const V = Math.sqrt(chi2 / (N * (Math.min(R, C) - 1)));
-  const out = { test: "χ²", chi2, df, p: pchisqUpper(chi2, df), N, expected, V, lowExpected: low, lowExpectedPct: low / (R * C) * 100 };
-  if (R === 2 && C === 2) out.fisher = fisherExact2x2(t[0][0], t[0][1], t[1][0], t[1][1]);
+  const out = {
+    test: "χ²", chi2: yates ? chi2Yates : chi2, df, p: pchisqUpper(yates ? chi2Yates : chi2, df), N, expected, V,
+    lowExpected: low, lowExpectedPct: low / (R * C) * 100,
+  };
+  if (yates) { out.chi2Uncorrected = chi2; out.pUncorrected = pchisqUpper(chi2, df); out.fisher = fisherExact2x2(t[0][0], t[0][1], t[1][0], t[1][1]); }
   return out;
 }
 

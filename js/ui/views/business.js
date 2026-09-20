@@ -56,6 +56,12 @@ function quickKpis(r) {
     P && { id: "improved", label: "향상자 비율 60% 이상", kpi: { name: "향상자 비율", stage: "중기성과", metric: "improvedRate", targetRef: "전체", target: 60, unit: "%" } },
     { id: "count", label: "참여 인원 (직접 입력)", kpi: { name: "참여 인원(실인원)", stage: "산출", metric: "manual", target: null, unit: "명" } },
     { id: "sessions", label: "운영 횟수 (직접 입력)", kpi: { name: "프로그램 운영 횟수", stage: "산출", metric: "manual", target: null, unit: "회" } },
+    // 청소년 사업 성과지표(여성가족부·한국청소년정책연구원 「인구감소지역 청소년 성장지원 성과지표 개발」 2024.12.23 참고) — 대상 문항은 직접 지정
+    A.items.length && { id: "belonging", label: "지역사회 소속감 향상", kpi: { name: "지역사회 소속감(100점 환산)", stage: "단기성과", metric: "score100", targetRef: "", target: 80, unit: "점" } },
+    A.items.length && { id: "lifeSat", label: "삶의 만족도 향상", kpi: { name: "삶의 만족도(100점 환산)", stage: "단기성과", metric: "score100", targetRef: "", target: 80, unit: "점" } },
+    P && { id: "socialConn", label: "사회연결성 향상", kpi: { name: "사회연결성 향상", stage: "중기성과", metric: "prepostDiff100", targetRef: "전체", target: 10, unit: "점" } },
+    A.items.length && { id: "regionView", label: "지역에 대한 인식 개선", kpi: { name: "지역에 대한 인식(100점 환산)", stage: "단기성과", metric: "score100", targetRef: "", target: 80, unit: "점" } },
+    { id: "activityExp", label: "활동 참여 경험(연 참여 횟수)", kpi: { name: "활동 참여 경험(연 참여 횟수)", stage: "산출", metric: "manual", target: null, unit: "회" } },
   ].filter(Boolean);
 }
 

@@ -110,7 +110,10 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   if (P?.matching) ov.push(B("s.match", 2, `사전·사후 매칭 ${P.matching.pairs}명(사전만 응답 ${P.matching.preOnly}명, 사후만 응답 ${P.matching.postOnly}명) — 매칭 기준: ${P.matching.keyDesc}`));
   ov.push(B("s.items", 1, `조사 내용: ${parts.join(", ")}`));
   if (scaleRange) ov.push(B("s.scale", 1, `척도: ${scaleRange.min}~${scaleRange.max}점(점수가 높을수록 긍정)`), B("s.score100", 2, "100점 환산 점수 = (평균 − 최소점) ÷ (최대점 − 최소점) × 100, 긍정응답률 = 상위 2개 척도 응답 비율"));
-  if (A.reliability && Number.isFinite(A.reliability.alpha)) ov.push(B("s.alpha", 1, `신뢰도: Cronbach α = ${f2(A.reliability.alpha)}(${alphaLabel(A.reliability.alpha)})`));
+  if (A.reliability && Number.isFinite(A.reliability.alpha)) {
+    const [aLo, aHi] = A.reliability.alphaCi || [];
+    ov.push(B("s.alpha", 1, `신뢰도: Cronbach α = ${f2(A.reliability.alpha)}(${alphaLabel(A.reliability.alpha)})${Number.isFinite(aLo) ? `, 95%CI[${f2(aLo)}, ${f2(aHi)}]` : ""}`));
+  }
   if (A.meta.straightLiners && !S.excludedCount) ov.push(B("s.clean", 1, `자료 점검: 모든 척도 문항에 같은 값으로 응답한 사례 ${A.meta.straightLiners}명 확인(분석에 포함)`));
   ov.push(B("s.method", 1, "분석 방법: 기술통계, 집단 간 차이 검정(Welch t검정·분산분석), 사전·사후 차이 검정(대응표본 t검정 또는 Wilcoxon 부호순위 검정), 유의수준 .05"));
   bullets(ov);
@@ -387,7 +390,8 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   if (A.reliability && A.reliability.alpha < t.lowAlpha) cau.push(B("c.alpha", 1, `척도 신뢰도(α=${f2(A.reliability.alpha)})가 낮아 문항 구성 검토 필요`));
   const hiMiss = A.items.filter(i => i.missing / Math.max(1, i.nTotal) * 100 > t.highMissing);
   if (hiMiss.length) cau.push(B("c.missing", 1, `무응답 비율이 ${t.highMissing}%를 넘는 문항: ${hiMiss.map(i => q(i.label)).join(", ")}`));
-  if (crossUse.reduce((s, c) => s + c.rows.filter(r => r.test).length, 0) >= 4) cau.push(B("c.multi", 1, "응답자 특성별 비교는 여러 검정을 반복한 결과로, 유의확률이 경계 수준인 결과는 신중히 해석 필요(부록에 Holm 보정값 제시)"));
+  if (crossUse.reduce((s, c) => s + c.rows.filter(r => r.test).length, 0) >= 4) cau.push(B("c.multi", 1, "응답자 특성별 비교는 여러 검정을 반복한 결과로, 유의확률이 경계 수준인 결과는 신중히 해석 필요(부록에 Holm·BH 보정값 제시)"));
+  if (crossUse.some(c => c.rows.some(r => r.smallGroupN) || c.total?.smallGroupN)) cau.push(B("c.smalln", 1, "응답자 특성별 비교 중 일부는 집단 인원이 10명 미만으로 결과를 신중히 해석할 필요가 있음"));
   if (texts.length) cau.push(B("c.text", 1, "주관식 분류는 규칙 기반 자동 분류 결과이므로 원문 검토와 병행 필요"));
   if (P?.retrospective) cau.push(B("c.retro", 1, "회고식 사전검사 결과는 응답자의 회상에 의존함"));
   if (cau.length) { push(H(2, "해석 시 유의사항")); bullets(cau); }
@@ -407,9 +411,10 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     });
   }
   if (crossUse.length) {
-    const rows = [["특성", "문항", "검정", "통계량", "p", "보정 p(Holm)", "효과크기"].map(cellH)];
-    crossUse.forEach(c => c.rows.forEach((r, i) => rows.push([i === 0 ? { text: c.label, rowSpan: c.rows.length, bold: true } : null, { text: r.label, align: "LEFT" }, r.test?.name || "-", r.test ? statNum(r.test) : "-", r.test ? pText(r.test.p).replace(/^p=?/, "") : "-", Number.isFinite(r.pHolm) ? pText(r.pHolm).replace(/^p=?/, "") : "-", r.test && Number.isFinite(r.test.effect) ? `${r.test.effectName}=${f2(r.test.effect)}` : "-"].filter(x => x !== null))));
-    push({ type: "table", caption: "응답자 특성별 차이 검정 전체 결과", compact: true, columns: [{ weight: 1.2 }, { weight: 2.6, align: "LEFT" }, { weight: 1.1 }, { weight: 0.9 }, { weight: 0.8 }, { weight: 1 }, { weight: 1 }], rows });
+    const rows = [["특성", "문항", "검정", "통계량", "p", "보정 p(Holm)", "보정 p(BH)", "효과크기"].map(cellH)];
+    crossUse.forEach(c => c.rows.forEach((r, i) => rows.push([i === 0 ? { text: c.label, rowSpan: c.rows.length, bold: true } : null, { text: `${r.label}${r.smallGroupN ? " †" : ""}`, align: "LEFT" }, r.test?.name || "-", r.test ? statNum(r.test) : "-", r.test ? pText(r.test.p).replace(/^p=?/, "") : "-", Number.isFinite(r.pHolm) ? pText(r.pHolm).replace(/^p=?/, "") : "-", Number.isFinite(r.pBH) ? pText(r.pBH).replace(/^p=?/, "") : "-", r.test && Number.isFinite(r.test.effect) ? `${r.test.effectName}=${f2(r.test.effect)}` : "-"].filter(x => x !== null))));
+    push({ type: "table", caption: "응답자 특성별 차이 검정 전체 결과", compact: true, columns: [{ weight: 1.2 }, { weight: 2.4, align: "LEFT" }, { weight: 1.1 }, { weight: 0.9 }, { weight: 0.8 }, { weight: 0.9 }, { weight: 0.9 }, { weight: 1 }], rows,
+      notes: crossUse.some(c => c.rows.some(r => r.smallGroupN)) ? ["† 집단 인원 10명 미만 포함(신중히 해석)"] : undefined });
   }
   push({ type: "table", caption: "주요 산식 정의", compact: true, columns: [{ weight: 1.6, align: "LEFT" }, { weight: 4, align: "LEFT" }], rows: [
     [cellH("지표"), cellH("산식·기준")],

@@ -37,6 +37,7 @@ test("분석 총괄: 문항·영역·교차·사전사후·NPS·주관식·IPA",
   assert.equal(res.nps.length, 1); assert.ok(res.nps[0].nps >= -100 && res.nps[0].nps <= 100);
   assert.equal(res.cross.length, 2);
   assert.ok(res.cross[0].rows[0].test && Number.isFinite(res.cross[0].rows[0].test.p));
+  assert.ok(res.cross[0].rows.some(r => Number.isFinite(r.pBH)), "BH 보정값도 함께 계산됨");
   assert.equal(res.prepost.items.length, 2);
   const pp = res.prepost.items[0];
   assert.ok(pp.diff > 0 && pp.primary.p < 0.05, "설계상 사후 향상");

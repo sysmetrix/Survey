@@ -34,3 +34,23 @@ export function alphaLabel(a) {
   if (!Number.isFinite(a)) return "-";
   return a >= 0.9 ? "매우 우수" : a >= 0.8 ? "양호" : a >= 0.7 ? "수용 가능" : a >= 0.6 ? "다소 낮음" : "낮음";
 }
+
+/**
+ * 독립 2표본 Cohen's d(또는 g)의 근사 95% 신뢰구간 (Hedges & Olkin 1985 표준오차식).
+ * SE_d ≈ √((n1+n2)/(n1·n2) + d²/(2(n1+n2)-4))
+ */
+export function dCiIndependent(d, n1, n2) {
+  if (!Number.isFinite(d) || n1 < 2 || n2 < 2) return [NaN, NaN];
+  const se = Math.sqrt((n1 + n2) / (n1 * n2) + (d * d) / (2 * (n1 + n2) - 4));
+  return [d - 1.96 * se, d + 1.96 * se];
+}
+
+/**
+ * 대응(1표본형) d_z의 근사 95% 신뢰구간 (Borenstein, Hedges, Higgins & Rothstein 2009 — 사전·사후
+ * 상관을 반영하지 않는 보수적(다소 넓은) 버전). SE_dz ≈ √(1/n + d_z²/(2n))
+ */
+export function dzCiPaired(dz, n) {
+  if (!Number.isFinite(dz) || n < 2) return [NaN, NaN];
+  const se = Math.sqrt(1 / n + (dz * dz) / (2 * n));
+  return [dz - 1.96 * se, dz + 1.96 * se];
+}

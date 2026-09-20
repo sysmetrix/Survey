@@ -1,6 +1,19 @@
 // 신뢰도: Cronbach α (목록별 완전 사례), 문항 제거 시 α, 수정 문항-총점 상관
 import { variance, sum } from "./descriptive.js";
 import { pearson } from "./correlation.js";
+import { qf } from "./distributions.js";
+
+/**
+ * Cronbach α의 95% 신뢰구간 (Feldt, Woodruff & Salih 1987 — F분포 기반 정확식).
+ * LL = 1 − (1−α)·F(0.975; n−1, (n−1)(k−1)), UL = 1 − (1−α)·F(0.025; n−1, (n−1)(k−1))
+ */
+export function alphaCi(alpha, n, k) {
+  if (!Number.isFinite(alpha) || n < 2 || k < 2) return [NaN, NaN];
+  const df1 = n - 1, df2 = (n - 1) * (k - 1);
+  const lo = 1 - (1 - alpha) * qf(0.975, df1, df2);
+  const hi = 1 - (1 - alpha) * qf(0.025, df1, df2);
+  return [lo, hi];
+}
 
 /** items: [{name, values}] (values는 역코딩 반영된 숫자|null) */
 export function cronbachAlpha(items) {
@@ -29,5 +42,5 @@ export function cronbachAlpha(items) {
     const rc = pearson(rows.map(r => r[j]), restTotal);
     return { name: it.name, rCorrected: rc ? rc.r : NaN, alphaIfDeleted: alphaOf(rest) };
   });
-  return { alpha, n, k, items: itemStats };
+  return { alpha, alphaCi: alphaCi(alpha, n, k), n, k, items: itemStats };
 }
