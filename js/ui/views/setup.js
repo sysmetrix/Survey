@@ -1,12 +1,12 @@
 // ② 데이터 설정 화면: 설계·열 역할·척도·역문항·영역·사전사후 짝·매칭·불성실응답
-import { state, compute, invalidate } from "../store.js";
+import { state, compute, invalidate, chooseDataSheet } from "../store.js";
 import { ROLES, normKey } from "../../model/detect.js";
-import { DESIGN_LABELS, rawColumn } from "../../model/codebook.js";
+import { DESIGN_LABELS, rawColumn, dataSheetCandidates } from "../../model/codebook.js";
 import { LABEL_SETS, matchLabelSet, mapWithSet } from "../../model/label-sets.js";
 import { unmappedValues } from "../../model/recode.js";
 import { YEAR_SCHEMES, DEFAULT_YEAR_SCHEME, REF_YEAR, yearToBucket } from "../../model/year-bucket.js";
 import { maskPII, isBlank } from "../../core/util.js";
-import { esc, option, levelBadge, toast } from "../util.js";
+import { esc, option, levelBadge, toast, busy, busyDone, nextFrame } from "../util.js";
 import { refresh, go } from "../router.js";
 import { scoreBasisPanel, scoreBasisActions } from "../score-basis.js";
 
@@ -101,6 +101,7 @@ export function render() {
   const sv = r.survey;
   const domainName = id => cb.domains.find(d => d.id === id)?.name || "";
   const multiSheet = cb.responseSheets.length > 1;
+  const sheetCandidates = dataSheetCandidates(state.dataset);
   const idCandidates = si => cb.columns.filter(c => c.sheet === si && ["id", "ignore", "demographic", "numeric"].includes(c.role));
   const m = sv.matching;
 
@@ -149,7 +150,15 @@ export function render() {
     ${r.codebookWarnings.length || unmappedWarn ? `<ul class="warnings">${unmappedWarn}${r.codebookWarnings.map(w => `<li>${levelBadge(w.level)} ${esc(w.msg)}</li>`).join("")}</ul>` : ""}
   </section>
 
-  ${r.analysis.items.length ? scoreBasisPanel(r.analysis.items) : ""}
+  ${sheetCandidates.length > 1 ? `<section class="card">
+    <h2>응답 시트 선택</h2>
+    <p class="muted">이 파일에 설문 응답으로 보이는 시트가 여러 개 있습니다. 지금은 한 번에 한 시트만 분석하므로, 분석할 시트를 고르세요.</p>
+    <div class="row gap wrap" role="radiogroup" aria-label="응답 시트">
+      ${sheetCandidates.map(c => `<label class="check"><input type="radio" name="data-sheet" value="${c.index}" ${cb.responseSheets[0] === c.index ? "checked" : ""} data-change="data-sheet"> ${esc(c.name)} <span class="small muted">(${c.nRows}행)</span></label>`).join("")}
+    </div>
+  </section>` : ""}
+
+  ${r.analysis.items.length ? scoreBasisPanel(r.analysis.items, { compact: true }) : ""}
 
   ${cb.design === "prepost-sheets" ? `
   <section class="card">
@@ -241,7 +250,38 @@ export const actions = {
     invalidate(); refresh();
   },
   design: el => { state.codebook.design = el.value; invalidate(); refresh(); },
-  "exclude-straight": el => { state.excludeStraight = el.checked; invalidate(); refresh(); },
+  "data-sheet": async el => {
+    const idx = +el.value;
+    if (idx === state.codebook.responseSheets[0]) return;
+    const name = state.dataset.sheets[idx]?.name || "";
+    busy(true, `'${name}' 시트로 문항을 다시 판별하는 중…`);
+    await nextFrame();
+    chooseDataSheet(idx);
+    try { compute(); }
+    catch (e) { console.error(e); busy(false); refresh(); toast(`시트를 바꾸지 못했습니다: ${e.message}`, "bad", 6000); return; }
+    busy(false);
+    refresh();
+    busyDone(`'${name}' 시트로 다시 판별했습니다.`);
+  },
+  "exclude-straight": async el => {
+    const checked = el.checked;
+    busy(true, checked ? "불성실 응답 의심 사례를 제외하고\n분석을 다시 계산하는 중…" : "제외했던 사례를 다시 포함하고\n분석을 다시 계산하는 중…");
+    await nextFrame();
+    state.excludeStraight = checked;
+    invalidate();
+    let r;
+    try { r = compute(); }
+    catch (e) {
+      console.error(e);
+      state.excludeStraight = !checked; invalidate();
+      busy(false); refresh();
+      toast(`처리하지 못했습니다: ${e.message}`, "bad", 6000);
+      return;
+    }
+    busy(false);
+    refresh();
+    busyDone(checked ? `불성실 응답 의심 사례 ${r?.excludedCount ?? ""}명을 제외했습니다.` : "제외했던 사례를 다시 포함했습니다.");
+  },
   idkey: el => { state.codebook.pairing.idKeys[+el.dataset.i] = el.value || null; invalidate(); refresh(); },
   "confirm-match": el => { state.codebook.pairing.confirmed[+el.dataset.pre] = +el.dataset.post; invalidate(); toast("매칭을 확정했습니다", "ok"); refresh(); },
   col: el => {

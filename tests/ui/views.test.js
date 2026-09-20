@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { parseFile } from "../../js/io/parse.js";
-import { state, loadDataset, reportBlocks, compute, invalidate } from "../../js/ui/store.js";
+import { state, loadDataset, reportBlocks, compute, invalidate, chooseDataSheet } from "../../js/ui/store.js";
 import * as load from "../../js/ui/views/load.js";
 import * as setup from "../../js/ui/views/setup.js";
 import * as business from "../../js/ui/views/business.js";
@@ -82,6 +82,34 @@ test("데이터 설정: 보기 점수 패널·일괄 적용", async () => {
   assert.ok(!setup.render().includes("미변환"));
   setup.actions["labelmap-reverse"]({ dataset: { key: a.key } });
   assert.equal(a.labelMap["완전 별로"], 5);
+});
+
+test("데이터 설정: 응답으로 보이는 시트가 여럿이면 고르는 카드가 뜨고, 고르면 그 시트로 다시 판별", () => {
+  const rows1 = [[1, 4], [2, 5]];
+  const rows2 = [[1, 3], [2, 4], [3, 5]];
+  loadDataset({
+    fileName: "m.xlsx", source: "file", sheets: [
+      { name: "1차", headers: ["번호", "만족도"], rows: rows1 },
+      { name: "2차", headers: ["번호", "만족도"], rows: rows2 },
+    ],
+  });
+  compute();
+  const before = setup.render();
+  assert.ok(before.includes("응답 시트 선택") && before.includes("> 1차 ") && before.includes("> 2차 "), "후보 시트 두 개가 보임");
+  assert.equal(compute().survey.n, 2, "고르기 전에는 첫 시트(1차, 2행)를 씀");
+
+  chooseDataSheet(1);
+  compute();
+  const after = setup.render();
+  assert.equal(compute().survey.n, 3, "2차 시트(3행)로 다시 판별됨");
+  assert.ok(/name="data-sheet" value="1" checked/.test(after), "2차가 선택 표시됨");
+});
+
+test("데이터 설정: 응답 시트 후보가 하나뿐이면 고르는 카드가 안 보임(기존 파일 그대로)", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  compute();
+  assert.ok(!setup.render().includes("응답 시트 선택"));
 });
 
 test("KPI 편집 → 재계산", async () => {

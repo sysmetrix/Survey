@@ -67,6 +67,8 @@ export function textAnalysis(values, { themes = DEFAULT_THEMES, maxQuotes = 3, g
     const rs = substantive.filter(r => r.themes.includes(t.id));
     return { id: t.id, name: t.name, n: rs.length, pct: rs.length / Math.max(1, substantive.length) * 100, positive: rs.filter(r => r.type === "positive").length, negative: rs.filter(r => r.type === "negative" || r.type === "suggestion").length };
   }).filter(t => t.n > 0).sort((a, b) => b.n - a.n);
+  // 미리 정한 8개 주제 키워드에 하나도 걸리지 않은 응답 — 얼마나 놓치고 있는지 그대로 보여줌(분류 신뢰도 투명성)
+  const unclassified = substantive.filter(r => r.themes.length === 0).length;
 
   // 대표 인용문: 15~150자, 키워드 점수 높은 순, 개인정보 마스킹
   const kwScore = new Map(keywords.map((k, idx) => [k.word, 30 - idx]));
@@ -96,7 +98,7 @@ export function textAnalysis(values, { themes = DEFAULT_THEMES, maxQuotes = 3, g
   return {
     nTotal: values.length, nAnswered: items.length, nSubstantive: substantive.length,
     avgLength: items.length ? items.reduce((s, x) => s + x.text.length, 0) / items.length : 0,
-    types, keywords, bigrams, themes: themeStats,
+    types, keywords, bigrams, themes: themeStats, unclassified,
     quotes: { positive: pick("positive"), improve: pick("improve") }, themeQuotes,
     responses: responses.map(r => ({ text: maskPII(r.text), type: r.type, themes: r.themes })),
     byGroup,

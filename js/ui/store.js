@@ -1,5 +1,5 @@
 // 앱 상태 저장소 + 분석 파이프라인 (브라우저 전용 계층이지만 DOM 미사용)
-import { buildCodebook, applySavedCodebook, lintCodebook } from "../model/codebook.js";
+import { buildCodebook, applySavedCodebook, lintCodebook, dataSheetCandidates } from "../model/codebook.js";
 import { buildSurvey } from "../model/survey.js";
 import { analyzeSurvey } from "../analysis/run.js";
 import { readBusinessFromDataset } from "../evaluation/business-sheet.js";
@@ -40,7 +40,7 @@ export function persistSettings() {
 }
 
 export const state = {
-  dataset: null, codebook: null,
+  dataset: null, codebook: null, dataSheetIndex: null,
   logicModel: emptyLogicModel(), kpis: [],
   settings: loadSettings(),
   overrides: {}, hidden: [], hiddenChapters: [],
@@ -58,12 +58,14 @@ export const invalidate = () => { state.dirty = true; };
 /** 새 데이터셋 적용 (프로젝트의 코드북이 있으면 재연결) */
 export function loadDataset(dataset, project = null) {
   state.dataset = dataset;
+  state.dataSheetIndex = null;
   let note = null;
   if (project?.codebook) {
     const r = applySavedCodebook(project.codebook, dataset);
     state.codebook = r.codebook;
     note = `저장된 설정 적용: ${r.matched}/${r.total}개 열 연결`;
   } else {
+    // 사전·사후 짝이 없는데 '응답' 후보 시트가 여럿이면 일단 첫 시트로 시작 — 데이터 설정 화면에서 고를 수 있음
     state.codebook = buildCodebook(dataset);
   }
   const biz = readBusinessFromDataset(dataset, state.codebook);
@@ -76,6 +78,19 @@ export function loadDataset(dataset, project = null) {
   }
   invalidate();
   return note;
+}
+
+/** 사전·사후 짝이 없을 때, 응답으로 쓸 시트를 사용자가 다시 고름(다른 열 설정은 처음부터 다시 판별) */
+export function chooseDataSheet(index) {
+  if (!state.dataset || !dataSheetCandidates(state.dataset).some(c => c.index === index)) return;
+  state.dataSheetIndex = index;
+  state.codebook = buildCodebook(state.dataset, { dataSheetIndex: index });
+  const biz = readBusinessFromDataset(state.dataset, state.codebook);
+  state.businessFound = biz.found;
+  state.logicModel = biz.logicModel || emptyLogicModel();
+  state.kpis = biz.kpis || [];
+  state.overrides = {}; state.hidden = []; state.hiddenChapters = []; state.deckHidden = []; state.overrideBase = {};
+  invalidate();
 }
 
 /** 외부(프로젝트 파일·내역)에서 온 설정은 알려진 항목만 검증해 반영 */

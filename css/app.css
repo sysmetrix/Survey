@@ -353,6 +353,7 @@ h3.flush { margin: 0; }
 .fmt-btn.on { background: var(--brand); color: var(--on-brand); }
 .fmt-sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; flex: none; }
 .fmt-color { width: 18px; height: 18px; border-radius: 50%; background: var(--fmt-c, transparent); border: 1px solid var(--border); }
+.fmt-color:hover { background: var(--fmt-c, var(--surface-2)); box-shadow: 0 0 0 2px var(--border-strong); } /* .fmt-btn:hover 의 회색이 실제 색을 가리지 않도록 */
 .fmt-clear { width: 22px; height: 22px; }
 .r-box { border-top: 2px solid var(--paper-rule); border-bottom: 2px solid var(--paper-rule); background: var(--paper-soft); padding: 8px 12px; margin: 8px 0 18px; font-family: var(--paper-sub-font, var(--paper-heading, "함초롬돋움")), var(--font); font-size: var(--paper-small-size, 14px); }
 .r-box + .r-h1 { margin-top: 52px; } /* 요약 상자와 첫 장 제목 사이 한 줄 더 띄움 */
@@ -392,8 +393,8 @@ svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .busy-msg { white-space: pre-line; line-height: 1.5; }
 .busy.done { cursor: pointer; }
-.busy.done .spinner { animation: none; border-color: var(--ok); background: var(--ok-soft); position: relative; }
-.busy.done .spinner::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--ok); font-weight: 800; font-size: 14px; }
+.busy.done .spinner { animation: none; border-color: var(--brand); background: var(--brand-soft); position: relative; }
+.busy.done .spinner::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--brand); font-weight: 800; font-size: 14px; }
 
 /* ── 반응형 ── */
 @media (max-width: 1100px) {

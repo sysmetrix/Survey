@@ -38,6 +38,20 @@ function marksAt(node, root) {
 }
 
 const sameMarks = (a, b) => a.bold === b.bold && a.italic === b.italic && a.underline === b.underline && a.strike === b.strike && a.color === b.color;
+const hasMarks = m => m.bold || m.italic || m.underline || m.strike || m.color;
+
+/**
+ * 서식 표시(** ++ 등)는 앞뒤에 공백이 붙으면 서식으로 인식되지 않는다(inline-marks.js).
+ * 선택 영역이 단어 경계의 공백을 함께 물고 오는 일이 흔해서, 앞뒤 공백은 표시 밖에 두고
+ * 알맹이만 감싼다 — 안 그러면 "**글자 **"처럼 저장돼 다음에 열 때 별표가 그대로 보인다.
+ */
+export function wrapRun(text, marks) {
+  if (!hasMarks(marks)) return text;
+  const lead = text.match(/^\s+/)?.[0] ?? "";
+  const trail = lead.length < text.length ? (text.slice(lead.length).match(/\s+$/)?.[0] ?? "") : "";
+  const core = text.slice(lead.length, text.length - trail.length);
+  return core ? lead + wrapMarks(escapeLiteral(core), marks) + trail : text;
+}
 
 /** 편집 끝(blur): contenteditable 안 실제 서식 → 저장 표식 문자열로 되돌림 */
 export function htmlToMarkup(root) {
@@ -56,5 +70,5 @@ export function htmlToMarkup(root) {
     node.childNodes.forEach(walk);
   };
   root.childNodes.forEach(walk);
-  return runs.map(r => wrapMarks(escapeLiteral(r.text), r.marks)).join("").replace(/\s+/g, " ").trim();
+  return runs.map(r => (hasMarks(r.marks) ? wrapRun(r.text, r.marks) : escapeLiteral(r.text))).join("").replace(/\s+/g, " ").trim();
 }

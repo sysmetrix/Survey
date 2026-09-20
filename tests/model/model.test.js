@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { toNum, koDate, withWeekday } from "../../js/core/util.js";
 import { detectColumn, parseTime, shortLabel } from "../../js/model/detect.js";
 import { matchLabelSet } from "../../js/model/label-sets.js";
-import { buildCodebook, pairsOf, lintCodebook } from "../../js/model/codebook.js";
+import { buildCodebook, pairsOf, lintCodebook, dataSheetCandidates } from "../../js/model/codebook.js";
 import { recodeNumeric, recodeMulti } from "../../js/model/recode.js";
 import { buildSurvey } from "../../js/model/survey.js";
 import { matrixToSheet, parseWorkbook, parseCsv, decodeText } from "../../js/io/parse.js";
@@ -98,6 +98,34 @@ test("코드북: 사전/사후 시트 분리 + ID 매칭", () => {
   assert.deepEqual(sv.matching.postOnly, [2]);
   const p = sv.pairs.find(x => x.label === "자기효능감1");
   assert.deepEqual(p.preValues, [2, 1, null, 4]); assert.deepEqual(p.postValues, [4, 3, 5, 4]);
+});
+
+test("응답 시트 후보: 사전·사후 짝이 없고 응답으로 보이는 시트가 여럿이면 후보로 나열, 짝이 있으면 후보 없음(자동으로 둘 다 씀)", () => {
+  const ds = { fileName: "m.xlsx", sheets: [
+    { name: "1차(2026.3)", headers: ["번호", "만족도"], rows: [[1, 4], [2, 5]] },
+    { name: "2차(2026.9)", headers: ["번호", "만족도"], rows: [[1, 3], [2, 4], [3, 5]] },
+    { name: "안내", headers: ["작성 방법"], rows: [["설명"]] },
+  ] };
+  const cands = dataSheetCandidates(ds);
+  assert.deepEqual(cands.map(c => c.name), ["1차(2026.3)", "2차(2026.9)"], "'안내' 시트는 후보에서 빠짐");
+  assert.deepEqual(cands.map(c => c.nRows), [2, 3]);
+
+  // 고르지 않으면 지금처럼 첫 시트를 그대로 씀(하위 호환)
+  const cbDefault = buildCodebook(ds);
+  assert.deepEqual(cbDefault.responseSheets, [0]);
+  assert.equal(buildSurvey(ds, cbDefault).n, 2);
+
+  // 두 번째 시트를 고르면 그 시트로 문항을 다시 판별
+  const cbChosen = buildCodebook(ds, { dataSheetIndex: 1 });
+  assert.deepEqual(cbChosen.responseSheets, [1]);
+  assert.equal(buildSurvey(ds, cbChosen).n, 3);
+
+  // 사전/사후 짝이 있으면 애초에 고를 필요가 없음
+  const pp = { fileName: "pp.xlsx", sheets: [
+    { name: "사전", headers: ["ID", "문항1"], rows: [["A", 3]] },
+    { name: "사후", headers: ["ID", "문항1"], rows: [["A", 4]] },
+  ] };
+  assert.deepEqual(dataSheetCandidates(pp), []);
 });
 
 test("파일 파싱: XLSX 다중 시트, CSV EUC-KR", () => {

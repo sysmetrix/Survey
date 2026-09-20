@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { buildCodebook } from "../../js/model/codebook.js";
 import { buildSurvey } from "../../js/model/survey.js";
 import { analyzeSurvey } from "../../js/analysis/run.js";
-import { classify, tokenize } from "../../js/analysis/text.js";
+import { classify, tokenize, textAnalysis } from "../../js/analysis/text.js";
 import { seededRandom } from "../../js/core/util.js";
 
 function makeData(n = 80, seed = 7) {
@@ -56,4 +56,16 @@ test("주관식 분류와 토큰화", () => {
   assert.equal(classify("별로 안 좋았어요"), "negative");
   assert.equal(classify("없음"), "none");
   assert.ok(tokenize("강사님이 친절하셨습니다").includes("강사님"));
+});
+
+test("주관식 분류 신뢰도 투명성: 미리 정한 8개 주제 중 어디에도 안 걸리는 응답 수를 그대로 보고함", () => {
+  const values = [
+    "강사님이 친절하고 체험 활동이 재미있었어요", // staff·content 주제에 걸림
+    "정말 좋았습니다", // 8개 주제 키워드 중 어디에도 안 걸림(미분류)
+    "다시 오고 싶어요", // 마찬가지로 미분류
+  ];
+  const r = textAnalysis(values);
+  assert.equal(r.nSubstantive, 3);
+  assert.equal(r.unclassified, 2, "주제 키워드가 없는 두 응답은 미분류로 집계");
+  assert.ok(r.themes.every(t => t.n <= r.nSubstantive));
 });

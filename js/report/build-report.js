@@ -341,7 +341,15 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       if (tx.quotes.positive.length) { tb.push(B(`text.${tx.key}.qp`, 1, "대표 의견(긍정)")); tx.quotes.positive.forEach((qt, i) => tb.push(B(`text.${tx.key}.qp${i}`, 3, `“${qt}”`))); }
       if (tx.quotes.improve.length) { tb.push(B(`text.${tx.key}.qi`, 1, "대표 의견(개선 요구)")); tx.quotes.improve.forEach((qt, i) => tb.push(B(`text.${tx.key}.qi${i}`, 3, `“${qt}”`))); }
       bullets(tb);
-      if (tx.themes.length) push({ type: "table", caption: `${tx.label} 주제별 분류`, unit: "(단위: 건, %)", columns: [{ weight: 2.2, align: "LEFT" }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }], rows: [["주제", "언급 건수", "비율", "긍정", "개선 요구"].map(cellH), ...tx.themes.map(th => [{ text: th.name, align: "LEFT" }, String(th.n), f1(th.pct), String(th.positive), String(th.negative)])], notes: ["주: 키워드 규칙에 따른 자동 분류로 한 응답이 여러 주제에 포함될 수 있으며, 원문 검토를 권장함"] });
+      if (tx.themes.length) push({
+        type: "table", caption: `${tx.label} 주제별 분류`, unit: "(단위: 건, %)",
+        columns: [{ weight: 2.2, align: "LEFT" }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }],
+        rows: [["주제", "언급 건수", "비율", "긍정", "개선 요구"].map(cellH), ...tx.themes.map(th => [{ text: th.name, align: "LEFT" }, String(th.n), f1(th.pct), String(th.positive), String(th.negative)])],
+        notes: [
+          "주: 미리 정한 8개 주제의 키워드 일치로 분류하는 규칙 기반 자동 분류로, 사람이 직접 읽고 분류한 것보다 정확도가 낮을 수 있고 한 응답이 여러 주제에 포함될 수 있음 — 원문·대표 의견 검토를 권장함",
+          tx.unclassified ? `주: 유효 응답 ${tx.nSubstantive}건 중 ${tx.unclassified}건(${f1(tx.unclassified / tx.nSubstantive * 100)}%)은 위 8개 주제 중 어느 것에도 해당하지 않아 표에서 빠짐` : null,
+        ].filter(Boolean),
+      });
     });
   }
 

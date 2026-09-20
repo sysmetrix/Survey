@@ -47,15 +47,29 @@ export function sheetRole(name) {
 }
 
 /**
+ * 사전·사후 짝이 없을 때 '응답' 후보가 될 수 있는 시트들 (역할=data, 내용 있음)
+ * 후보가 2개 이상이면 첫 시트만 조용히 쓰지 않고 사용자에게 고르게 한다(setup.js).
+ * @param {{sheets:{name:string, headers:string[], rows:any[][]}[]}} dataset
+ * @returns {{index:number, name:string, nRows:number}[]}
+ */
+export function dataSheetCandidates(dataset) {
+  const roles = dataset.sheets.map(s => sheetRole(s.name));
+  if (roles.includes("pre") && roles.includes("post")) return [];
+  return dataset.sheets.map((s, i) => ({ index: i, name: s.name, nRows: s.rows.length })).filter((c, i) => roles[i] === "data" && c.nRows > 0);
+}
+
+/**
  * 데이터셋에서 코드북 초안 생성
  * @param {{fileName:string, sheets:{name:string, headers:string[], rows:any[][]}[]}} dataset
+ * @param {{dataSheetIndex?: number}} [opts] 응답 후보 시트가 여럿일 때 사용자가 고른 시트 인덱스
  */
-export function buildCodebook(dataset) {
+export function buildCodebook(dataset, { dataSheetIndex = null } = {}) {
   const roles = dataset.sheets.map(s => ({ name: s.name, role: sheetRole(s.name) }));
   const preIdx = roles.findIndex(r => r.role === "pre");
   const postIdx = roles.findIndex(r => r.role === "post");
   let responseSheets;
   if (preIdx >= 0 && postIdx >= 0) responseSheets = [preIdx, postIdx];
+  else if (Number.isInteger(dataSheetIndex) && roles[dataSheetIndex]?.role === "data") responseSheets = [dataSheetIndex];
   else {
     const dataIdx = roles.findIndex(r => r.role === "data" && dataset.sheets[roles.indexOf(r)]?.rows.length);
     responseSheets = [dataIdx >= 0 ? dataIdx : 0];

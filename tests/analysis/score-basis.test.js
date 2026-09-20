@@ -19,6 +19,7 @@ import { parseFile } from "../../js/io/parse.js";
 import { state, loadDataset, compute, invalidate } from "../../js/ui/store.js";
 import * as setup from "../../js/ui/views/setup.js";
 import * as settingsView from "../../js/ui/views/settings.js";
+import { scoreBasisActions } from "../../js/ui/score-basis.js";
 const require = createRequire(import.meta.url);
 const XLSX = require("../../vendor/xlsx-0.20.3.full.min.js");
 const Papa = require("../../vendor/papaparse-5.4.1.min.js");
@@ -113,26 +114,44 @@ test("발표 자료: 기준에 관계없이 슬라이드 구성은 같고 근거
   assert.ok(JSON.stringify(a).includes("반올림 전 평균 기준"));
 });
 
-test("선택 화면: 데이터 설정·로컬 설정에 두 방식과 차이 설명, 실제 데이터 예시, 현재 선택이 표시됨", async () => {
+test("선택 화면: 로컬 설정은 산식·예시가 항상 보이고, 데이터 설정은 다른 카드가 많아 요약으로 접혀 있다가 '자세히'로 펼쳐짐", async () => {
   const file = "2026_문화의집_만족도_구글폼.csv";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa }));
+  const fullChecks = (html, name, basis) => {
+    assert.ok(html.includes("반올림 전 평균으로 환산") && html.includes("반올림 후 평균으로 환산"), `${name}: 두 선택지 문구`);
+    assert.equal((html.match(/badge info">기본</g) || []).length, 1, `${name}: '기본' 태그는 한 번만`);
+    assert.ok(html.includes('badge info">조정<'), `${name}: 반올림 후 선택지의 '조정' 태그`);
+    assert.ok(!html.includes("(기본)"), `${name}: 태그와 중복되는 '(기본)' 문구 없음`);
+    const checked = html.match(/value="(exact|rounded)" checked/g);
+    assert.deepEqual(checked, [`value="${basis}" checked`], `${name}: 현재 선택(${basis}) 하나만 선택됨`);
+    assert.ok(!/undefined|NaN(?!\w)/.test(html.replace(/data-[a-z-]+="[^"]*"/g, "")), `${name}: 값 누락 없음`);
+  };
   for (const basis of ["exact", "rounded"]) {
     state.settings.scoreBasis = basis; invalidate(); compute();
-    for (const [name, html] of [["setup", setup.render()], ["settings", settingsView.render()]]) {
-      assert.ok(html.includes("반올림 전 평균으로 환산") && html.includes("반올림 후 평균으로 환산"), `${name}: 두 선택지 문구`);
-      assert.ok(html.includes("최대 ±0.125점"), `${name}: 오차 크기 설명`);
-      assert.equal((html.match(/badge info">기본</g) || []).length, 1, `${name}: '기본' 태그는 한 번만`);
-      assert.ok(html.includes('badge info">조정<'), `${name}: 반올림 후 선택지의 '조정' 태그`);
-      assert.ok(!html.includes("(기본)"), `${name}: 태그와 중복되는 '(기본)' 문구 없음`);
-      assert.ok(html.includes("높아질 수도(올림), 낮아질 수도(내림)"), `${name}: 방향이 다를 수 있다는 설명`);
-      assert.ok(html.includes("· 올림") && html.includes("· 내림") && html.includes("예 1.") && html.includes("예 2."), `${name}: 올림·내림 예시 두 개(산식 그림)`);
-      assert.ok(html.includes("basis-formula") && html.includes("반올림 후(조정)"), `${name}: 반올림 전·후 산식이 그림으로 보임`);
-      assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(html), `${name}: 이 파일에서의 영향 수`);
-      assert.ok(html.includes("로컬 설정"), `${name}: 나중에 바꿀 수 있다는 안내`);
-      const checked = html.match(/value="(exact|rounded)" checked/g);
-      assert.deepEqual(checked, [`value="${basis}" checked`], `${name}: 현재 선택(${basis}) 하나만 선택됨`);
-      assert.ok(!/undefined|NaN(?!\w)/.test(html.replace(/data-[a-z-]+="[^"]*"/g, "")), `${name}: 값 누락 없음`);
-    }
+
+    const settingsHtml = settingsView.render();
+    fullChecks(settingsHtml, "settings", basis);
+    assert.ok(settingsHtml.includes("최대 ±0.125점"), "settings: 오차 크기 설명");
+    assert.ok(settingsHtml.includes("높아질 수도(올림), 낮아질 수도(내림)"), "settings: 방향이 다를 수 있다는 설명");
+    assert.ok(settingsHtml.includes("· 올림") && settingsHtml.includes("· 내림") && settingsHtml.includes("예 1.") && settingsHtml.includes("예 2."), "settings: 올림·내림 예시 두 개(산식 그림)");
+    assert.ok(settingsHtml.includes("basis-formula") && settingsHtml.includes("반올림 후(조정)"), "settings: 반올림 전·후 산식이 그림으로 보임");
+    assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(settingsHtml), "settings: 이 파일에서의 영향 수");
+    assert.ok(settingsHtml.includes("로컬 설정"), "settings: 나중에 바꿀 수 있다는 안내");
+
+    // 데이터 설정: 기본은 요약 한 줄 + '자세히' 버튼만 있고, 산식 그림·긴 설명은 없음(카드가 이미 많은 화면이므로)
+    const compactHtml = setup.render();
+    fullChecks(compactHtml, "setup(접힘)", basis);
+    assert.ok(compactHtml.includes("산식·예시 보기"), "setup(접힘): 펼치기 버튼");
+    assert.ok(!compactHtml.includes("basis-formula") && !compactHtml.includes("basis-diagram"), "setup(접힘): 산식 그림은 숨겨짐");
+    assert.ok(!compactHtml.includes("최대 ±0.125점"), "setup(접힘): 긴 설명은 숨겨짐");
+
+    // '자세히'를 누르면 데이터 설정도 로컬 설정과 같은 내용을 보여줌
+    scoreBasisActions["basis-toggle"]();
+    const expandedHtml = setup.render();
+    fullChecks(expandedHtml, "setup(펼침)", basis);
+    assert.ok(expandedHtml.includes("basis-formula") && expandedHtml.includes("예 1.") && expandedHtml.includes("예 2."), "setup(펼침): 산식 그림이 보임");
+    assert.ok(expandedHtml.includes("간단히"), "setup(펼침): 접기 버튼");
+    scoreBasisActions["basis-toggle"](); // 다음 반복을 위해 다시 접음
   }
   state.settings.scoreBasis = "exact"; invalidate();
 });
