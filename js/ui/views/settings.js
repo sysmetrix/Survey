@@ -17,7 +17,7 @@ export function render() {
       <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" placeholder="예: 부천여성청소년재단 청소년팀" data-change="local-org"></label>
       <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="예: 홍길동" data-change="local-author"></label>
     </section>
-    ${scoreBasisPanel(state.results?.analysis?.items || [])}
+    ${scoreBasisPanel(state.results?.analysis?.items || [], { compact: true })}
     <section class="card"><h2>화면</h2>
       <label class="field">화면 테마<select class="in" data-change="local-theme">${Object.entries(THEME_LABEL).map(([v, label]) => option(v, label, themePref() === v)).join("")}</select></label>
       <p class="small muted">시스템 설정은 Windows 또는 브라우저의 밝은·어두운 화면 설정을 따릅니다.</p>

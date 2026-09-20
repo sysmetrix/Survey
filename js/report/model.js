@@ -7,6 +7,10 @@ import { stripInlineMarks as stripBold } from "./inline-marks.js";
 
 const ROMAN = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "Ⅺ", "Ⅻ"];
 const GANADA = "가나다라마바사아자차카타파하";
+// 이미 문장부호로 끝나거나(.!?…) 응답자 원문을 그대로 인용한 문장("...")은 그대로 두고, 그 밖의
+// 규칙기반 문장 끝에는 마침표를 붙임. 사용자가 직접 고친 문장은(있는 그대로 존중) 건드리지 않음.
+const SENTENCE_END = /[.!?…”]$/;
+const withPeriod = text => { const t = String(text ?? ""); return t && !SENTENCE_END.test(t) ? `${t}.` : t; };
 
 /**
  * 장·절 번호, 표·그림 번호 부여 + 사용자 수정문(overrides) 적용
@@ -32,11 +36,11 @@ export function finalizeBlocks(blocks, { overrides = {}, hidden = new Set(), hid
       else { b.number = `${GANADA[(b.index ?? 1) - 1] || ""}.`; }
       b.display = b.number ? `${b.number} ${b.text}` : b.text;
     }
-    if (b.type === "bullets") b.items = b.items.filter(it => !hidden.has(it.key)).map(applyOverride);
-    if (b.type === "box") b.lines = b.lines.filter(it => !hidden.has(it.key)).map(applyOverride);
-    if (b.type === "paragraph") Object.assign(b, applyOverride(b));
-    if (b.type === "table") { tbl++; b.number = tbl; b.display = `<표 ${tbl}> ${b.caption}`; }
-    if (b.type === "figure") { fig++; b.number = fig; b.display = `<그림 ${fig}> ${b.caption}`; }
+    if (b.type === "bullets") b.items = b.items.filter(it => !hidden.has(it.key)).map(it => ({ ...it, text: withPeriod(it.text) })).map(applyOverride);
+    if (b.type === "box") b.lines = b.lines.filter(it => !hidden.has(it.key)).map(it => ({ ...it, text: withPeriod(it.text) })).map(applyOverride);
+    if (b.type === "paragraph") { b.text = withPeriod(b.text); Object.assign(b, applyOverride(b)); }
+    if (b.type === "table") { tbl++; b.number = tbl; b.display = `<표 ${tbl}> ${b.caption}`; if (b.notes) b.notes = b.notes.map(withPeriod); }
+    if (b.type === "figure") { fig++; b.number = fig; b.display = `<그림 ${fig}> ${b.caption}`; if (b.notes) b.notes = b.notes.map(withPeriod); }
     if ((b.type === "bullets" && !b.items.length) || (b.type === "box" && !b.lines.length)) continue;
     out.push(b);
   }

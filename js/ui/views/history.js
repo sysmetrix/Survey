@@ -61,7 +61,7 @@ function timelineHtml(project) {
       <span class="tl-dot ${KIND_CLS[s.kind] || ""}" aria-hidden="true"></span>
       <div class="tl-main">
         <div class="row between wrap gap">
-          <div class="row gap wrap"><b>${esc(s.label || KIND_LABEL[s.kind] || "버전")}</b><span class="badge ${KIND_CLS[s.kind] || "muted"}">${esc(KIND_LABEL[s.kind] || s.kind)}</span>${i === 0 ? `<span class="badge info">최신</span>` : ""}${s.pinned ? `<span class="badge ok">고정</span>` : ""}${s.hasData ? `<span class="badge info">원자료 암호화 보관</span>` : ""}</div>
+          <div class="row gap wrap"><b>${esc(s.label || KIND_LABEL[s.kind] || "버전")}</b><span class="badge ${KIND_CLS[s.kind] || "muted"}">${esc(KIND_LABEL[s.kind] || s.kind)}</span>${i === 0 ? `<span class="badge info">최신</span>` : ""}${s.pinned ? `<span class="badge info">고정</span>` : ""}${s.hasData ? `<span class="badge info">원자료 암호화 보관</span>` : ""}</div>
           <time class="small muted" datetime="${new Date(s.createdAt).toISOString()}" title="${fmtDateTime(s.createdAt)}">${fmtDateTime(s.createdAt)} · ${relTime(s.createdAt)}</time>
         </div>
         <div class="small muted">${esc(summaryLine(s.summary))}</div>
