@@ -1,6 +1,7 @@
 // ⑥ 발표 모드: 분석 결과를 16:9 슬라이드로 — 키보드·전체화면·개요·발표자 노트·슬라이드 숨기기·PDF 인쇄
 import { state, deckSlides } from "../store.js";
 import { chartSvg } from "../../report/model.js";
+import { inlineHtml } from "../../report/render-html.js";
 import { maskPII } from "../../core/util.js";
 import { buildPresentHtml, EXPORT_ICONS } from "../../present/export-html.js";
 import { esc, busy, download, safeFileName, toast, nextFrame } from "../util.js";
@@ -32,20 +33,30 @@ const toneMark = t => (TONE[t] ? `<span class="tone ${t}" role="img" aria-label=
 const quoteText = q => maskPII(typeof q === "string" ? q : q?.text ?? "");
 const list = items => `<ul class="s-list">${items.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
 
-/** 슬라이드 1장 HTML (무대·개요 썸네일·인쇄 공용) */
-export function slideHtml(s, i, total, theme) {
+/** 슬라이드 문구 편집 필드: 직접 고친 문구가 있으면(무대·개요·인쇄·내보내기 모두) 항상 그 문구를 보여주고,
+ *  editable=true(슬라이드 편집 화면)일 때만 contenteditable 표식 문자열 편집(state.deckOverrides.bySlide 에 저장)으로 감쌈 */
+function slideField(slideId, field, autoText, editable) {
+  const entry = state.deckOverrides.bySlide[slideId];
+  const text = entry?.text?.[field] ?? autoText;
+  if (!editable) return inlineHtml(text);
+  const key = `deck:${slideId}.${field}`;
+  return `<span class="r-txt" contenteditable="true" spellcheck="false" data-edit="${esc(key)}" data-raw="${esc(text)}" data-auto="${esc(autoText)}">${inlineHtml(text)}</span>`;
+}
+
+/** 슬라이드 1장 HTML (무대·개요 썸네일·인쇄·편집 공용). editable=true(슬라이드 편집 화면)일 때만 문구를 직접 고칠 수 있음 */
+export function slideHtml(s, i, total, theme, { editable = false } = {}) {
   const org = state.settings.orgName || "";
-  const head = `<header class="s-head"><p class="s-eyebrow">${esc(s.section)}</p><h2 class="s-title">${esc(s.title)}</h2>${s.subtitle ? `<p class="s-sub">${esc(s.subtitle)}</p>` : ""}</header>`;
+  const head = `<header class="s-head"><p class="s-eyebrow">${esc(s.section)}</p><h2 class="s-title">${slideField(s.id, "title", s.title, editable)}</h2>${s.subtitle ? `<p class="s-sub">${slideField(s.id, "subtitle", s.subtitle, editable)}</p>` : ""}</header>`;
   let inner;
   switch (s.type) {
     case "cover":
-      inner = `<div class="s-cover"><p class="s-eyebrow">${esc(s.section)}</p><h1 class="s-cover-title">${esc(s.title)}</h1>${s.subtitle ? `<p class="s-sub">${esc(s.subtitle)}</p>` : ""}${s.chips?.length ? `<ul class="s-chips">${s.chips.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}</div><div class="s-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>`;
+      inner = `<div class="s-cover"><p class="s-eyebrow">${esc(s.section)}</p><h1 class="s-cover-title">${slideField(s.id, "title", s.title, editable)}</h1>${s.subtitle ? `<p class="s-sub">${slideField(s.id, "subtitle", s.subtitle, editable)}</p>` : ""}${s.chips?.length ? `<ul class="s-chips">${s.chips.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}</div><div class="s-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>`;
       break;
     case "stats":
-      inner = head + `<div class="s-stats n${s.stats.length}">${s.stats.map(st => `<div class="s-stat"><p class="s-stat-label">${esc(st.label)}</p><p class="s-stat-value">${esc(st.value)}<small>${esc(st.unit || "")}</small></p><p class="s-stat-sub">${toneMark(st.tone)}${esc(st.sub || "")}</p></div>`).join("")}</div>`;
+      inner = head + `<div class="s-stats n${s.stats.length}">${s.stats.map((st, si) => `<div class="s-stat"><p class="s-stat-label">${slideField(s.id, `stats.${si}.label`, st.label, editable)}</p><p class="s-stat-value">${slideField(s.id, `stats.${si}.value`, st.value, editable)}<small>${esc(st.unit || "")}</small></p><p class="s-stat-sub">${toneMark(st.tone)}${slideField(s.id, `stats.${si}.sub`, st.sub || "", editable)}</p></div>`).join("")}</div>`;
       break;
     case "hero":
-      inner = head + `<div class="s-body s-hero-body"><div class="s-hero"><p class="s-hero-value">${esc(s.hero.value)}<small>${esc(s.hero.unit || "")}</small></p><p class="s-hero-cap">${esc(s.hero.caption)}</p>${list(s.hero.facts)}</div><div class="s-chart">${chart(s.chart, theme)}</div></div>`;
+      inner = head + `<div class="s-body s-hero-body"><div class="s-hero"><p class="s-hero-value">${slideField(s.id, "hero.value", s.hero.value, editable)}<small>${esc(s.hero.unit || "")}</small></p><p class="s-hero-cap">${slideField(s.id, "hero.caption", s.hero.caption, editable)}</p>${list(s.hero.facts)}</div><div class="s-chart">${chart(s.chart, theme)}</div></div>`;
       break;
     case "voice": {
       const group = (title, qs, tone) => (qs?.length ? `<section class="s-qgroup"><h3>${toneMark(tone)}${esc(title)}</h3>${qs.map(q => `<blockquote>${esc(quoteText(q))}</blockquote>`).join("")}</section>` : "");
@@ -53,10 +64,10 @@ export function slideHtml(s, i, total, theme) {
       break;
     }
     case "columns":
-      inner = head + `<div class="s-cols">${s.columns.map(c => `<section class="s-col"><h3>${toneMark(c.tone)}${esc(c.title)}</h3>${list(c.items.length ? c.items : ["해당 없음"])}</section>`).join("")}</div>`;
+      inner = head + `<div class="s-cols">${s.columns.map((c, ci) => `<section class="s-col"><h3>${toneMark(c.tone)}${slideField(s.id, `columns.${ci}.title`, c.title, editable)}</h3>${list(c.items.length ? c.items : ["해당 없음"])}</section>`).join("")}</div>`;
       break;
     case "end":
-      inner = `<div class="s-end"><h1>${esc(s.title)}</h1>${s.subtitle ? `<p>${esc(s.subtitle)}</p>` : ""}</div>`;
+      inner = `<div class="s-end"><h1>${slideField(s.id, "title", s.title, editable)}</h1>${s.subtitle ? `<p>${slideField(s.id, "subtitle", s.subtitle, editable)}</p>` : ""}</div>`;
       break;
     default:
       inner = head + `<div class="s-body${s.aside ? " s-aside-body" : ""}"><div class="s-chart">${chart(s.chart, theme)}</div>${s.aside ? `<aside class="s-aside"><h3>${esc(s.aside.title)}</h3>${list(s.aside.items)}</aside>` : ""}</div>`;
@@ -74,6 +85,7 @@ function bar(idx, total, fs) {
     <button class="p-count" data-act="p-overview" title="슬라이드 개요 (O)"><b>${idx + 1}</b> / ${total}</button>
     ${btn("p-next", "right", "다음 (→)", idx === total - 1 ? "disabled" : "")}
     <span class="p-div" aria-hidden="true"></span>
+    ${btn("p-edit", "edit", "슬라이드 편집")}
     ${btn("p-overview", "grid", "슬라이드 개요 (O)", `aria-pressed="${view.overview}"`)}
     ${btn("p-notes", "notes", "발표자 노트 (N)", `aria-pressed="${ui.notes}"`)}
     ${btn("p-stage", ui.stage === "dark" ? "moon" : ui.stage === "light" ? "sun" : "monitor", `무대: ${STAGE_LABEL[ui.stage]} (T)`)}
@@ -208,6 +220,7 @@ export const actions = {
       toast(`HTML 만들기 실패: ${e.message}`, "bad", 7000);
     } finally { busy(false); }
   },
+  "p-edit": () => go("presentEdit"),
   "p-fullscreen": () => toggleFullscreen(),
   "p-help": () => { view.help = !view.help; view.save = false; refresh(); },
   "p-blank": () => { view.blank = !view.blank; refresh(); },

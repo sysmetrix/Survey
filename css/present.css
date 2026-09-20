@@ -176,3 +176,18 @@ body.presenting .container { max-width: none; padding: 0; }
 @media (prefers-reduced-motion: reduce) {
   .p-stage > .slide, .p-stage .viz-mark .m { animation: none !important; }
 }
+
+/* ── 슬라이드 편집(문구 직접 고치기) — 자유배치 편집기가 붙기 전까지의 1단계 ── */
+.pe-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 20px; align-items: start; }
+.pe-list { display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - var(--topbar-h) - 140px); overflow-y: auto; position: sticky; top: calc(var(--topbar-h) + 20px); }
+.pe-thumb { display: flex; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 8px 10px; font: inherit; font-size: 13px; color: var(--text-2); cursor: pointer; }
+.pe-thumb:hover { border-color: var(--text-3); color: var(--text); }
+.pe-thumb.on { border-color: var(--brand); background: var(--brand-soft); color: var(--text); }
+.pe-thumb-n { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.pe-thumb-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-stage-wrap { max-width: 900px; }
+.pe-stage .slide { width: 100%; border-radius: 6px; box-shadow: var(--shadow-lg); }
+.pe-stage .r-txt[contenteditable] { border-radius: 3px; }
+.pe-stage .r-txt[contenteditable]:hover { background: #FFF6CC; cursor: text; }
+.pe-stage .r-txt[contenteditable]:focus { background: #FFF0B3; outline: 2px solid #E8B400; }
+@media (max-width: 760px) { .pe-layout { grid-template-columns: 1fr; } .pe-list { position: static; max-height: none; flex-direction: row; flex-wrap: wrap; } }

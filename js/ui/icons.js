@@ -19,6 +19,8 @@ const P = {
   right: '<path d="M9 5l7 7-7 7"/>',
   printer: '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  alert: '<path d="M10.3 3.9 2.4 18a1.8 1.8 0 0 0 1.5 2.7h16.2a1.8 1.8 0 0 0 1.5-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z"/><path d="M12 9.5v4.2"/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.3"/><circle cx="12" cy="7.7" r=".6" fill="currentColor" stroke="none"/>',
   offline: '<path d="M3 3l18 18"/><path d="M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5-2.7M19 13a10 10 0 0 0-2.3-1.7M2 9.5a15 15 0 0 1 4.2-2.7M22 9.5A15 15 0 0 0 11 5.1"/><circle cx="12" cy="20" r=".6"/>',
   install: '<rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M12 7v7m0 0-3-3m3 3 3-3M9.5 18h5"/>',
   shield: '<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
@@ -39,6 +41,7 @@ const P = {
   italic: '<path d="M12 4h6M6 20h6M15 4 9 20" stroke-width="2"/>',
   underline: '<path d="M6 4v7a6 6 0 0 0 12 0V4M5 20h14" stroke-width="2"/>',
   strike: '<path d="M5 12h14M8 6.5c0-1.7 1.8-3 4-3s4 1.1 4 2.6c0 1-.6 1.7-1.6 2.2M16 17.5c0 1.7-1.8 3-4 3s-4-1.3-4-2.9" stroke-width="1.8"/>',
+  edit: '<path d="M4 20l1-4.2L15.6 5.2a1.5 1.5 0 0 1 2.1 0l1.1 1.1a1.5 1.5 0 0 1 0 2.1L8.2 19 4 20z"/><path d="M14 7l3 3"/>',
   palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-.6-.2-1-.5-1.4-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.3-4-7.5-9-7.5z"/><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/>',
 };
 

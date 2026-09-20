@@ -45,6 +45,7 @@ export const state = {
   settings: loadSettings(),
   overrides: {}, hidden: [], hiddenChapters: [],
   deckHidden: [], overrideBase: {},
+  deckOverrides: { bySlide: {} },
   excludeStraight: false,
   businessFound: null,
   results: null, dirty: true,
@@ -74,6 +75,7 @@ export function loadDataset(dataset, project = null) {
     state.logicModel = biz.logicModel || emptyLogicModel();
     state.kpis = biz.kpis || [];
     state.overrides = {}; state.hidden = []; state.hiddenChapters = []; state.deckHidden = []; state.overrideBase = {};
+    state.deckOverrides = { bySlide: {} };
     state.settings.reportTitle = "";
   }
   invalidate();
@@ -90,6 +92,7 @@ export function chooseDataSheet(index) {
   state.logicModel = biz.logicModel || emptyLogicModel();
   state.kpis = biz.kpis || [];
   state.overrides = {}; state.hidden = []; state.hiddenChapters = []; state.deckHidden = []; state.overrideBase = {};
+  state.deckOverrides = { bySlide: {} };
   invalidate();
 }
 
@@ -113,6 +116,7 @@ export function applyEditable(e) {
   state.hiddenChapters = Array.isArray(e.hiddenChapters) ? e.hiddenChapters : [];
   state.deckHidden = Array.isArray(e.deckHidden) ? e.deckHidden : [];
   state.overrideBase = e.overrideBase && typeof e.overrideBase === "object" ? e.overrideBase : {};
+  state.deckOverrides = e.deckOverrides && typeof e.deckOverrides === "object" ? e.deckOverrides : { bySlide: {} };
   state.excludeStraight = !!e.excludeStraight;
   applySettingsFrom(e.settings);
   invalidate();
@@ -127,6 +131,7 @@ export function applyProject(p) {
   state.hiddenChapters = p.report?.hiddenChapters || [];
   state.deckHidden = p.present?.hidden || [];
   state.overrideBase = p.report?.overrideBase || {};
+  state.deckOverrides = p.present?.overrides || { bySlide: {} };
   state.excludeStraight = !!p.excludeStraight;
   applySettingsFrom(p.settings);
   state.pendingProject = p;

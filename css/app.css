@@ -384,18 +384,21 @@ svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
 .viz-tip span { color: var(--text-2); }
 
 /* ── 알림 · 처리 중 ── */
-.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(16px); background: var(--brand); color: var(--on-brand); padding: 11px 18px; border-radius: 12px; opacity: 0; transition: opacity .22s, transform .22s; z-index: 70; max-width: min(92vw, 640px); pointer-events: none; box-shadow: var(--shadow-lg); font-size: 14.5px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(16px); background: var(--brand); color: var(--on-brand); padding: 11px 18px; border-radius: 12px; opacity: 0; transition: opacity .22s, transform .22s; z-index: 70; max-width: min(92vw, 640px); pointer-events: none; box-shadow: var(--shadow-lg); font-size: 14.5px; display: flex; align-items: center; gap: 9px; }
+.toast .ico { flex: none; opacity: .92; }
 .toast.show { opacity: 1; transform: translateX(-50%); } .toast.ok { background: var(--brand); } .toast.bad { background: #9b2c1c; }
 .snack { position: fixed; right: 20px; bottom: 20px; z-index: 75; display: flex; align-items: center; gap: 10px; max-width: min(92vw, 480px); padding: 12px 10px 12px 16px; border-radius: 14px; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-lg); font-size: 14px; }
 .snack span { flex: 1; }
 .busy { position: fixed; inset: 0; background: color-mix(in srgb, var(--bg) 60%, transparent); backdrop-filter: blur(3px); display: grid; place-items: center; z-index: 80; }
-.busy-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 26px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow-lg); }
-.spinner { width: 22px; height: 22px; border: 3px solid var(--brand-soft-2); border-top-color: var(--brand); border-radius: 50%; animation: spin .9s linear infinite; }
+.busy-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 26px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow-lg); animation: busy-in .16s ease; }
+@keyframes busy-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+.spinner { width: 22px; height: 22px; flex: none; border: 3px solid var(--brand-soft-2); border-top-color: var(--brand); border-radius: 50%; animation: spin .9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .busy-msg { white-space: pre-line; line-height: 1.5; }
 .busy.done { cursor: pointer; }
-.busy.done .spinner { animation: none; border-color: var(--brand); background: var(--brand-soft); position: relative; }
-.busy.done .spinner::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--brand); font-weight: 800; font-size: 14px; }
+.busy.done .spinner { animation: none; border-color: transparent; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; }
+.busy.done .spinner .ico { animation: pop-in .22s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes pop-in { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
 
 /* ── 반응형 ── */
 @media (max-width: 1100px) {

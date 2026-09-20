@@ -16,14 +16,15 @@ import * as business from "./ui/views/business.js";
 import * as dash from "./ui/views/dash.js";
 import * as report from "./ui/views/report.js";
 import * as present from "./ui/views/present.js";
+import * as presentEdit from "./ui/views/present-edit.js";
 import * as history from "./ui/views/history.js";
 import * as settings from "./ui/views/settings.js";
 import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.20.0";
-const VIEWS = { load, setup, business, dash, report, present, history, settings, updates };
+export const APP_VERSION = "5.21.0";
+const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
 
@@ -139,13 +140,21 @@ document.addEventListener("focusout", e => {
   if (!el) return;
   el.dataset.editing = "";
   const text = htmlToMarkup(el);
+  const key = el.dataset.edit;
   if (text !== el.dataset.raw) {
-    if (text) {
-      state.overrides[el.dataset.edit] = text;
+    if (key.startsWith("deck:")) {
+      // 발표 슬라이드 문구 편집: "deck:<슬라이드id>.<필드>" — 문장 숨기기 개념이 없어 빈 값도 그대로 저장
+      const [slideId, field] = key.slice(5).split(/\.(.+)/);
+      const bySlide = { ...state.deckOverrides.bySlide };
+      const entry = bySlide[slideId] || { mode: "auto", text: {}, textBase: {} };
+      bySlide[slideId] = { ...entry, text: { ...entry.text, [field]: text }, textBase: { ...entry.textBase, [field]: el.dataset.auto } };
+      state.deckOverrides = { ...state.deckOverrides, bySlide };
+    } else if (text) {
+      state.overrides[key] = text;
       // 고칠 당시의 자동 문장을 기억 → 나중에 근거 수치가 바뀌면 '근거 변경' 표시
-      state.overrideBase = { ...state.overrideBase, [el.dataset.edit]: el.dataset.auto };
+      state.overrideBase = { ...state.overrideBase, [key]: el.dataset.auto };
     }
-    else state.hidden = [...new Set([...state.hidden, el.dataset.edit])];
+    else state.hidden = [...new Set([...state.hidden, key])];
   }
   refresh();
   afterAction();

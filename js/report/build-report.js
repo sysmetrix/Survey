@@ -43,7 +43,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   const blocks = [];
   const push = b => blocks.push(b);
   const bullets = items => { const its = items.filter(Boolean); if (its.length) push({ type: "bullets", items: its }); };
-  const B = (key, level, text) => ({ key, level, text });
+  const B = (key, level, text, frag) => ({ key, level, text, frag });
   const colOf = key => CB.columns.find(c => c.key === key);
   const P = A.prepost, ALLP = P?.domains.find(d => d.id === "ALL") || (P?.items.length === 1 ? P.items[0] : null);
   const overall = A.overallItem, tot = A.total;
@@ -54,19 +54,19 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   const title = S.reportTitle || (LM?.programName ? `${LM.programName} 결과 분석 보고서` : "설문조사 결과 분석 보고서");
   push({ type: "title", text: title, subtitle: [S.orgName, S.author, S.date || koDate()].filter(Boolean).join(" · ") });
   const sum = [];
-  sum.push(B("sum.survey", 1, `□ 조사 개요: ${DESIGN_LABELS[A.meta.design]}, 응답자 ${A.meta.n}명${P && !P.unpaired && A.meta.design === "prepost-sheets" ? `(사전·사후 매칭 ${P.matchedN}명)` : ""}`));
+  sum.push(B("sum.survey", 1, `□ 조사 개요: ${DESIGN_LABELS[A.meta.design]}, 응답자 ${A.meta.n}명${P && !P.unpaired && A.meta.design === "prepost-sheets" ? `(사전·사후 매칭 ${P.matchedN}명)` : ""}`, true));
   if (kpiOn) {
     const s = E.summary;
-    sum.push(B("sum.kpi", 1, `□ 성과지표: ${s.measured}개 중 **${s.achieved}개 달성**${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}${s.notAchieved ? `, ${s.notAchieved}개 미달성` : ""} (종합 **${s.grade}**)`));
+    sum.push(B("sum.kpi", 1, `□ 성과지표: ${s.measured}개 중 **${s.achieved}개 달성**${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}${s.notAchieved ? `, ${s.notAchieved}개 미달성` : ""} (종합 **${s.grade}**)`, true));
   }
   if (ALLP) sum.push(B("sum.prepost", 1, `□ 성과 변화: 사전 ${f2(ALLP.mPre)}점 → 사후 ${f2(ALLP.mPost)}점(**${signed(ALLP.diff)}점**), ${sigPhrase(ALLP.primary.p)}`));
   if (overall) sum.push(B("sum.overall", 1, `□ 만족도: ${overall.label} 평균 ${f2(overall.mean)}점(100점 환산 **${f2(overall.score100)}점**)으로 ${levelWord(overall.score100, t)}임`));
   else if (tot && Number.isFinite(tot.score100)) sum.push(B("sum.total", 1, `□ 만족도: 척도 문항 전체 평균 100점 환산 **${f2(tot.score100)}점**으로 ${levelWord(tot.score100, t)}임`));
-  if (A.nps.length) sum.push(B("sum.nps", 1, `□ 순추천지수(NPS): ${signed(A.nps[0].nps, 1)}점`));
-  if (detailItems.length >= 2) sum.push(B("sum.items", 1, `□ 최고 문항 ${q(detailItems[0].label)}(${f2(detailItems[0].score100)}점), 최저 문항 ${q(detailItems.at(-1).label)}(${f2(detailItems.at(-1).score100)}점)`));
+  if (A.nps.length) sum.push(B("sum.nps", 1, `□ 순추천지수(NPS): ${signed(A.nps[0].nps, 1)}점`, true));
+  if (detailItems.length >= 2) sum.push(B("sum.items", 1, `□ 최고 문항 ${q(detailItems[0].label)}(${f2(detailItems[0].score100)}점), 최저 문항 ${q(detailItems.at(-1).label)}(${f2(detailItems.at(-1).score100)}점)`, true));
   const impTheme = A.text.flatMap(tx => tx.themes.filter(th => th.negative >= 2)).sort((a, b) => b.negative - a.negative)[0]?.name;
-  if (impTheme) sum.push(B("sum.text", 1, `□ 주요 개선 요구: ${q(impTheme)} 관련 의견`));
-  push({ type: "box", lines: sum.map(s => ({ key: s.key, text: s.text })) });
+  if (impTheme) sum.push(B("sum.text", 1, `□ 주요 개선 요구: ${q(impTheme)} 관련 의견`, true));
+  push({ type: "box", lines: sum.map(s => ({ key: s.key, text: s.text, frag: s.frag })) });
 
   // ───── Ⅰ. 사업 개요 ─────
   if (hasProgramInfo(LM) || hasLogicModel(LM)) {
@@ -106,12 +106,12 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     A.nps.length && `추천의향 ${A.nps.length}개`, A.multi.length && `복수응답 ${A.multi.length}개`, A.text.length && `주관식 ${A.text.length}개`,
   ].filter(Boolean);
   const ov = [
-    B("s.design", 1, `조사 설계: ${DESIGN_LABELS[A.meta.design]}`),
-    B("s.n", 1, `응답자: ${A.meta.n}명${S.excludedCount ? `(불성실 응답 ${S.excludedCount}명 제외 후)` : ""}`),
+    B("s.design", 1, `조사 설계: ${DESIGN_LABELS[A.meta.design]}`, true),
+    B("s.n", 1, `응답자: ${A.meta.n}명${S.excludedCount ? `(불성실 응답 ${S.excludedCount}명 제외 후)` : ""}`, true),
   ];
-  if (P?.matching) ov.push(B("s.match", 2, `사전·사후 매칭 ${P.matching.pairs}명(사전만 응답 ${P.matching.preOnly}명, 사후만 응답 ${P.matching.postOnly}명) — 매칭 기준: ${P.matching.keyDesc}`));
-  ov.push(B("s.items", 1, `조사 내용: ${parts.join(", ")}`));
-  if (scaleRange) ov.push(B("s.scale", 1, `척도: ${scaleRange.min}~${scaleRange.max}점(점수가 높을수록 긍정)`), B("s.score100", 2, `100점 환산 점수 = (평균 − 최소점) ÷ (최대점 − 최소점) × 100${A.meta.scoreBasis === "rounded" ? "(표에 적힌 소수 둘째 자리 평균으로 계산)" : "(반올림 전 평균으로 계산)"}, 긍정응답률 = 상위 2개 척도 응답 비율`));
+  if (P?.matching) ov.push(B("s.match", 2, `사전·사후 매칭 ${P.matching.pairs}명(사전만 응답 ${P.matching.preOnly}명, 사후만 응답 ${P.matching.postOnly}명) — 매칭 기준: ${P.matching.keyDesc}`, true));
+  ov.push(B("s.items", 1, `조사 내용: ${parts.join(", ")}`, true));
+  if (scaleRange) ov.push(B("s.scale", 1, `척도: ${scaleRange.min}~${scaleRange.max}점(점수가 높을수록 긍정)`, true), B("s.score100", 2, `100점 환산 점수 = (평균 − 최소점) ÷ (최대점 − 최소점) × 100${A.meta.scoreBasis === "rounded" ? "(표에 적힌 소수 둘째 자리 평균으로 계산)" : "(반올림 전 평균으로 계산)"}, 긍정응답률 = 상위 2개 척도 응답 비율`, true));
   if (A.reliability && Number.isFinite(A.reliability.alpha)) {
     const { alpha } = A.reliability;
     const [aLo, aHi] = A.reliability.alphaCi || [];
@@ -124,8 +124,8 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       ? `신뢰도는 ${phrase}이며(${evidence}), 신뢰도 추정의 안정성도 낮았음`
       : `신뢰도는 ${phrase}임(${evidence})`));
   }
-  if (A.meta.straightLiners && !S.excludedCount) ov.push(B("s.clean", 1, `자료 점검: 모든 척도 문항에 같은 값으로 응답한 사례 ${A.meta.straightLiners}명 확인(분석에 포함)`));
-  ov.push(B("s.method", 1, "분석 방법: 기술통계, 집단 간 차이 검정(Welch t검정·분산분석), 사전·사후 차이 검정(대응표본 t검정 또는 Wilcoxon 부호순위 검정), 유의수준 .05(다층모형·요인분석 등 고급 분석은 별도 통계 패키지 사용을 권장)"));
+  if (A.meta.straightLiners && !S.excludedCount) ov.push(B("s.clean", 1, `자료 점검: 모든 척도 문항에 같은 값으로 응답한 사례 ${A.meta.straightLiners}명 확인(분석에 포함)`, true));
+  ov.push(B("s.method", 1, "분석 방법: 기술통계, 집단 간 차이 검정(Welch t검정·분산분석), 사전·사후 차이 검정(대응표본 t검정 또는 Wilcoxon 부호순위 검정), 유의수준 .05(다층모형·요인분석 등 고급 분석은 별도 통계 패키지 사용을 권장)", true));
   bullets(ov);
 
   if (A.respondents.length) {

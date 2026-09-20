@@ -11,7 +11,7 @@ export function projectToJson(state, { includeData = false } = {}) {
     },
     codebook: state.codebook, logicModel: state.logicModel, kpis: state.kpis,
     report: { overrides: state.overrides, overrideBase: state.overrideBase || {}, hidden: state.hidden, hiddenChapters: state.hiddenChapters },
-    present: { hidden: state.deckHidden || [] },
+    present: { hidden: state.deckHidden || [], overrides: state.deckOverrides || { bySlide: {} } },
     excludeStraight: state.excludeStraight,
     dataFingerprint: state.dataset ? { fileName: state.dataset.fileName, headersHash: state.codebook?.headersHash, rows: state.dataset.sheets.map(s => s.rows.length) } : null,
   };
@@ -39,6 +39,7 @@ export function parseProject(text) {
   if (obj.codebook !== undefined && obj.codebook !== null && !(isObj(obj.codebook) && Array.isArray(obj.codebook.columns))) throw new Error("프로젝트 파일 형식 오류(codebook)");
   if (obj.kpis !== undefined && !Array.isArray(obj.kpis)) throw new Error("프로젝트 파일 형식 오류(kpis)");
   if (obj.report !== undefined && !isObj(obj.report)) throw new Error("프로젝트 파일 형식 오류(report)");
+  if (obj.present !== undefined && !isObj(obj.present)) throw new Error("프로젝트 파일 형식 오류(present)");
   if (obj.dataset !== undefined && !(isObj(obj.dataset) && Array.isArray(obj.dataset.sheets))) throw new Error("프로젝트 파일 형식 오류(dataset)");
   // 원자료의 날짜 문자열 복원은 불필요 (분석은 문자열/숫자 기반)
   return obj;

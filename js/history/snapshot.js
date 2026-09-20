@@ -16,6 +16,7 @@ export function captureEditable(state) {
     hidden: state.hidden || [],
     hiddenChapters: state.hiddenChapters || [],
     deckHidden: state.deckHidden || [],
+    deckOverrides: state.deckOverrides || { bySlide: {} },
     excludeStraight: !!state.excludeStraight,
     settings: Object.fromEntries(SETTINGS_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]])),
   }));
@@ -129,6 +130,9 @@ export function diffEditable(older, newer) {
   diffSet(a.hidden, b.hidden, "문장");
   diffSet(a.hiddenChapters, b.hiddenChapters, "장");
   diffSet(a.deckHidden, b.deckHidden, "발표 슬라이드");
+  const da = a.deckOverrides?.bySlide || {}, db = b.deckOverrides?.bySlide || {};
+  const editedSlides = [...new Set([...Object.keys(da), ...Object.keys(db)])].filter(id => !same(da[id], db[id])).length;
+  if (editedSlides) add("발표 슬라이드", `문구 편집 ${editedSlides}개`);
 
   const sa = a.settings || {}, sb = b.settings || {};
   const SET_LABEL = { orgName: "기관·부서명", author: "담당자명", reportTitle: "보고서 제목", date: "작성일", thresholds: "판정 기준", scoreBasis: "100점 환산 기준", fontPreset: "글꼴", fontBody: "본문 글꼴", fontHeading: "제목 글꼴", baseSize: "글자 크기", lineSpacing: "줄 간격" };

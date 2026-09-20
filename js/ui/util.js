@@ -1,12 +1,15 @@
 // UI 공용 도우미 (브라우저)
 import { esc } from "../core/util.js";
+import { icon } from "./icons.js";
 export { esc };
+
+const TOAST_ICON = { ok: "check", bad: "alert", info: "info" };
 
 export function toast(msg, kind = "info", ms = 3200) {
   if (typeof document === "undefined") return;
   const el = document.getElementById("toast");
   if (!el) return;
-  el.textContent = msg;
+  el.innerHTML = `${icon(TOAST_ICON[kind] || "info", 17)}<span>${esc(msg)}</span>`;
   el.className = `toast show ${kind}`;
   clearTimeout(toast._t);
   toast._t = setTimeout(() => { el.className = "toast"; }, ms);
@@ -47,6 +50,7 @@ export function busy(on, msg = "처리 중…") {
   el.classList.remove("done");
   el.hidden = !on;
   el.querySelector(".busy-msg").textContent = msg;
+  el.querySelector(".spinner").innerHTML = "";
 }
 
 /** 화면 가운데에 완료 안내를 잠시 보여준다 (클릭하면 바로 닫힘). msg 의 줄바꿈(
@@ -56,6 +60,7 @@ export function busyDone(msg, ms = 2400) {
   const el = document.getElementById("busy");
   if (!el) return;
   el.querySelector(".busy-msg").textContent = msg;
+  el.querySelector(".spinner").innerHTML = icon("check", 15);
   el.classList.add("done");
   el.hidden = false;
   clearTimeout(busyDone._t);
