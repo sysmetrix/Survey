@@ -180,6 +180,31 @@ test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   assert.equal(bad(html), null);
 });
 
+test("성과지표 빠른 추가: 청소년 지표는 실제로 그 주제를 묻는 문항이 있으면 그 문항을 대상으로, 없으면 '전체로 계산'을 밝힘", () => {
+  const L = ["전혀 아니다", "아니다", "보통", "그렇다", "매우 그렇다"];
+  const rows = Array.from({ length: 20 }, (_, i) => [L[i % 5], L[(i + 1) % 5]]);
+  // 1) '소속감'을 직접 묻는 문항이 있는 설문
+  loadDataset({ fileName: "belong.csv", source: "file", sheets: [{ name: "응답", headers: ["나는 이 지역에 소속감을 느낀다", "전반적으로 만족한다"], rows }] });
+  const c = state.codebook.columns.find(x => x.header.includes("소속감"));
+  c.role = "likert"; c.scale = { min: 1, max: 5 }; c.labelMap = Object.fromEntries(L.map((t, i) => [t, i + 1]));
+  invalidate();
+  let html = business.render();
+  assert.match(html, /지역사회 소속감 향상 \(나는 이 지역에.*?\)/, "소속감 문항을 대상으로 표시");
+  business.actions["kpi-quick"]({ dataset: { id: "belonging" } });
+  assert.equal(state.kpis[0].targetRef, "나는 이 지역에 소속감을 느낀다", "소속감 문항이 대상으로 채워짐");
+
+  // 2) 소속감과 무관한 설문 — 전체로 계산됨을 버튼에서 밝히고, 대상은 비워 둠(전체로 계산)
+  const L2 = L;
+  const rows2 = Array.from({ length: 20 }, (_, i) => [L2[i % 5], L2[(i + 2) % 5]]);
+  loadDataset({ fileName: "generic.csv", source: "file", sheets: [{ name: "응답", headers: ["프로그램 내용이 흥미로웠다", "강사가 전문적이었다"], rows: rows2 }] });
+  state.codebook.columns.forEach(col => { col.role = "likert"; col.scale = { min: 1, max: 5 }; col.labelMap = Object.fromEntries(L2.map((t, i) => [t, i + 1])); });
+  invalidate();
+  html = business.render();
+  assert.ok(html.includes("지역사회 소속감 향상 — 관련 문항 없어 전체로 계산"), "관련 문항이 없으면 전체로 계산됨을 밝힘");
+  business.actions["kpi-quick"]({ dataset: { id: "belonging" } });
+  assert.equal(state.kpis[0].targetRef, "", "대상 문항이 없으면 targetRef 는 비워 둠(평가 시 전체로 해석됨)");
+});
+
 test("직접 고친 문장의 근거 수치가 바뀌면 표시(stale)", async () => {
   const f = "2026_진로탐색_사전사후.xlsx";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
