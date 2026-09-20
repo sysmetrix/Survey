@@ -185,7 +185,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     /** 개조식 항목: level 1 □, 2 ○, 3 -, 4 · */
     bullet(level, text) {
       const lv = Math.min(4, Math.max(1, level));
-      const size = lv === 1 ? B + 1 : B;
+      const size = B; // 미리보기(HTML)와 동일하게 모든 단계 본문 글자 크기를 그대로 사용(설정한 크기와 일치)
       const symbolW = Math.round(size * 100 * (lv >= 3 ? 1.1 : 1.6));
       const left = [0, 0, 1100, 2400, 3500][lv];
       addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "JUSTIFY", left: left + symbolW, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: LS });

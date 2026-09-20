@@ -100,6 +100,19 @@ test("공문서형: 제목 글꼴은 큰 제목에만, 굵은 글씨·표는 본
   assert.deepEqual(validateHwpx(entries, DOMParser), []);
 });
 
+test("개조식 항목(□○-·)은 단계와 무관하게 모두 설정한 본문 글자 크기 그대로(미리보기와 일치, 1단계만 커지던 문제 수정)", () => {
+  const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "t", baseSize: 12 });
+  doc.bullet(1, "1단계 문장").bullet(2, "2단계 문장").bullet(3, "3단계 문장");
+  const entries = doc.finish();
+  const header = part(entries, "Contents/header.xml");
+  const sec = part(entries, "Contents/section0.xml");
+  for (const [symbol, text] of [["□", "1단계"], ["○", "2단계"], ["-", "3단계"]]) {
+    const height = +charPrOf(header, runIdFor(sec, `${symbol} ${text}`)).match(/height="(\d+)"/)[1];
+    assert.equal(height, 1200, `${text} 글자 크기는 baseSize(12pt)와 같아야 함`);
+  }
+  assert.deepEqual(validateHwpx(entries, DOMParser), []);
+});
+
 test("문서 기본 위아래 여백은 10mm", () => {
   const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "여백 확인" });
   const sec = part(doc.finish(), "Contents/section0.xml");

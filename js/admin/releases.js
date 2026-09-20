@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.12.3", date: "2026-09-20", title: "한글(HWPX) 다운로드 시 본문 글자 크기가 설정과 다르게 나오던 문제 수정",
+    groups: {
+      "한글 문서": [
+        "개조식 1단계 항목(□)만 설정한 본문 크기보다 1pt 크게 나가던 문제 수정 — 예: 12pt로 설정해도 실제 문장 대부분(□ 항목)이 13pt로 저장되던 현상",
+        "이제 화면 미리보기와 동일하게 모든 단계가 설정한 글자 크기 그대로 저장됨",
+      ],
+    },
+  },
+  {
     version: "5.12.2", date: "2026-09-20", title: "100점 환산 점수를 소수점 2자리로 표기",
     groups: {
       "보고서·발표": [
