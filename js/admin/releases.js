@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.12.1", date: "2026-09-20", title: "분석 결과 화면의 상관계수 표기를 다른 화면과 통일",
+    groups: {
+      "화면": [
+        "'문항 간 상관' 표의 소수점 표기를 보고서·다른 화면과 같은 서식 규칙으로 통일(값은 그대로 소수점 2자리)",
+      ],
+    },
+  },
+  {
     version: "5.12.0", date: "2026-09-20", title: "통계 엔진 정확성·투명성 강화, 청소년 사업 성과지표 반영",
     groups: {
       "통계": [
