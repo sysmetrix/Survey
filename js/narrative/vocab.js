@@ -16,22 +16,23 @@ export function levelWord(score, t = DEFAULT_THRESHOLDS) {
   return score >= a ? "매우 높은 수준" : score >= b ? "높은 수준" : score >= c ? "보통 이상 수준" : score >= d ? "보통 수준" : "낮은 수준";
 }
 
-/** 100점 환산 기준 — exact: 반올림 전 평균으로 계산(기본), rounded: 표에 표시된 평균(소수 둘째 자리)으로 환산 */
+/**
+ * 100점 환산 기준 — 분석 엔진이 환산 점수를 계산할 때 쓰는 평균을 정한다.
+ *  exact   : 원자료의 평균(반올림 전)으로 환산
+ *  rounded : 표에 적힌 평균(소수 둘째 자리로 반올림한 값)으로 환산
+ * 환산 점수가 정해지면 정렬·수준 판정·성과지표 판정·차트가 모두 그 값을 따른다.
+ */
 export const SCORE_BASES = [
-  { id: "exact", label: "반올림 전 평균으로 환산 (정확한 값, 기본)" },
-  { id: "rounded", label: "표시된 평균(소수 둘째 자리)으로 환산 (기존 수기 보고서와 동일)" },
+  { id: "exact", label: "반올림 전 평균으로 환산 (기본)" },
+  { id: "rounded", label: "반올림 후 평균으로 환산 (표에 적힌 소수 둘째 자리 평균 기준)" },
 ];
 export const cleanScoreBasis = v => (v === "rounded" ? "rounded" : "exact");
 
-/**
- * 화면·보고서에 보여줄 100점 환산값. 표시 전용이며 수준 판정·성과지표 판정·정렬은 항상 원값(score100)을 쓴다.
- * o = {mean, min, max, score100} (문항·영역·전체 공통)
- */
-export function shown100(o, basis) {
-  if (!o) return NaN;
-  if (basis !== "rounded" || !Number.isFinite(o.mean)) return o.score100;
-  const { min, max } = o;
-  return Number.isFinite(min) && Number.isFinite(max) && max > min ? (round(o.mean, 2) - min) / (max - min) * 100 : o.score100;
+/** 두 기준의 차이를 보여줄 예시 계산 (평균 → 환산) */
+export function scoreBasisExample(mean, min, max) {
+  const conv = m => (m - min) / (max - min) * 100;
+  const shown = round(mean, 2);
+  return { mean, shown, min, max, exact: conv(mean), rounded: conv(shown) };
 }
 
 /** 수치 표기 */

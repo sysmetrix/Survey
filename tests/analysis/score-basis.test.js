@@ -1,70 +1,131 @@
-// 100점 환산 기준(exact | rounded): 표시값만 바뀌고 판정·정렬·분석 원값은 그대로여야 함
+// 100점 환산 기준(exact 반올림 전 | rounded 반올림 후): 엔진이 환산값을 정하고, 정렬·판정·성과지표가 그 값을 그대로 따라야 함
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { buildCodebook } from "../../js/model/codebook.js";
 import { buildSurvey } from "../../js/model/survey.js";
 import { analyzeSurvey } from "../../js/analysis/run.js";
+import { score100 } from "../../js/analysis/items.js";
+import { pairedComparison } from "../../js/analysis/prepost.js";
+import { evaluateKpis } from "../../js/evaluation/kpi.js";
 import { buildReport } from "../../js/report/build-report.js";
 import { buildDeck } from "../../js/present/deck.js";
 import { emptyLogicModel } from "../../js/evaluation/logic-model.js";
-import { shown100, f2, cleanScoreBasis } from "../../js/narrative/vocab.js";
+import { f2, cleanScoreBasis, scoreBasisExample } from "../../js/narrative/vocab.js";
 import { round, seededRandom } from "../../js/core/util.js";
+import { parseFile } from "../../js/io/parse.js";
+import { state, loadDataset, compute, invalidate } from "../../js/ui/store.js";
+import * as setup from "../../js/ui/views/setup.js";
+import * as settingsView from "../../js/ui/views/settings.js";
+const require = createRequire(import.meta.url);
+const XLSX = require("../../vendor/xlsx-0.20.3.full.min.js");
+const Papa = require("../../vendor/papaparse-5.4.1.min.js");
 
-function makeAnalysis() {
+function makeDs() {
   const rnd = seededRandom(11);
   const headers = ["번호", "성별", "프로그램 내용이 유익했다", "강사가 전문적이었다", "시설 환경이 쾌적했다", "프로그램에 전반적으로 만족하였다"];
   const rows = Array.from({ length: 164 }, (_, i) => {
     const pick = mu => Math.max(1, Math.min(5, Math.round(mu + (rnd() - 0.5) * 2.6)));
     return [i + 1, rnd() < 0.5 ? "남" : "여", pick(4.3), pick(4.6), pick(3.9), pick(4.4)];
   });
-  const ds = { fileName: "demo.xlsx", source: "file", sheets: [{ name: "응답", headers, rows }] };
-  const cb = buildCodebook(ds);
-  return { cb, analysis: analyzeSurvey(buildSurvey(ds, cb)) };
+  return { fileName: "demo.xlsx", source: "file", sheets: [{ name: "응답", headers, rows }] };
 }
+const analyze = (ds, scoreBasis) => { const cb = buildCodebook(ds); return { cb, an: analyzeSurvey(buildSurvey(ds, cb), { scoreBasis }) }; };
+const itemTable = blocks => blocks.find(b => b.type === "table" && b.caption === "문항별 만족도");
+const build = (an, cb) => buildReport({ analysis: an, evaluation: null, lint: [], logicModel: emptyLogicModel(), codebook: cb, settings: {} });
 
-const cellsOf = blocks => blocks.flatMap(b => [b.text, ...(b.lines || []).map(l => l.text), ...(b.items || []).map(i => (typeof i === "string" ? i : i.text)), ...(b.rows || []).flat().map(c => (typeof c === "string" ? c : c.text))]).filter(x => typeof x === "string");
-const build = (analysis, cb, scoreBasis) => buildReport({ analysis, evaluation: null, lint: [], logicModel: emptyLogicModel(), codebook: cb, settings: { scoreBasis } });
-
-test("shown100: exact 는 원값, rounded 는 표시 평균(소수 둘째 자리)으로 환산", () => {
-  const it = { mean: 4.3659, min: 1, max: 5, score100: (4.3659 - 1) / 4 * 100 };
-  assert.equal(shown100(it, "exact"), it.score100);
-  assert.equal(shown100(it, undefined), it.score100);
-  assert.ok(Math.abs(shown100(it, "rounded") - 84.25) < 1e-9); // 4.37 → 84.25 (수기 계산과 동일)
-  assert.equal(f2(shown100(it, "exact")), "84.15");
-  assert.equal(shown100({ mean: 4.3659, min: null, max: null, score100: 84.1475 }, "rounded"), 84.1475); // 척도 혼합은 원값 유지
+test("score100: exact 는 원값, rounded 는 소수 둘째 자리 평균으로 환산(4.37 → 84.25), 부동소수 잡음 없음", () => {
+  assert.ok(Math.abs(score100(4.3659, 1, 5) - 84.1475) < 1e-9);
+  assert.equal(score100(4.3659, 1, 5, "rounded"), 84.25);
+  assert.equal(score100(4.198, 1, 5, "rounded"), 80); // 4.20 → 정확히 80 (79.99999999999999 아님)
+  assert.ok(Number.isNaN(score100(NaN, 1, 5, "rounded")));
   assert.equal(cleanScoreBasis("rounded"), "rounded");
-  assert.equal(cleanScoreBasis("x"), "exact");
+  assert.equal(cleanScoreBasis(undefined), "exact");
+  const ex = scoreBasisExample(4.3659, 1, 5);
+  assert.equal(f2(ex.exact), "84.15"); assert.equal(f2(ex.rounded), "84.25");
 });
 
-test("보고서: rounded 에서 표의 환산값이 표시 평균으로 검산되고, 정렬·문항 목록은 exact 와 동일", () => {
-  const { cb, analysis } = makeAnalysis();
-  const exact = build(analysis, cb, "exact"), rounded = build(analysis, cb, "rounded");
-  const items = analysis.items;
-  assert.ok(items.some(it => f2(it.score100) !== f2((round(it.mean, 2) - it.min) / (it.max - it.min) * 100)), "두 기준의 값이 다른 문항이 있어야 테스트가 의미 있음");
-  const rowsOf = blocks => blocks.find(b => b.type === "table" && b.caption === "문항별 만족도").rows.slice(1).map(r => r.map(c => c.text));
-  const re = rowsOf(exact), rr = rowsOf(rounded);
-  assert.deepEqual(rr.map(r => r[0]), re.map(r => r[0]), "행 순서(정렬)는 원값 기준으로 동일");
-  for (const row of rr) {
-    const it = items.find(x => x.label === row[0]);
-    if (!it) continue; // '세부 문항 전체' 행은 아래에서 별도 검증
-    assert.equal(row[4], f2((Number(row[2]) - it.min) / (it.max - it.min) * 100), `${it.label}: 표의 평균으로 환산한 값과 일치`);
-  }
-  for (const row of re) {
-    const it = items.find(x => x.label === row[0]);
-    if (it) assert.equal(row[4], f2(it.score100), `${it.label}: exact 는 원값`);
-  }
-  const totRow = rr.find(r => r[0] === "세부 문항 전체");
-  const tot = analysis.total;
-  assert.equal(totRow[4], f2((round(tot.mean, 2) - tot.min) / (tot.max - tot.min) * 100));
-  // 기준을 안내하는 표 주석
-  assert.ok(cellsOf([exact.find(b => b.type === "table" && b.caption === "문항별 만족도")].map(b => ({ text: (b.notes || []).join("|") }))).join("").includes("반올림 전 평균"));
-  assert.ok((rounded.find(b => b.type === "table" && b.caption === "문항별 만족도").notes || []).join("|").includes("표시된 평균"));
+test("엔진: rounded 는 문항·전체 환산이 표시 평균으로 검산되고 meta 에 기준이 기록됨, 기본은 exact", () => {
+  const ds = makeDs();
+  const ex = analyze(ds, "exact").an, ro = analyze(ds, "rounded").an;
+  assert.equal(ex.meta.scoreBasis, "exact"); assert.equal(ro.meta.scoreBasis, "rounded");
+  assert.deepEqual(analyze(ds, undefined).an.items.map(i => i.score100), ex.items.map(i => i.score100), "기본값은 exact");
+  assert.ok(ex.items.some((it, i) => f2(it.score100) !== f2(ro.items[i].score100)), "두 기준의 값이 다른 문항이 있어야 의미 있는 테스트");
+  ro.items.forEach((it, i) => {
+    assert.equal(it.mean, ex.items[i].mean, "평균 자체는 같음");
+    assert.ok(Math.abs(it.score100 - (round(it.mean, 2) - it.min) / (it.max - it.min) * 100) < 1e-6, `${it.label}: 표시 평균으로 환산`);
+  });
+  const t = ro.total;
+  assert.ok(Math.abs(t.score100 - (round(t.mean, 2) - t.min) / (t.max - t.min) * 100) < 1e-6, "전체 행도 표시 평균으로 환산");
+  assert.notEqual(ex.total.score100, ro.total.score100);
 });
 
-test("발표 자료: rounded 는 표시값만 바뀌고 슬라이드 수·순서는 동일", () => {
-  const { cb, analysis } = makeAnalysis();
-  const mk = scoreBasis => buildDeck({ analysis, evaluation: null, logicModel: emptyLogicModel(), codebook: cb, settings: { scoreBasis } });
+test("보고서 표: rounded 는 모든 행이 표에 적힌 평균으로 검산되고 표시된 환산 점수 순으로 정렬됨", () => {
+  const ds = makeDs();
+  for (const basis of ["exact", "rounded"]) {
+    const { cb, an } = analyze(ds, basis);
+    const blocks = build(an, cb), table = itemTable(blocks);
+    const rows = table.rows.slice(1).map(r => r.map(c => c.text));
+    const detail = rows.filter(r => an.items.some(it => it.label === r[0] && !it.isOverall));
+    const vals = detail.map(r => Number(r[4]));
+    assert.deepEqual(vals, [...vals].sort((a, b) => b - a), `${basis}: 표시된 환산 점수가 높은 순`);
+    if (basis === "rounded") {
+      for (const r of rows.filter(r => an.items.some(it => it.label === r[0]))) {
+        const it = an.items.find(x => x.label === r[0]);
+        assert.equal(r[4], f2((Number(r[2]) - it.min) / (it.max - it.min) * 100), `${r[0]}: 표의 평균 ${r[2]}로 검산`);
+      }
+      const tot = rows.find(r => r[0] === "세부 문항 전체");
+      assert.equal(tot[4], f2((Number(tot[2]) - 1) / 4 * 100));
+    }
+    const notes = (table.notes || []).join("|");
+    assert.ok(basis === "rounded" ? notes.includes("정렬·수준 판정·성과지표 판정도 이 값을 기준") : notes.includes("반올림 전 평균으로 계산"), `${basis}: 기준 안내 주석`);
+  }
+});
+
+test("성과지표 판정이 선택한 기준을 따름: 평균 4.198(반올림 4.20) 문항, 목표 80점", () => {
+  const rows = Array.from({ length: 500 }, (_, i) => [i + 1, i % 2 ? "남" : "여", i < 99 ? 5 : 4, 3 + (i % 3)]); // 5가 99명, 4가 401명 → 평균 4.198
+  const ds = { fileName: "k.xlsx", source: "file", sheets: [{ name: "응답", headers: ["번호", "성별", "프로그램 내용", "강사 전문성"], rows }] };
+  const kpi = [{ id: "K1", name: "만족도", stage: "단기성과", goalId: "G1", metric: "score100", targetRef: "프로그램 내용", target: 80, direction: "up" }];
+  const judged = basis => { const { cb, an } = analyze(ds, basis); return { item: an.items.find(i => i.label === "프로그램 내용"), r: evaluateKpis(kpi, an, cb).results[0] }; };
+  const ex = judged("exact"), ro = judged("rounded");
+  assert.equal(f2(ex.item.mean), "4.20");
+  assert.equal(f2(ex.item.score100), "79.95"); assert.equal(ex.r.judgment, "대체로 달성");
+  assert.equal(f2(ro.item.score100), "80.00"); assert.equal(ro.r.judgment, "달성", "표시 평균 4.20 → 80.00점이므로 목표 80점 달성으로 판정");
+});
+
+test("사전·사후 환산(score100Pre/Post)도 기준을 따르고 변화량(diff100)은 원자료 기준 유지", () => {
+  const pre = [3, 3, 4, 3, 4, 3, 3, 4, 3, 3], post = [4, 4, 5, 4, 4, 4, 5, 4, 4, 4];
+  const a = pairedComparison(pre, post, { min: 1, max: 5 }), b = pairedComparison(pre, post, { min: 1, max: 5 }, { scoreBasis: "rounded" });
+  assert.equal(b.score100Post, score100(b.mPost, 1, 5, "rounded"));
+  assert.equal(a.score100Post, score100(a.mPost, 1, 5));
+  assert.equal(b.diff100, a.diff100);
+  assert.equal(b.diff, a.diff);
+});
+
+test("발표 자료: 기준에 관계없이 슬라이드 구성은 같고 근거 문구에 기준이 표기됨", () => {
+  const ds = makeDs();
+  const mk = basis => { const { cb, an } = analyze(ds, basis); return buildDeck({ analysis: an, evaluation: null, logicModel: emptyLogicModel(), codebook: cb, settings: {} }); };
   const a = mk("exact"), b = mk("rounded");
-  assert.equal(a.length, b.length);
   assert.deepEqual(a.map(s => s.id), b.map(s => s.id));
+  assert.ok(JSON.stringify(b).includes("표시된 소수 둘째 자리 평균 기준"));
+  assert.ok(JSON.stringify(a).includes("반올림 전 평균 기준"));
+});
+
+test("선택 화면: 데이터 설정·로컬 설정에 두 방식과 차이 설명, 실제 데이터 예시, 현재 선택이 표시됨", async () => {
+  const file = "2026_문화의집_만족도_구글폼.csv";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa }));
+  for (const basis of ["exact", "rounded"]) {
+    state.settings.scoreBasis = basis; invalidate(); compute();
+    for (const [name, html] of [["setup", setup.render()], ["settings", settingsView.render()]]) {
+      assert.ok(html.includes("반올림 전 평균으로 환산") && html.includes("반올림 후 평균으로 환산"), `${name}: 두 선택지 문구`);
+      assert.ok(html.includes("최대 ±0.125점"), `${name}: 오차 크기 설명`);
+      assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(html), `${name}: 이 파일에서의 영향 수`);
+      assert.ok(html.includes("로컬 설정"), `${name}: 나중에 바꿀 수 있다는 안내`);
+      const checked = html.match(/value="(exact|rounded)" checked/g);
+      assert.deepEqual(checked, [`value="${basis}" checked`], `${name}: 현재 선택(${basis}) 하나만 선택됨`);
+      assert.ok(!/undefined|NaN(?!\w)/.test(html.replace(/data-[a-z-]+="[^"]*"/g, "")), `${name}: 값 누락 없음`);
+    }
+  }
+  state.settings.scoreBasis = "exact"; invalidate();
 });

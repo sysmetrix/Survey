@@ -8,6 +8,7 @@ import { YEAR_SCHEMES, DEFAULT_YEAR_SCHEME, REF_YEAR, yearToBucket } from "../..
 import { maskPII, isBlank } from "../../core/util.js";
 import { esc, option, levelBadge, toast } from "../util.js";
 import { refresh, go } from "../router.js";
+import { scoreBasisPanel, scoreBasisActions } from "../score-basis.js";
 
 const SHEET_ROLE = { data: "응답", pre: "사전 응답", post: "사후 응답", codebook: "문항정보", business: "사업정보", kpi: "성과지표", guide: "안내" };
 const IS_NUM = s => /^[-+]?\d+(\.\d+)?$/.test(s);
@@ -148,6 +149,8 @@ export function render() {
     ${r.codebookWarnings.length || unmappedWarn ? `<ul class="warnings">${unmappedWarn}${r.codebookWarnings.map(w => `<li>${levelBadge(w.level)} ${esc(w.msg)}</li>`).join("")}</ul>` : ""}
   </section>
 
+  ${r.analysis.items.length ? scoreBasisPanel(r.analysis.items) : ""}
+
   ${cb.design === "prepost-sheets" ? `
   <section class="card">
     <h2>사전·사후 응답자 연결</h2>
@@ -186,6 +189,7 @@ export function render() {
 const colByKey = key => state.codebook.columns.find(x => x.key === key);
 
 export const actions = {
+  ...scoreBasisActions,
   "toggle-labels": el => { expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },
   "toggle-yearbucket": el => { expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },
   yearscheme: el => { const c = colByKey(el.dataset.key); if (!c) return; c.yearScheme = el.value; invalidate(); refresh(); },

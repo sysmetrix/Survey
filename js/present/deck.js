@@ -1,7 +1,7 @@
 // 발표 슬라이드 구성 (순수 모듈): 분석 결과 → 슬라이드 배열
 // 원칙(데이터 스토리텔링): 슬라이드당 하나의 메시지, 결론을 말하는 제목(행동형 제목), 핵심 수치 1개 강조,
 //   차트는 메시지에 맞는 형태 1개, 근거(n·검정)는 각주·발표자 노트로
-import { levelWord, f1, f2, signed, pText, statParen, shown100, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
+import { levelWord, f1, f2, signed, pText, statParen, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { josa } from "../narrative/josa.js";
 import { DESIGN_LABELS } from "../model/codebook.js";
 import { levelLabels } from "../report/build-report.js";
@@ -22,11 +22,8 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   const P = A.prepost;
   const ALLP = P?.domains.find(d => d.id === "ALL") || (P?.items.length === 1 ? P.items[0] : null);
   const overall = A.overallItem, tot = A.total;
-  const D = o => shown100(o, S.scoreBasis); // 화면 표시용 환산값 (수준 판정·정렬은 원값 score100 사용)
-  const itemOf = key => A.items.find(it => it.key === key);
   const detail = A.items.filter(it => !it.isOverall).sort((a, b) => b.score100 - a.score100);
   const sat = overall ? overall.score100 : tot?.score100;
-  const satShown = D(overall || tot);
   const n = A.meta.n;
   const title = S.reportTitle || (LM?.programName ? LM.programName : "설문조사 결과");
   const colOf = key => CB?.columns.find(c => c.key === key);
@@ -43,12 +40,12 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   const stats = [{ label: "응답자", value: String(n), unit: "명", sub: P?.matching ? `사전·사후 매칭 ${P.matchedN}명` : DESIGN_LABELS[A.meta.design] }];
   if (E?.results.length) stats.push({ label: "성과지표 달성", value: `${E.summary.achieved}/${E.summary.measured}`, unit: "개", sub: `종합 평가 ${E.summary.grade}`, tone: E.summary.grade === "우수" ? "good" : E.summary.grade === "미흡" ? "critical" : "warning" });
   if (ALLP) stats.push({ label: "참여 전후 변화", value: signed(ALLP.diff), unit: "점", sub: `${f2(ALLP.mPre)} → ${f2(ALLP.mPost)} · ${pText(ALLP.primary.p)}`, tone: ALLP.primary.p < 0.05 && ALLP.diff > 0 ? "good" : "neutral" });
-  if (Number.isFinite(sat)) stats.push({ label: overall ? "전반적 만족도" : "만족도", value: f1(satShown), unit: "점", sub: `100점 환산 · ${levelWord(sat, t)}` });
+  if (Number.isFinite(sat)) stats.push({ label: overall ? "전반적 만족도" : "만족도", value: f1(sat), unit: "점", sub: `100점 환산 · ${levelWord(sat, t)}` });
   if (A.nps[0]) stats.push({ label: "순추천지수(NPS)", value: signed(A.nps[0].nps, 1), unit: "", sub: `추천 ${f1(A.nps[0].promoters)}% · 비추천 ${f1(A.nps[0].detractors)}%` });
   const head = [];
   if (E?.results.length) head.push(`성과지표 ${E.summary.measured}개 중 ${E.summary.achieved}개 달성`);
   if (ALLP && ALLP.primary.p < 0.05 && ALLP.diff > 0) head.push(`참여 후 성과 점수 ${signed(ALLP.diff)}점 향상`);
-  if (head.length < 2 && Number.isFinite(sat)) head.push(`만족도 ${f1(satShown)}점(${levelWord(sat, t)})`);
+  if (head.length < 2 && Number.isFinite(sat)) head.push(`만족도 ${f1(sat)}점(${levelWord(sat, t)})`);
   add({ id: "summary", type: "stats", section: "한눈에 보기", title: head.slice(0, 2).join(", ") || "조사 결과 요약", stats: stats.slice(0, 5), notes: stats.map(s => `${s.label}: ${s.value}${s.unit} (${s.sub})`) });
 
   // 3. 성과지표
@@ -109,11 +106,11 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
     const hi = detail[0], lo = detail.at(-1);
     add({ id: "ranking",
       type: "chart", section: "만족도",
-      title: `${q(short(hi.label, 16))} ${f2(D(hi))}점으로 가장 높고, ${q(short(lo.label, 16))} ${f2(D(lo))}점으로 가장 낮습니다`,
-      subtitle: tot && Number.isFinite(tot.score100) ? `세부 문항 평균 ${f2(D(tot))}점(100점 환산, ${levelWord(tot.score100, t)})` : "",
-      chart: { kind: "hbar", data: detail.slice(0, 12).map(i => ({ label: i.label, value: D(i) })), opts: { max: 100, refValue: tot ? D(tot) : null, refLabel: "평균", unit: "점", width: 900, labelWidth: 280, valueFmt: f2 } },
-      notes: detail.map(i => `${i.label}: ${f2(i.mean)}점(100점 ${f2(D(i))}, 긍정 ${f1(i.top2)}%, 부정 ${f1(i.bottom2)}%)`),
-      source: `100점 환산 = (평균 − 최소) ÷ (최대 − 최소) × 100${S.scoreBasis === "rounded" ? "(표시된 평균 기준)" : "(반올림 전 평균 기준)"} · n=${Math.min(...detail.map(i => i.n))}`,
+      title: `${q(short(hi.label, 16))} ${f2(hi.score100)}점으로 가장 높고, ${q(short(lo.label, 16))} ${f2(lo.score100)}점으로 가장 낮습니다`,
+      subtitle: tot && Number.isFinite(tot.score100) ? `세부 문항 평균 ${f2(tot.score100)}점(100점 환산, ${levelWord(tot.score100, t)})` : "",
+      chart: { kind: "hbar", data: detail.slice(0, 12).map(i => ({ label: i.label, value: i.score100 })), opts: { max: 100, refValue: tot?.score100 ?? null, refLabel: "평균", unit: "점", width: 900, labelWidth: 280, valueFmt: f2 } },
+      notes: detail.map(i => `${i.label}: ${f2(i.mean)}점(100점 ${f2(i.score100)}, 긍정 ${f1(i.top2)}%, 부정 ${f1(i.bottom2)}%)`),
+      source: `100점 환산 = (평균 − 최소) ÷ (최대 − 최소) × 100${A.meta.scoreBasis === "rounded" ? "(표시된 소수 둘째 자리 평균 기준)" : "(반올림 전 평균 기준)"} · n=${Math.min(...detail.map(i => i.n))}`,
     });
   }
 
@@ -201,9 +198,9 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   const good = [], improve = [], next = [];
   if (E) E.results.filter(r => r.judgment === "달성").slice(0, 2).forEach(r => good.push(`${r.name} 목표 달성(${f1(r.rate)}%)`));
   if (ALLP && ALLP.primary.p < 0.05 && ALLP.diff > 0) good.push(`참여 후 성과 점수 ${signed(ALLP.diff)}점 향상(${ALLP.primary.effectLabel})`);
-  detail.filter(i => i.score100 >= t.level[1]).slice(0, 2).forEach(i => good.push(`${short(i.label, 20)} ${f2(D(i))}점`));
+  detail.filter(i => i.score100 >= t.level[1]).slice(0, 2).forEach(i => good.push(`${short(i.label, 20)} ${f2(i.score100)}점`));
   if (E) E.results.filter(r => r.judgment === "미달성").slice(0, 2).forEach(r => { improve.push(`${r.name} 미달성(${f1(r.rate)}%)`); next.push(`${r.name}: 원인 분석·운영 방식 보완`); });
-  (A.ipa?.points || []).filter(p => p.quadrant === "집중 개선").slice(0, 2).forEach(p => { improve.push(`${short(p.label, 20)} 만족도 ${f2(itemOf(p.key) ? D(itemOf(p.key)) : p.performance)}점`); next.push(`${short(p.label, 20)} 개선 과제 수립`); });
+  (A.ipa?.points || []).filter(p => p.quadrant === "집중 개선").slice(0, 2).forEach(p => { improve.push(`${short(p.label, 20)} 만족도 ${f2(p.performance)}점`); next.push(`${short(p.label, 20)} 개선 과제 수립`); });
   texts.forEach(tx => tx.themes.filter(th => th.negative >= 3).slice(0, 1).forEach(th => improve.push(`주관식 ${th.name} 개선 요구 ${th.negative}건`)));
   if (P) P.items.filter(i => !(i.primary.p < 0.05)).slice(0, 1).forEach(i => next.push(`${short(i.label, 18)} 관련 활동 보강`));
   if (E) next.push("차년도 성과지표 목표(안) 검토");

@@ -133,7 +133,7 @@ export function compute() {
     survey = buildSurvey(state.dataset, cb, { exclude: new Set(survey.straightLiners) });
     excludedCount = straight;
   }
-  const analysis = analyzeSurvey(survey);
+  const analysis = analyzeSurvey(survey, { scoreBasis: state.settings.scoreBasis });
   if (excludedCount) analysis.meta.straightLiners = straight;
   const kpis = state.kpis.filter(k => k.name);
   const evaluation = kpis.length ? evaluateKpis(kpis, analysis, cb, state.settings.thresholds) : null;

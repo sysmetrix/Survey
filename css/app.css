@@ -464,3 +464,12 @@ kbd { font: 600 11.5px/1 var(--font); padding: 3px 6px; border-radius: 5px; bord
   .recent-actions .btn { flex: 1; }
 }
 .r-stale { flex: none; align-self: center; font: 700 11px/1 var(--font); color: #8A5A00; background: #FFF2D2; border-radius: 5px; padding: 3px 6px; margin-left: 4px; cursor: help; }
+
+/* 100점 환산 기준 선택 카드 */
+.basis-card .basis-example { margin: 4px 0; }
+.basis-card .basis-impact { margin: 4px 0 10px; padding: 8px 12px; border-radius: var(--radius); background: var(--surface-2); }
+.basis-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 10px 0; }
+.basis-opt { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; }
+.basis-opt.on { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 0 1px var(--brand) inset; }
+.basis-opt input { margin-top: 4px; }
+.basis-opt p { margin: 6px 0 0; font-size: 13.5px; }

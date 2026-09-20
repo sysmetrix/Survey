@@ -8,9 +8,11 @@ import { ols } from "../stats/regression.js";
 import { cronbachAlpha } from "../stats/reliability.js";
 import { mean } from "../stats/descriptive.js";
 
-export function analyzeSurvey(survey, { textGroupKey = null } = {}) {
-  const items = survey.scales.map(c => itemStats(survey, c));
-  const domainsRes = domainStats(survey, items);
+/** scoreBasis: "exact"(반올림 전 평균으로 환산) | "rounded"(반올림 후 평균으로 환산) — 정렬·수준 판정·성과지표 판정은 여기서 정해진 환산 점수를 그대로 따른다 */
+export function analyzeSurvey(survey, { textGroupKey = null, scoreBasis = "exact" } = {}) {
+  const basis = { scoreBasis };
+  const items = survey.scales.map(c => itemStats(survey, c, basis));
+  const domainsRes = domainStats(survey, items, basis);
   const overallItem = items.find(it => it.isOverall) || null;
   const nonOverall = items.filter(it => !it.isOverall);
 
@@ -45,14 +47,14 @@ export function analyzeSurvey(survey, { textGroupKey = null } = {}) {
 
   const groups = textGroupKey ? survey.values(textGroupKey) : null;
   return {
-    meta: { n: survey.n, design: survey.design, fileName: survey.dataset.fileName, source: survey.dataset.source, straightLiners: survey.straightLiners.length },
+    meta: { n: survey.n, scoreBasis, design: survey.design, fileName: survey.dataset.fileName, source: survey.dataset.source, straightLiners: survey.straightLiners.length },
     respondents: survey.demographics.map(c => respondentProfile(survey, c)),
     items, overallItem, domains: domainsRes.domains, total: domainsRes.total, reliability,
     nps: survey.nps.map(c => npsStats(survey, c)),
     multi: survey.multis.map(c => multiStats(survey, c)),
-    cross: crossAnalysis(survey, items, domainsRes),
+    cross: crossAnalysis(survey, items, domainsRes, basis),
     associations: demographicAssociations(survey),
-    prepost: prepostAnalysis(survey),
+    prepost: prepostAnalysis(survey, basis),
     text: survey.texts.map(c => ({ key: c.key, label: c.label, ...textAnalysis(survey.values(c.key), { groups }) })),
     correlation, regression, ipa,
   };

@@ -6,12 +6,13 @@ import { shapiroWilk } from "../stats/normality.js";
 import { dLabel, rLabel } from "../stats/effectsize.js";
 import { rawColumn } from "../model/codebook.js";
 import { recodeColumn } from "../model/recode.js";
+import { score100 } from "./items.js";
 
 /**
  * 대응 자료 검정 자동 선택
  *  n ≥ 30 → 대응표본 t / n < 30 → 차이점수 Shapiro-Wilk p<.05 이면 Wilcoxon, 아니면 대응표본 t
  */
-export function pairedComparison(pre, post, { min, max }) {
+export function pairedComparison(pre, post, { min, max }, { scoreBasis = "exact" } = {}) {
   const pt = pairedT(pre, post);
   const wx = wilcoxonSignedRank(pre, post);
   if (!pt) return null;
@@ -29,7 +30,7 @@ export function pairedComparison(pre, post, { min, max }) {
     : { name: "대응표본 t", stat: pt.t, statLabel: "t", df: pt.df, p: pt.p, ci: pt.ci, effect: pt.dz, effectName: "d", effectLabel: dLabel(pt.dz) };
   return {
     n, mPre: pt.mPre, mPost: pt.mPost, sdPre: pt.sdPre, sdPost: pt.sdPost, diff: pt.diff, ci: pt.ci,
-    score100Pre: (pt.mPre - min) / range * 100, score100Post: (pt.mPost - min) / range * 100, diff100: pt.diff / range * 100,
+    score100Pre: score100(pt.mPre, min, max, scoreBasis), score100Post: score100(pt.mPost, min, max, scoreBasis), diff100: pt.diff / range * 100,
     changePct: pt.mPre ? pt.diff / pt.mPre * 100 : NaN,
     dz: pt.dz, dav: pt.dav, primary, rule: useW ? "n<30 & 차이점수 비정규(Shapiro-Wilk p<.05)" : n < 30 ? "n<30 & 정규성 기각 안 됨" : "n≥30",
     pairedT: { t: pt.t, df: pt.df, p: pt.p }, wilcoxon: { V: wx.V, z: wx.z, p: wx.p, r: wx.r },
@@ -41,7 +42,7 @@ export function pairedComparison(pre, post, { min, max }) {
 }
 
 /** 비매칭(독립) 사전·사후 비교 — 동일인 비교 아님 */
-export function unpairedComparison(pre, post, { min, max }) {
+export function unpairedComparison(pre, post, { min, max }, { scoreBasis = "exact" } = {}) {
   const a = pre.filter(x => x !== null), b = post.filter(x => x !== null);
   const t = welchT(b, a), mw = mannWhitney(b, a);
   if (!t) return null;
@@ -49,7 +50,7 @@ export function unpairedComparison(pre, post, { min, max }) {
   return {
     unpaired: true, nPre: a.length, nPost: b.length, n: Math.min(a.length, b.length),
     mPre: t.m2, mPost: t.m1, sdPre: t.sd2, sdPost: t.sd1, diff: t.diff, ci: t.ci,
-    score100Pre: (t.m2 - min) / range * 100, score100Post: (t.m1 - min) / range * 100, diff100: t.diff / range * 100,
+    score100Pre: score100(t.m2, min, max, scoreBasis), score100Post: score100(t.m1, min, max, scoreBasis), diff100: t.diff / range * 100,
     changePct: t.m2 ? t.diff / t.m2 * 100 : NaN,
     primary: { name: "Welch t (비매칭)", stat: t.t, statLabel: "t", df: t.df, p: t.p, ci: t.ci, effect: t.g, effectName: "g", effectLabel: dLabel(t.g) },
     mannWhitney: mw && { W: mw.W, p: mw.p, effect: mw.rb, effectName: "r" },
@@ -57,7 +58,7 @@ export function unpairedComparison(pre, post, { min, max }) {
 }
 
 /** 사전·사후 전체 분석: 문항 짝 + 영역(짝 문항 평균) */
-export function prepostAnalysis(survey) {
+export function prepostAnalysis(survey, { scoreBasis = "exact" } = {}) {
   if (survey.design === "single" || !survey.pairs.length) return null;
   const cb = survey.codebook;
   const colOf = k => cb.columns.find(c => c.key === k);
@@ -70,7 +71,7 @@ export function prepostAnalysis(survey) {
   const items = survey.pairs.map(p => {
     const col = colOf(p.post);
     const scale = col.scale || { min: 0, max: 10 };
-    const res = useUnpaired ? unpairedComparison(fullValues(p.pre), fullValues(p.post), scale) : pairedComparison(p.preValues, p.postValues, scale);
+    const res = useUnpaired ? unpairedComparison(fullValues(p.pre), fullValues(p.post), scale, { scoreBasis }) : pairedComparison(p.preValues, p.postValues, scale, { scoreBasis });
     return res && { pairKey: p.pairKey, label: p.label, domain: p.domain, pre: p.pre, post: p.post, scale, ...res };
   }).filter(Boolean);
 
@@ -86,7 +87,7 @@ export function prepostAnalysis(survey) {
       const v = g.pairs.map(p => p[side][i]).filter(x => x !== null);
       return v.length >= Math.ceil(g.pairs.length / 2) ? mean(v) : null;
     });
-    const res = pairedComparison(avgOf("preValues"), avgOf("postValues"), scale);
+    const res = pairedComparison(avgOf("preValues"), avgOf("postValues"), scale, { scoreBasis });
     if (res) domains.push({ id: g.id, name: g.name, nItems: g.pairs.length, scale, ...res });
   }
 

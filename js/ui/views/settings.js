@@ -1,7 +1,7 @@
 import { prefs, savePrefs, cache, requestPersist, fmtBytes } from "../history/manager.js";
 import { themePref, setTheme, THEME_LABEL } from "../theme.js";
 import { state, persistSettings, invalidate } from "../store.js";
-import { SCORE_BASES, cleanScoreBasis } from "../../narrative/vocab.js";
+import { scoreBasisPanel, scoreBasisActions } from "../score-basis.js";
 import { esc, toast, option } from "../util.js";
 import { refresh, prevView, viewLabel } from "../router.js";
 import { icon } from "../icons.js";
@@ -17,10 +17,7 @@ export function render() {
       <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" placeholder="예: 부천여성청소년재단 청소년팀" data-change="local-org"></label>
       <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="예: 홍길동" data-change="local-author"></label>
     </section>
-    <section class="card"><h2>보고서 수치 표기</h2>
-      <label class="field">100점 환산 기준<select class="in" data-change="local-basis">${SCORE_BASES.map(b => option(b.id, b.label, state.settings.scoreBasis === b.id)).join("")}</select></label>
-      <p class="small muted">보고서 표·요약 문장·차트와 발표 자료에 표시되는 환산 점수에만 적용됩니다. 수준 판정, 성과지표 달성 판정, 문항 순위, 사전·사후 변화량은 어느 쪽이든 반올림 전 값으로 계산합니다.</p>
-    </section>
+    ${scoreBasisPanel(state.results?.analysis?.items || [])}
     <section class="card"><h2>화면</h2>
       <label class="field">화면 테마<select class="in" data-change="local-theme">${Object.entries(THEME_LABEL).map(([v, label]) => option(v, label, themePref() === v)).join("")}</select></label>
       <p class="small muted">시스템 설정은 Windows 또는 브라우저의 밝은·어두운 화면 설정을 따릅니다.</p>
@@ -55,9 +52,9 @@ export function render() {
 }
 
 export const actions = {
+  ...scoreBasisActions,
   "local-org": el => { state.settings.orgName = el.value.trim(); persistSettings(); invalidate(); toast("기관·부서명을 저장했습니다", "ok"); refresh(); },
   "local-author": el => { state.settings.author = el.value.trim(); persistSettings(); invalidate(); toast("담당자명을 저장했습니다", "ok"); refresh(); },
-  "local-basis": el => { state.settings.scoreBasis = cleanScoreBasis(el.value); persistSettings(); invalidate(); toast("100점 환산 기준을 변경했습니다", "ok"); refresh(); },
   "local-theme": el => { setTheme(el.value); toast(`화면 테마: ${THEME_LABEL[el.value]}`); refresh(); },
   "local-autosave": el => { savePrefs({ autosave: el.checked }); toast(el.checked ? "자동 저장을 켰습니다" : "자동 저장을 껐습니다"); refresh(); },
   "local-max": el => { savePrefs({ maxAuto: Number(el.value) }); toast("자동 버전 보관 수를 변경했습니다", "ok"); refresh(); },

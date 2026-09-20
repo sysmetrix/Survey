@@ -1,11 +1,18 @@
 // 문항·영역·신뢰도·NPS·복수응답·응답자 특성 분석
 import { describe, frequency, mean } from "../stats/descriptive.js";
 import { cronbachAlpha } from "../stats/reliability.js";
+import { round } from "../core/util.js";
 
-export const score100 = (m, min, max) => (Number.isFinite(m) && max > min ? (m - min) / (max - min) * 100 : NaN);
+/** 평균 → 100점 환산. basis="rounded"면 소수 둘째 자리로 반올림한 평균으로 환산 (보고서에 표시되는 평균과 동일한 반올림) */
+export const score100 = (m, min, max, basis = "exact") => {
+  if (!Number.isFinite(m) || !(max > min)) return NaN;
+  if (basis !== "rounded") return (m - min) / (max - min) * 100;
+  // 부동소수 잡음(79.99999999999999 등)이 판정 경계에서 결과를 뒤집지 않도록 9자리로 정리
+  return Math.round((round(m, 2) - min) / (max - min) * 100 * 1e9) / 1e9;
+};
 
 /** 척도 문항 1개 요약 */
-export function itemStats(survey, col) {
+export function itemStats(survey, col, { scoreBasis = "exact" } = {}) {
   const { values, missing, invalid } = survey.column(col.key);
   const v = values.filter(x => x !== null);
   const { min, max } = col.scale;
@@ -19,7 +26,7 @@ export function itemStats(survey, col) {
   return {
     key: col.key, label: col.label, header: col.header, domain: col.domain, reverse: col.reverse, isOverall: col.isOverall,
     ...d, obsMin: d.min, obsMax: d.max, min, max, // min/max = 척도 범위 (관측값은 obsMin/obsMax)
-    score100: score100(d.mean, min, max), top2, bottom2,
+    score100: score100(d.mean, min, max, scoreBasis), top2, bottom2,
     neutral: Number.isInteger(mid) && v.length ? v.filter(x => x === mid).length / v.length * 100 : 0,
     freq, missing, invalid, nTotal: survey.n,
   };
@@ -42,7 +49,7 @@ export function compositeScores(survey, cols, minAnswered = 0.5) {
 }
 
 /** 영역별 요약 (영역 미지정 문항은 "전체"로만 집계) */
-export function domainStats(survey, items) {
+export function domainStats(survey, items, { scoreBasis = "exact" } = {}) {
   const scaleCols = survey.scales;
   const groups = [];
   (survey.domains || []).forEach(d => {
@@ -55,11 +62,13 @@ export function domainStats(survey, items) {
     const rel = cols.length >= 2 ? cronbachAlpha(cols.map(c => ({ name: c.label, values: survey.values(c.key) }))) : null;
     const d = describe(comp.map(x => x * 100));
     const sameScale = cols.length && cols.every(c => c.scale.min === cols[0].scale.min && c.scale.max === cols[0].scale.max);
+    const meanOfItems = mean(its.map(it => it.mean)); // 문항 평균의 평균 (원척도)
     return {
       id, name, keys: cols.map(c => c.key), nItems: cols.length, n: d.n,
-      min: sameScale ? cols[0].scale.min : null, max: sameScale ? cols[0].scale.max : null, // 척도가 섞이면 null (표시용 환산에서 제외)
-      score100: d.mean, sd100: d.sd,
-      mean: mean(its.map(it => it.mean)), // 문항 평균의 평균 (원척도)
+      min: sameScale ? cols[0].scale.min : null, max: sameScale ? cols[0].scale.max : null,
+      // 반올림 후 기준: 표에 적힌 평균(문항 평균의 평균)으로 환산. 척도가 섞인 영역은 응답자별 0~1 정규화 평균 그대로
+      score100: scoreBasis === "rounded" && sameScale ? score100(meanOfItems, cols[0].scale.min, cols[0].scale.max, "rounded") : d.mean, sd100: d.sd,
+      mean: meanOfItems,
       top2: mean(its.map(it => it.top2)),
       alpha: rel?.alpha ?? null, reliability: rel,
     };

@@ -1,7 +1,7 @@
 // ④ 분석 결과 화면: 핵심 지표 카드 + 장별 결과(보고서와 동일한 표·그래프) + 주관식 원문 + 자료 품질
 import { state, compute, reportBlocks, invalidate } from "../store.js";
 import { blocksToHtml, splitChapters } from "../../report/render-html.js";
-import { f1, f2, signed, pText, shown100 } from "../../narrative/vocab.js";
+import { f1, f2, signed, pText } from "../../narrative/vocab.js";
 import { alphaLabel } from "../../stats/effectsize.js";
 import { DESIGN_LABELS } from "../../model/codebook.js";
 import { maskPII } from "../../core/util.js";
@@ -25,7 +25,7 @@ export function mount() {
 function cards(r) {
   const A = r.analysis, E = r.evaluation, P = A.prepost;
   const all = P?.domains.find(d => d.id === "ALL") || (P?.items.length === 1 ? P.items[0] : null);
-  const sat = shown100(A.overallItem || A.total, state.settings.scoreBasis);
+  const sat = A.overallItem ? A.overallItem.score100 : A.total?.score100;
   const c = [
     ["응답자", `${A.meta.n}명`, DESIGN_LABELS[A.meta.design]],
     E && ["성과지표", `${E.summary.achieved}/${E.summary.measured} 달성`, `종합 ${E.summary.grade}`],

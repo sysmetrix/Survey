@@ -8,7 +8,7 @@ import { chiSquare, crosstab } from "../stats/categorical.js";
 import { holm, benjaminiHochberg } from "../stats/adjust.js";
 import { dLabel, etaLabel, vLabel } from "../stats/effectsize.js";
 import { DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
-import { compositeScores, naturalOrder } from "./items.js";
+import { compositeScores, naturalOrder, score100 } from "./items.js";
 
 /**
  * 집단 비교 1회.
@@ -55,7 +55,7 @@ export function compareGroups(groupVals, groupNames, { minN = 2, smallN = DEFAUL
  * @param items  itemStats 결과
  * @param domainsRes domainStats 결과
  */
-export function crossAnalysis(survey, items, domainsRes, { maxGroups = 12, minGroupN = 2 } = {}) {
+export function crossAnalysis(survey, items, domainsRes, { maxGroups = 12, minGroupN = 2, scoreBasis = "exact" } = {}) {
   const out = [];
   const totalComp = domainsRes?.total ? compositeScores(survey, survey.scales.filter(c => domainsRes.total.keys.includes(c.key))) : null;
   for (const demo of survey.demographics) {
@@ -69,7 +69,7 @@ export function crossAnalysis(survey, items, domainsRes, { maxGroups = 12, minGr
       const vals = survey.values(it.key);
       const cmp = compareGroups(groupsOf(vals), names, { minN: minGroupN });
       const { min, max } = col.scale;
-      cmp.stats.forEach(s => { s.score100 = Number.isFinite(s.mean) ? (s.mean - min) / (max - min) * 100 : NaN; });
+      cmp.stats.forEach(s => { s.score100 = score100(s.mean, min, max, scoreBasis); });
       return { key: it.key, label: it.label, ...cmp };
     });
     let total = null;
