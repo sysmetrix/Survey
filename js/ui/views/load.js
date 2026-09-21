@@ -60,7 +60,7 @@ export function render() {
 
     <section class="ld-hero">
       <div class="ld-hero-top">
-        <p class="eyebrow ld-in" style="--d:0s">${icon("sparkle", 14)}청소년 사업 결과평가 도구</p>
+        <p class="eyebrow ld-in" style="--d:0s">${icon("sparkle", 14)}청소년 사업 평가 도구</p>
         <h1 class="ld-h1" data-kinetic>
           <span class="ln"><span class="tx">설문 엑셀 하나로</span> <span class="roll" data-roll><span class="roll-track"><span class="rw">분석부터</span><span class="rw" data-alt>보고서까지</span><span class="rw" data-alt>발표까지</span><span class="rw" data-alt>분석부터</span></span></span></span>
           <span class="ln"><span class="tx">한글 보고서·발표 자료까지</span></span>
