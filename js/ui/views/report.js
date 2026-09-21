@@ -124,7 +124,6 @@ export function render() {
         <p><b>문장 편집</b> — 미리보기의 문장을 클릭해 직접 고칩니다.</p>
         <dl class="rt-keys">
           <dt><kbd>Enter</kbd></dt><dd>고친 내용 확정</dd>
-          <dt><kbd>Ctrl</kbd>+<kbd>B</kbd></dt><dd>선택한 글자 굵게(한컴·워드와 같음)</dd>
           <dt>✕</dt><dd>이 문장 빼기</dd>
           <dt>↺</dt><dd>자동 문장으로 되돌리기</dd>
         </dl>

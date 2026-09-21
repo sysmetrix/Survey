@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.35.3", date: "2026-09-21", title: "보고서 화면 사용법에서 Ctrl+B 단축키 안내 삭제",
+    groups: {
+      "보고서": [
+        "'사용법' 팝업의 단축키 목록에서 'Ctrl+B 선택한 글자 굵게' 항목 삭제",
+      ],
+    },
+  },
+  {
     version: "5.35.2", date: "2026-09-21", title: "HWPX 상단 표제부 글꼴 통일, 개조식 내어쓰기 값 수정",
     groups: {
       "보고서(HWPX)": [
