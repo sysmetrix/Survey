@@ -19,7 +19,7 @@ function loadSettings() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { /* 비공개 모드 등 */ }
   return {
-    orgName: saved.orgName ?? "", author: saved.author || "",
+    orgName: saved.orgName ?? "부천여성청소년재단", author: saved.author || "",
     reportTitle: "", date: koDate(), thresholds: { ...DEFAULT_THRESHOLDS, ...(saved.thresholds || {}) },
     scoreBasis: cleanScoreBasis(saved.scoreBasis),
     ...pickDocSettings(saved),
