@@ -92,7 +92,7 @@ export function render() {
       </label>
       <div class="ld-side-row">
         <div class="ld-open">
-          <label class="btn">${icon("folder", 17)}프로젝트 파일 열기<input type="file" accept=".json" data-change="pick-project" hidden></label>
+          <label class="btn" title="지난번 '프로젝트 파일 저장'으로 내려받은 설정 파일(.json)을 열면 문항 설정·성과지표·문장 수정이 이어집니다. 처음 쓰신다면 몰라도 됩니다 — 아래에서 설문 데이터부터 올리세요.">${icon("folder", 17)}프로젝트 파일 열기<input type="file" accept=".json" data-change="pick-project" hidden></label>
           ${state.dataset ? `<button class="btn primary" data-act="goto" data-to="setup">현재 데이터 계속 (${esc(state.dataset.fileName)}) ${icon("right", 16)}</button>` : ""}
         </div>
         <div class="ld-tpl"><b>입력 템플릿</b>
