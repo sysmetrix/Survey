@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.35.1", date: "2026-09-21", title: "보고서 화면 '사용법' 안내를 화면 기능에 맞춰 전면 개편",
+    groups: {
+      "보고서": [
+        "'사용법' 팝업이 문장 편집 방법만 담고 있던 것을, 이 화면에서 할 수 있는 모든 것(문서 서식·상단 표제부, 장 이동, 미리보기 확대·축소, 한글(HWPX)·인쇄·복사 내보내기, 사이드바 저장)을 항목별로 설명하도록 전면 다시 씀",
+      ],
+    },
+  },
+  {
     version: "5.35.0", date: "2026-09-21", title: "HWPX 상단 표제부·개조식 문단 서식 정비, 차트 확대, 보관함·첫 화면 정리",
     groups: {
       "보고서(HWPX)": [

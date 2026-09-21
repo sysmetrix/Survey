@@ -119,15 +119,20 @@ export function render() {
   <div class="report-toolbar no-print">
     <div class="rt-pop-wrap">
       <button class="rt-btn" data-act="toggle-help" aria-expanded="${helpOpen}" aria-haspopup="true">${icon("help", 16)}사용법</button>
-      ${helpOpen ? `<div class="rt-pop" role="dialog" aria-label="사용법">
-        <p><b>문장 편집</b> — 미리보기의 문장을 클릭해 직접 고칠 수 있습니다.</p>
+      ${helpOpen ? `<div class="rt-pop wide" role="dialog" aria-label="보고서 화면 사용법">
+        <p><b>이 화면은</b> — 분석 결과로 자동으로 만들어진 문장·표·그래프를 검토·수정해 한글(HWPX) 보고서로 완성하는 곳입니다.</p>
+        <p><b>문장 편집</b> — 미리보기의 문장을 클릭해 직접 고칩니다.</p>
         <dl class="rt-keys">
           <dt><kbd>Enter</kbd></dt><dd>고친 내용 확정</dd>
           <dt><kbd>Ctrl</kbd>+<kbd>B</kbd></dt><dd>선택한 글자 굵게(한컴·워드와 같음)</dd>
           <dt>✕</dt><dd>이 문장 빼기</dd>
           <dt>↺</dt><dd>자동 문장으로 되돌리기</dd>
         </dl>
-        <p class="small muted" style="margin-top:8px">표시할 장 같은 설정은 왼쪽 사이드바에서 바꿀 수 있습니다.</p>
+        <p><b>${esc(docPreset.name)} · ${state.settings.baseSize}pt 버튼</b> — 글꼴 조합·글자 크기·줄 간격과 상단 표제부(붙임 서식) 여부를 바꿉니다.</p>
+        <p><b>장 이동</b> — 지금 포함된 장으로 미리보기를 바로 옮깁니다. 어떤 장을 넣고 뺄지는 왼쪽 사이드바 ‘포함할 장’에서 고릅니다.</p>
+        <p><b>확대·축소(－ ％ ＋)</b> — 미리보기가 보이는 크기만 바꾸며, 실제 문서·글자 크기에는 영향이 없습니다.</p>
+        <p><b>${icon("download", 13)} ${icon("printer", 13)} ${icon("copy", 13)}</b> — 차례로 한글(HWPX) 내려받기, 인쇄·PDF 저장, 워드·구글문서에 붙여넣을 복사입니다.</p>
+        <p class="small muted" style="margin-top:8px">왼쪽 사이드바에서 기관명·제목·작성일을 채우고, 다 쓰면 맨 아래 ‘프로젝트 파일 저장’으로 지금 상태를 남겨 두세요.</p>
       </div>` : ""}
     </div>
     <div class="rt-sep" aria-hidden="true"></div>
