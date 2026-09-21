@@ -179,13 +179,17 @@ body.presenting .container { max-width: none; padding: 0; }
 
 /* ── 슬라이드 편집(문구 직접 고치기 + 자유배치) ── */
 .pe-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr) 240px; gap: 18px; align-items: start; }
-.pe-list { display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - var(--topbar-h) - 140px); overflow-y: auto; position: sticky; top: calc(var(--topbar-h) + 20px); }
-.pe-thumb { position: relative; display: flex; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 8px 10px; font: inherit; font-size: 13px; color: var(--text-2); cursor: pointer; }
-.pe-thumb:hover { border-color: var(--text-3); color: var(--text); }
-.pe-thumb.on { border-color: var(--brand); background: var(--brand-soft); color: var(--text); }
-.pe-thumb.off { opacity: .55; }
-.pe-thumb-n { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.pe-list { display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - var(--topbar-h) - 140px); overflow-y: auto; position: sticky; top: calc(var(--topbar-h) + 20px); padding-right: 2px; }
+.pe-thumb { position: relative; display: block; width: 100%; text-align: left; border: 2px solid transparent; background: none; border-radius: var(--radius-sm); padding: 0; font: inherit; color: var(--text-2); cursor: pointer; }
+.pe-thumb-preview { display: block; pointer-events: none; border-radius: 6px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.pe-thumb-preview .slide { border-radius: 5px; }
+.pe-thumb:hover .pe-thumb-preview { box-shadow: var(--shadow); }
+.pe-thumb.on .pe-thumb-preview { outline: 2px solid var(--brand); outline-offset: 1px; }
+.pe-thumb.off { opacity: .5; }
+.pe-thumb-foot { display: flex; align-items: center; gap: 6px; padding: 5px 2px 0; font-size: 12px; }
+.pe-thumb-n { flex: none; width: 16px; height: 16px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-size: 10px; font-weight: 700; }
 .pe-thumb-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-back { margin-bottom: 10px; }
 .pe-main { min-width: 0; }
 .pe-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .pe-toolbar .rot90 { transform: rotate(-90deg); }
@@ -222,8 +226,9 @@ body.presenting .container { max-width: none; padding: 0; }
 .s-el-table th { font-weight: 700; background: rgba(128, 128, 128, .15); }
 .editing .s-el { cursor: move; outline: 1px dashed transparent; }
 .editing .s-el:hover { outline-color: var(--brand-soft-2); }
+.editing .s-el.selected { outline: 2px solid var(--brand); outline-offset: 1px; z-index: 999 !important; }
 .editing .s-el-handle { display: none; }
-.editing .s-el:hover .s-el-handle, .editing .s-el:focus-within .s-el-handle { display: block; }
+.editing .s-el:hover .s-el-handle, .editing .s-el:focus-within .s-el-handle, .editing .s-el.selected .s-el-handle { display: block; }
 .s-el-handle { position: absolute; width: 10px; height: 10px; background: var(--brand); border: 2px solid #fff; border-radius: 50%; z-index: 50; }
 .s-el-handle.h-nw { top: -6px; left: -6px; cursor: nwse-resize; }
 .s-el-handle.h-n { top: -6px; left: calc(50% - 5px); cursor: ns-resize; }
@@ -234,3 +239,9 @@ body.presenting .container { max-width: none; padding: 0; }
 .s-el-handle.h-sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
 .s-el-handle.h-w { top: calc(50% - 5px); left: -6px; cursor: ew-resize; }
 .s-el-handle.h-rot { top: -26px; left: calc(50% - 5px); cursor: grab; background: var(--ok); }
+
+/* 드래그 중 슬라이드 가운데·가장자리 정렬 안내선 */
+.s-guides { position: absolute; inset: 0; pointer-events: none; z-index: 1000; }
+.s-guide-v, .s-guide-h { position: absolute; background: #E8483B; display: none; }
+.s-guide-v { top: 0; bottom: 0; width: 1px; }
+.s-guide-h { left: 0; right: 0; height: 1px; }

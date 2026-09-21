@@ -57,17 +57,18 @@ function elInner(slideId, el, theme, editable) {
 const TEXTUAL = new Set(["text", "richtext"]);
 
 /** @param {{id:string,kind:string,x:number,y:number,w:number,h:number,rot?:number,z?:number}[]} elements */
-export function freeElementsHtml(slideId, elements, theme, { editable = false } = {}) {
+export function freeElementsHtml(slideId, elements, theme, { editable = false, selectedElId = null } = {}) {
   return (elements || []).map(el => {
     const style = `left:${el.x}%;top:${el.y}%;width:${el.w}%;height:${el.h}%;transform:rotate(${el.rot || 0}deg);z-index:${el.z || 1};${TEXTUAL.has(el.kind) && el.fontSize ? `font-size:${el.fontSize}cqw;` : ""}${TEXTUAL.has(el.kind) ? `text-align:${el.align || "left"};` : ""}`;
+    const selected = editable && el.id === selectedElId;
     const handles = editable ? HANDLES.map(h => `<i class="s-el-handle h-${h}" data-handle="${h}"></i>`).join("") + `<i class="s-el-handle h-rot" data-handle="rotate"></i>` : "";
-    return `<div class="s-el s-el-${esc(el.kind)}" data-el-id="${esc(el.id)}" style="${style}">${elInner(slideId, el, theme, editable)}${handles}</div>`;
+    return `<div class="s-el s-el-${esc(el.kind)}${selected ? " selected" : ""}" data-el-id="${esc(el.id)}" style="${style}">${elInner(slideId, el, theme, editable)}${handles}</div>`;
   }).join("");
 }
 
 /** 자유배치 슬라이드 1장(자동 슬라이드를 디태치했거나, 처음부터 빈 슬라이드로 만든 것) */
-export function slideHtmlCustom(s, entry, i, total, theme, { editable = false } = {}) {
+export function slideHtmlCustom(s, entry, i, total, theme, { editable = false, selectedElId = null } = {}) {
   const elements = entry?.elements || [];
-  const free = `<div class="s-free">${freeElementsHtml(s.id, elements, theme, { editable })}</div>`;
+  const free = `<div class="s-free">${freeElementsHtml(s.id, elements, theme, { editable, selectedElId })}</div>`;
   return `<article class="slide t-custom ${theme}${editable ? " editing" : ""}" aria-roledescription="슬라이드" aria-label="${i + 1} / ${total}. ${esc(s.title)}" data-slide-id="${esc(s.id)}">${free}</article>`;
 }

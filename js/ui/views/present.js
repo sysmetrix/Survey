@@ -52,8 +52,8 @@ function slideField(slideId, field, autoText, editable) {
 export const isCustomSlide = s => (state.deckOverrides.bySlide[s.id]?.mode || (s.type === "custom" ? "custom" : "auto")) === "custom";
 
 /** 슬라이드 1장 HTML (무대·개요 썸네일·인쇄·편집 공용). editable=true(슬라이드 편집 화면)일 때만 문구를 직접 고칠 수 있음 */
-export function slideHtml(s, i, total, theme, { editable = false } = {}) {
-  if (isCustomSlide(s)) return slideHtmlCustom(s, state.deckOverrides.bySlide[s.id], i, total, theme, { editable });
+export function slideHtml(s, i, total, theme, { editable = false, selectedElId = null } = {}) {
+  if (isCustomSlide(s)) return slideHtmlCustom(s, state.deckOverrides.bySlide[s.id], i, total, theme, { editable, selectedElId });
   const org = state.settings.orgName || "";
   const head = `<header class="s-head"><p class="s-eyebrow">${esc(s.section)}</p><h2 class="s-title">${slideField(s.id, "title", s.title, editable)}</h2>${s.subtitle ? `<p class="s-sub">${slideField(s.id, "subtitle", s.subtitle, editable)}</p>` : ""}</header>`;
   let inner;

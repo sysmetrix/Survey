@@ -1,6 +1,6 @@
 {
   "name": "survey-analysis-v5",
-  "version": "5.24.0",
+  "version": "5.25.0",
   "private": true,
   "description": "부천여성청소년재단 설문 분석·사업 결과평가 보고서(HWPX) 도구",
   "type": "module",

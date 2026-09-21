@@ -5,7 +5,7 @@ import { elementsFromAutoSlide } from "../../present/edit/detach.js";
 import { installCanvasInteractions, installKeyboardNudge } from "../present-canvas.js";
 import { trackChange } from "../history/manager.js";
 import { esc, toast } from "../util.js";
-import { go, refresh } from "../router.js";
+import { go, refresh, prevView, viewLabel } from "../router.js";
 import { icon } from "../icons.js";
 import { resolvedTheme } from "../theme.js";
 
@@ -62,15 +62,14 @@ export function mount() {
 }
 export function unmount() { teardownInteractions(); }
 
-function slideListHtml() {
-  const all = allDeckSlides();
+function slideListHtml(all, theme) {
   const hidden = new Set(state.deckHidden);
   return all.map((s, i) => {
     const off = hidden.has(s.id);
     const title = state.deckOverrides.bySlide[s.id]?.text?.title ?? s.title;
-    return `<button class="pe-thumb${s.id === selectedId ? " on" : ""}${off ? " off" : ""}" data-act="pe-select" data-id="${esc(s.id)}">
-      <span class="pe-thumb-n">${i + 1}</span><span class="pe-thumb-title">${esc(title)}</span>
-      ${off ? `<span class="badge muted">숨김</span>` : ""}
+    return `<button class="pe-thumb${s.id === selectedId ? " on" : ""}${off ? " off" : ""}" data-act="pe-select" data-id="${esc(s.id)}" aria-label="${esc(i + 1)}번 슬라이드: ${esc(title)}">
+      <span class="pe-thumb-preview">${slideHtml(s, i, all.length, theme)}</span>
+      <span class="pe-thumb-foot"><span class="pe-thumb-n">${i + 1}</span><span class="pe-thumb-title">${esc(title)}</span>${off ? `<span class="badge muted">숨김</span>` : ""}</span>
     </button>`;
   }).join("");
 }
@@ -133,12 +132,12 @@ export function render() {
   const theme = resolvedTheme();
   const custom = isCustomSlide(slide);
   const canRevertAuto = custom && slide.type !== "custom";
-  return `<div class="page-head"><div><h2>슬라이드 편집</h2><p class="muted small">텍스트를 눌러 바로 고치고, 자유배치로 바꾸면 위치·크기·색·이미지까지 원하는 대로 꾸밀 수 있습니다.</p></div>
+  return `<div class="page-head"><div><button class="btn ghost sm pe-back" data-act="back">${icon("left", 15)}${esc(viewLabel(prevView()))} 화면으로</button><h2>슬라이드 편집</h2><p class="muted small">텍스트를 눌러 바로 고치고, 자유배치로 바꾸면 위치·크기·색·이미지까지 원하는 대로 꾸밀 수 있습니다.</p></div>
     <button class="btn primary" data-act="goto" data-to="present" data-sub="${idx + 1}">${icon("play", 16)}발표로 미리 보기</button>
   </div>
   <div class="pe-layout">
     <aside class="pe-list">
-      ${slideListHtml()}
+      ${slideListHtml(all, theme)}
       <button class="btn sm block sub" data-act="pe-add-slide">${icon("grid", 14)}빈 슬라이드 추가</button>
     </aside>
     <div class="pe-main">
@@ -158,7 +157,7 @@ export function render() {
         <button class="btn sm" data-act="pe-move-slide" data-dir="down" ${idx === all.length - 1 ? "disabled" : ""} title="아래로">${icon("right", 14, "rot90")}</button>
         <button class="btn sm danger" data-act="pe-delete-slide">${icon("x", 14)}슬라이드 삭제</button>
       </div>
-      <div class="pe-stage-wrap"><div class="pe-stage">${slideHtml(slide, idx, all.length, theme, { editable: true })}</div></div>
+      <div class="pe-stage-wrap"><div class="pe-stage">${slideHtml(slide, idx, all.length, theme, { editable: true, selectedElId })}</div></div>
     </div>
     <aside class="pe-props"><h3>속성</h3>${custom ? propPanelHtml(slide) : `<p class="muted small">자유배치로 바꾸면 요소를 하나씩 옮기고 꾸밀 수 있습니다.</p>`}</aside>
   </div>`;

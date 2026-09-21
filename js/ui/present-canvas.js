@@ -17,6 +17,41 @@ function applyLiveStyle(elDiv, next) {
   elDiv.style.transform = `rotate(${next.rot || 0}deg)`;
 }
 
+// 이동(리사이즈·회전 제외)할 때만 슬라이드 가운데·가장자리에 살짝 달라붙게 — 손대중으로 가운데를 맞추기
+// 어렵다는 문제를 덜기 위함(다른 요소끼리의 스냅은 범위 밖으로 남겨 둠).
+const SNAP_TOL = 1.2; // % 단위
+function snapMove(next, w, h) {
+  const guides = { v: null, h: null }; // 스냅된 기준선(0~100, %) — 있으면 안내선을 그림
+  const cx = next.x + w / 2, cy = next.y + h / 2;
+  if (Math.abs(cx - 50) < SNAP_TOL) { next.x = 50 - w / 2; guides.v = 50; }
+  else if (Math.abs(next.x) < SNAP_TOL) { next.x = 0; guides.v = 0; }
+  else if (Math.abs(next.x + w - 100) < SNAP_TOL) { next.x = 100 - w; guides.v = 100; }
+  if (Math.abs(cy - 50) < SNAP_TOL) { next.y = 50 - h / 2; guides.h = 50; }
+  else if (Math.abs(next.y) < SNAP_TOL) { next.y = 0; guides.h = 0; }
+  else if (Math.abs(next.y + h - 100) < SNAP_TOL) { next.y = 100 - h; guides.h = 100; }
+  return guides;
+}
+
+function ensureGuides(slide) {
+  let wrap = slide.querySelector(":scope > .s-guides");
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.className = "s-guides";
+    wrap.innerHTML = `<i class="s-guide-v"></i><i class="s-guide-h"></i>`;
+    slide.appendChild(wrap);
+  }
+  return wrap;
+}
+function showGuides(slide, guides) {
+  const wrap = ensureGuides(slide);
+  const v = wrap.querySelector(".s-guide-v"), h = wrap.querySelector(".s-guide-h");
+  v.style.display = guides.v == null ? "none" : "block";
+  if (guides.v != null) v.style.left = `${guides.v}%`;
+  h.style.display = guides.h == null ? "none" : "block";
+  if (guides.h != null) h.style.top = `${guides.h}%`;
+}
+function hideGuides(slide) { slide.querySelector(":scope > .s-guides")?.remove(); }
+
 /**
  * @param {HTMLElement} root 편집 화면의 캔버스 컨테이너(.pe-stage 등) — 이 안의 .s-el 만 반응
  * @param {{getElements: () => any[], onChange: (id:string, patch:object) => void, onSelect: (id:string|null) => void}} hooks
@@ -41,7 +76,7 @@ export function installCanvasInteractions(root, { getElements, onChange, onSelec
     const cur = slide && getElements().find(x => x.id === id);
     if (!cur) { onSelect?.(id); return; }
     const rect = slide.getBoundingClientRect();
-    drag = { id, elDiv, mode: handle || "move", startX: e.clientX, startY: e.clientY, rect, start: { ...cur }, pending: null, moved: false, editableTarget: handle ? null : editableTarget };
+    drag = { id, elDiv, slide, mode: handle || "move", startX: e.clientX, startY: e.clientY, rect, start: { ...cur }, pending: null, moved: false, editableTarget: handle ? null : editableTarget };
     if (handle) { safeCapture(elDiv, e.pointerId); e.preventDefault(); }
   };
 
@@ -62,6 +97,8 @@ export function installCanvasInteractions(root, { getElements, onChange, onSelec
     if (drag.mode === "move") {
       next.x = clamp(s.x + dxPct, 0, Math.max(0, 100 - s.w));
       next.y = clamp(s.y + dyPct, 0, Math.max(0, 100 - s.h));
+      const guides = snapMove(next, s.w, s.h);
+      showGuides(drag.slide, guides);
     } else if (drag.mode === "rotate") {
       const cx = drag.rect.left + (s.x + s.w / 2) / 100 * drag.rect.width;
       const cy = drag.rect.top + (s.y + s.h / 2) / 100 * drag.rect.height;
@@ -78,7 +115,8 @@ export function installCanvasInteractions(root, { getElements, onChange, onSelec
 
   const up = () => {
     if (!drag) return;
-    const { id, pending, moved } = drag;
+    const { id, pending, moved, slide } = drag;
+    hideGuides(slide);
     drag = null;
     // 이동·크기조절이 있었으면 onChange 가 알아서 다시 그려주므로 선택 알림을 따로 부를 필요 없음(중복 렌더 방지)
     if (moved && pending) onChange(id, pending); else onSelect?.(id);
