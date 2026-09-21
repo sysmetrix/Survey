@@ -5,6 +5,7 @@
 import { state, allDeckSlides, deckSlides, blankCustomSlide, effectiveDeckOrder } from "../store.js";
 import { slideHtml, isCustomSlide } from "./present.js";
 import { elementsFromAutoSlide } from "../../present/edit/detach.js";
+import { revealScrollTop, fitLayoutHeight, createScrollMemory } from "../../present/edit/scroll-fit.js";
 import { installCanvasInteractions, installKeyboardNudge } from "../present-canvas.js";
 import * as M from "../present-edit-model.js";
 import { trackChange } from "../history/manager.js";
@@ -22,6 +23,9 @@ let openMenu = null; // 열려 있는 도구 모음 메뉴 이름(shape·chart·
 let clipboard = null; // Ctrl+C/X 로 담아 둔 요소 사본(슬라이드를 옮겨 다니며 붙여넣기 가능)
 let pointerDown = false, pendingRefresh = false;
 let dragSlideId = null;
+// 다시 그릴 때마다 main.innerHTML 이 통째로 바뀌므로 칸별(슬라이드 목록·속성·가운데) 스크롤 위치를 따로 기억했다가 되돌림
+const scrollMem = createScrollMemory();
+let revealSelected = true; // 슬라이드를 고르거나 넣거나 옮긴 직후에만: 선택한 썸네일이 목록 밖이면 가장 적게 굴려서 보이게
 const newElId = () => `el${Date.now().toString(36)}${(seq++).toString(36)}`;
 
 /** 상태를 고친 뒤: 되돌리기 기록 + 다시 그리기. 마우스를 누르고 있는 중(입력칸을 벗어나며 change 가 먼저 터진 경우)에는
@@ -145,21 +149,54 @@ export function mount() {
   document.addEventListener("keydown", onMenuEsc);
   cleanupFns.push(() => { document.removeEventListener("click", onDocClick); document.removeEventListener("keydown", onMenuEsc); });
 
-  // 도구 모음이 좁은 화면에서 여러 줄로 접히면 왼쪽·오른쪽 패널의 sticky 위치가 그 높이만큼 내려가야 겹치지 않음
-  const syncToolsHeight = () => {
-    const tools = document.querySelector(".pe-tools"), layout = document.querySelector(".pe-layout");
-    if (tools && layout) layout.style.setProperty("--pe-tools-h", `${Math.round(tools.getBoundingClientRect().height)}px`);
+  // 도구 모음이 좁은 화면에서 여러 줄로 접히면 그 높이만큼 편집 영역이 아래로 내려감 → 세 칸(목록·슬라이드·속성)이
+  // 창 높이 안에 들어가도록 편집 영역 높이를 다시 재고, 칸마다 안에서 스크롤(문서 전체에는 세로 스크롤이 생기지 않게)
+  const syncLayout = () => {
+    const tools = document.querySelector(".pe-tools"), layout = document.querySelector(".pe-layout"), host = document.getElementById("main");
+    if (!tools || !layout) return;
+    layout.style.setProperty("--pe-tools-h", `${Math.round(tools.getBoundingClientRect().height)}px`);
+    const top = layout.getBoundingClientRect().top + window.scrollY;
+    const below = (parseFloat(getComputedStyle(host).paddingBottom) || 0) + (document.querySelector(".foot")?.offsetHeight || 0) + 2;
+    layout.style.setProperty("--pe-layout-h", `${fitLayoutHeight({ innerH: window.innerHeight, top, below })}px`);
   };
-  syncToolsHeight();
-  window.addEventListener("resize", syncToolsHeight);
-  cleanupFns.push(() => window.removeEventListener("resize", syncToolsHeight));
+  syncLayout();
+  window.addEventListener("resize", syncLayout);
+  cleanupFns.push(() => window.removeEventListener("resize", syncLayout));
+  if (typeof ResizeObserver === "function") {
+    const ro = new ResizeObserver(syncLayout);
+    const tools = document.querySelector(".pe-tools");
+    if (tools) ro.observe(tools);
+    cleanupFns.push(() => ro.disconnect());
+  }
+  restoreScroll(slide);
 
   // 다시 그린 뒤에도 방향키·Delete 등이 계속 먹도록 포커스를 캔버스로 돌려 놓음(main.innerHTML 이 통째로 바뀌면 포커스가 body 로 떨어짐)
   if (custom && selectedElId && findEl(slide.id, selectedElId) && (!document.activeElement || document.activeElement === document.body)) {
     root.focus({ preventScroll: true });
   }
 }
-export function unmount() { teardownInteractions(); document.getElementById("main")?.classList.remove("pe-wide"); openMenu = null; pointerDown = false; pendingRefresh = false; dragSlideId = null; }
+export function unmount() { teardownInteractions(); document.getElementById("main")?.classList.remove("pe-wide"); openMenu = null; pointerDown = false; pendingRefresh = false; dragSlideId = null; revealSelected = true; }
+
+/** 다시 그린 뒤 칸별 스크롤 위치를 되돌리고 이후 스크롤을 계속 기억. 속성 칸은 같은 슬라이드·요소를 다시 그릴 때만 유지(다른 것을 고르면 맨 위부터) */
+function restoreScroll(slide) {
+  const regions = [["thumbs", ".pe-thumbs", ""], ["props", ".pe-props", `${slide.id}|${selectedElId || ""}`], ["stage", ".pe-main", slide.id]];
+  for (const [name, sel, key] of regions) {
+    const node = document.querySelector(sel);
+    if (!node) continue;
+    node.scrollTop = scrollMem.recall(name, key);
+    scrollMem.save(name, node.scrollTop);
+    const onScroll = () => scrollMem.save(name, node.scrollTop);
+    node.addEventListener("scroll", onScroll, { passive: true });
+    cleanupFns.push(() => node.removeEventListener("scroll", onScroll));
+  }
+  if (!revealSelected) return;
+  revealSelected = false;
+  const list = document.querySelector(".pe-thumbs"), thumb = list?.querySelector(".pe-thumb.on");
+  if (!list || !thumb) return;
+  const itemTop = thumb.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+  list.scrollTop = revealScrollTop({ scrollTop: list.scrollTop, viewH: list.clientHeight, contentH: list.scrollHeight, itemTop, itemH: thumb.offsetHeight });
+  scrollMem.save("thumbs", list.scrollTop);
+}
 
 /** 슬라이드 목록 HTML5 끌어놓기 — 손 뗀 곳의 앞/뒤(가로 배치면 좌/우)로 순서 변경 */
 function installSlideDnD(list) {
@@ -452,7 +489,7 @@ function insert(slide, el) {
 }
 
 export const actions = {
-  "pe-select": el => { selectedId = el.dataset.id; selectedElId = null; openMenu = null; refresh(); },
+  "pe-select": el => { selectedId = el.dataset.id; selectedElId = null; openMenu = null; revealSelected = true; refresh(); },
   "pe-el-select": el => { selectedElId = el.dataset.id || null; openMenu = null; refresh(); },
   "pe-menu": el => { openMenu = openMenu === el.dataset.menu ? null : el.dataset.menu; refresh(); },
   "pe-detach": () => {
@@ -477,7 +514,7 @@ export const actions = {
     const at = cur ? order.indexOf(cur.id) : -1;
     order.splice(at >= 0 ? at + 1 : order.length, 0, ns.id);
     state.deckOrder = order;
-    selectedId = ns.id; selectedElId = null;
+    selectedId = ns.id; selectedElId = null; revealSelected = true;
     commit();
   },
   "pe-dup-slide": () => {
@@ -494,12 +531,14 @@ export const actions = {
     const at = order.indexOf(cur.id);
     order.splice(at >= 0 ? at + 1 : order.length, 0, ns.id);
     state.deckOrder = order;
-    selectedId = ns.id; selectedElId = null;
+    selectedId = ns.id; selectedElId = null; revealSelected = true;
     commit();
   },
   "pe-delete-slide": () => {
     const slide = currentSlide(); if (!slide) return;
-    state.deckOrder = effectiveDeckOrder().filter(id => id !== slide.id);
+    const before = effectiveDeckOrder(), at = before.indexOf(slide.id);
+    const neighbor = before[at + 1] ?? before[at - 1] ?? null; // 지운 뒤에는 그 자리를 이은 슬라이드를 고름(목록이 맨 위로 튀지 않게)
+    state.deckOrder = before.filter(id => id !== slide.id);
     if (state.deckOverrides.customSlides[slide.id]) {
       const customSlides = { ...state.deckOverrides.customSlides }; delete customSlides[slide.id];
       const bySlide = { ...state.deckOverrides.bySlide }; delete bySlide[slide.id];
@@ -507,7 +546,7 @@ export const actions = {
     } else if (!state.deckHidden.includes(slide.id)) {
       state.deckHidden = [...state.deckHidden, slide.id];
     }
-    selectedId = null; selectedElId = null;
+    selectedId = neighbor; selectedElId = null; revealSelected = true;
     commit();
     toast("슬라이드를 지웠습니다. 되돌리려면 Ctrl+Z를 누르세요.", "info");
   },
@@ -519,6 +558,7 @@ export const actions = {
     if (to < 0 || to >= order.length) return;
     [order[idx], order[to]] = [order[to], order[idx]];
     state.deckOrder = order;
+    revealSelected = true;
     commit();
   },
   /** 끌어놓기와 같은 동작: data-from 을 data-to 의 앞(data-after 가 "1" 이면 뒤)으로 */

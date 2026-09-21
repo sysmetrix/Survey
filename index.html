@@ -10,24 +10,26 @@
   <meta name="description" content="설문 엑셀로 통계 분석, 청소년 사업 성과지표 달성 평가, 한글(HWPX) 보고서와 발표 슬라이드를 브라우저 안에서 만듭니다.">
   <title>설문 분석 · 평가 도구</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" sizes="any">
+  <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="icons/favicon-16.png" type="image/png" sizes="16x16">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180">
   <meta name="apple-mobile-web-app-title" content="설문분석">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="vendor/fonts/pretendard-gov/pretendard-gov-dynamic-subset.css">
-  <link rel="stylesheet" href="css/app.css?v=5.28.0">
-  <link rel="stylesheet" href="css/present.css?v=5.28.0">
+  <link rel="stylesheet" href="css/app.css?v=5.29.0">
+  <link rel="stylesheet" href="css/present.css?v=5.29.0">
   <script src="js/boot-check.js"></script>
   <script src="vendor/papaparse-5.4.1.min.js"></script>
   <script src="vendor/xlsx-0.20.3.full.min.js"></script>
   <script src="vendor/jszip-3.10.1.min.js"></script>
-  <script type="module" src="js/main.js?v=5.28.0"></script>
+  <script type="module" src="js/main.js?v=5.29.0"></script>
 </head>
 <body>
   <button class="skip no-print" data-act="skip">본문 바로가기</button>
   <header class="topbar no-print">
     <a class="brand" href="#/load" aria-label="설문 분석 · 평가 도구 처음 화면">
-      <svg class="logo" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--brand)"/><rect x="8" y="16" width="4" height="8" rx="1.5" fill="var(--on-brand)"/><rect x="14" y="11" width="4" height="13" rx="1.5" fill="var(--on-brand)"/><rect x="20" y="7" width="4" height="17" rx="1.5" fill="var(--on-brand)" opacity=".75"/></svg>
+      <img class="logo" src="icons/favicon.svg" width="32" height="32" alt="" aria-hidden="true">
       <span><b>설문 분석 · 평가 도구</b></span>
     </a>
     <nav id="steps" class="stepper" aria-label="진행 단계"></nav>

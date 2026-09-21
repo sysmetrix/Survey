@@ -4,14 +4,15 @@ import { STEPS, NO_DATA_VIEWS, parseHash, go, setRenderer, setPrevView, prevView
 import { toast, esc } from "./ui/util.js";
 import { icon } from "./ui/icons.js";
 import { cycleTheme, themePref, THEME_LABEL, watchSystemTheme } from "./ui/theme.js";
-import { initPwa, installApp } from "./ui/pwa.js";
+import { initPwa, installApp, isUpdateReloading, takeUpdateResume } from "./ui/pwa.js";
+import { projectIdOf } from "./history/snapshot.js";
 import { installTooltips } from "./ui/tooltip.js";
 import { installFormatToolbar } from "./ui/format-toolbar.js";
 import { markupToHtml, htmlToMarkup } from "./ui/inline-edit.js";
 import { installScrollHints } from "./ui/scrollhint.js";
 import { createPressGuard } from "./ui/press-guard.js";
 import { parseDeckKey } from "./present/edit/keys.js";
-import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redoChange, canUndo, canRedo } from "./ui/history/manager.js";
+import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redoChange, canUndo, canRedo, resumeProject, cache as historyCache } from "./ui/history/manager.js";
 import * as load from "./ui/views/load.js";
 import * as setup from "./ui/views/setup.js";
 import * as business from "./ui/views/business.js";
@@ -25,7 +26,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.28.0";
+export const APP_VERSION = "5.29.0";
 const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -212,7 +213,7 @@ document.addEventListener("keydown", e => {
   }
   current.onKey?.(e);
 });
-window.addEventListener("beforeunload", e => { if (state.dataset && (Object.keys(state.overrides).length || state.kpis.length)) { e.preventDefault(); e.returnValue = ""; } });
+window.addEventListener("beforeunload", e => { if (!isUpdateReloading() && state.dataset &&(Object.keys(state.overrides).length || state.kpis.length)) { e.preventDefault(); e.returnValue = ""; } });
 
 // 작업 내역 연동
 document.addEventListener("survey:loaded", () => {
@@ -248,7 +249,31 @@ watchSystemTheme(() => refresh());
 installTooltips();
 installFormatToolbar();
 installScrollHints();
-initPwa({ onFile: f => load.actions["drop-data"](f), hasUnsavedWork: () => !!state.dataset });
-initHistory({ onUpdate: () => { if (currentId === "history" || currentId === "load") refresh(); else renderChrome(currentId); } });
+// 업데이트 적용(js/ui/pwa.js): 다시 불러오기 직전에 작업을 저장하고, 새로고침 뒤 같은 작업·화면을 이어서 연다
+const updateResume = takeUpdateResume();
+const localProject = () => (state.codebook ? historyCache.projects.find(p => p.id === projectIdOf(state.codebook)) : null);
+/** 작업 저장(진행 중인 저장까지 기다림) → 복원 표식. 원자료가 이 브라우저에 보관되지 않았다면 표식 없음 */
+async function prepareUpdateReload() {
+  if (!state.dataset || !state.codebook) return null;
+  const settle = async () => { for (let i = 0; i < 50 && historyCache.saving; i++) await new Promise(r => setTimeout(r, 100)); };
+  await settle();
+  await saveSnapshot("auto");
+  await settle();
+  return localProject()?.hasData ? { projectId: projectIdOf(state.codebook), hash: location.hash, at: Date.now() } : null;
+}
+async function resumeAfterUpdate(token) {
+  if (!token || state.dataset || !historyCache.projects.find(p => p.id === token.projectId)?.hasData) return;
+  try {
+    if ((await resumeProject(token.projectId)).mode !== "ready") return;
+    if (token.hash && location.hash !== token.hash) location.hash = token.hash; // hashchange 로 다시 그려짐
+    else refresh();
+    toast("새 버전으로 업데이트했습니다. 작업하던 내용을 이어서 열었습니다.", "ok", 5000);
+  } catch (e) { console.warn("업데이트 뒤 작업 복원 실패:", e); }
+}
+initPwa({
+  onFile: f => load.actions["drop-data"](f), appVersion: APP_VERSION, hasUnsavedWork: () => !!state.dataset,
+  isPersistent: () => !!localProject()?.hasData, isSaving: () => historyCache.saving, prepareReload: prepareUpdateReload,
+});
+initHistory({ onUpdate: () => { if (currentId === "history" || currentId === "load") refresh(); else renderChrome(currentId); } }).then(() => resumeAfterUpdate(updateResume));
 render();
 offerFirstRun();

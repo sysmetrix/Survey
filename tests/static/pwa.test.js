@@ -19,6 +19,25 @@ test("매니페스트 필수 항목·아이콘 파일", async () => {
   assert.ok(m.file_handlers?.[0]?.accept?.["text/csv"], "CSV 파일 열기");
 });
 
+test("아이콘: 투명 배경(any·파비콘) / 불투명 배경(maskable·apple-touch) / ICO 구성", async () => {
+  const { pngAlphaInfo } = await import("../../tools/lib/png-read.mjs");
+  for (const [f, size] of [["icon-192", 192], ["icon-512", 512], ["favicon-16", 16], ["favicon-32", 32], ["favicon-48", 48]]) {
+    const i = pngAlphaInfo(await readFile(`icons/${f}.png`));
+    assert.equal(i.colorType, 6, `${f}: RGBA`);
+    assert.equal(i.w, size);
+    assert.ok(i.corners.every(c => c[3] === 0), `${f}: 네 모서리 투명`);
+  }
+  for (const f of ["icon-maskable-512", "apple-touch-icon"]) {
+    const i = pngAlphaInfo(await readFile(`icons/${f}.png`));
+    assert.ok(i.colorType === 2 || i.corners.every(c => c[3] === 255), `${f}: 불투명 배경`);
+  }
+  const ico = await readFile("icons/favicon.ico");
+  assert.equal(ico.readUInt16LE(2), 1, "ICO 형식");
+  assert.deepEqual(Array.from({ length: ico.readUInt16LE(4) }, (_, k) => ico[6 + k * 16]), [16, 32, 48]);
+  const html = await readFile("index.html", "utf8");
+  for (const f of ["icons/favicon.svg", "icons/favicon-32.png", "icons/favicon-16.png", "icons/apple-touch-icon.png"]) assert.ok(html.includes(`href="${f}"`), `${f} 링크`);
+});
+
 test("sw.js 사전 캐시 목록·리비전이 최신 (node tools/build-sw.mjs)", async () => {
   const src = (await readFile("sw.js", "utf8")).replace(/\r\n/g, "\n");
   assert.equal(await buildSwSource(src), src, "sw.js 가 최신이 아닙니다 → node tools/build-sw.mjs");
@@ -39,6 +58,21 @@ test("버전 표기 일치 (main.js · package.json · index.html ?v=)", async (
   assert.equal(JSON.parse(await readFile("package.json", "utf8")).version, v);
   const html = await readFile("index.html", "utf8");
   for (const m of html.matchAll(/\?v=([\d.]+)/g)) assert.equal(m[1], v, "index.html ?v=");
+  assert.ok(html.includes(`?v=${v}`), "index.html 에 ?v=<버전> 이 있어야 함 — sw.js 설치 때 사전 캐시한 index.html 이 같은 버전인지 확인하는 기준");
   const releases = await readFile("js/admin/releases.js", "utf8");
   assert.equal(/version: "([^"]+)"/.exec(releases)[1], v, "최신 업데이트 내역 버전");
+});
+
+test("즉시 업데이트 약속: 서비스워커 메시지·설치 검증·확인용 sw.js 우회, 화면은 캐시 없이 등록", async () => {
+  const sw = await readFile("sw.js", "utf8");
+  assert.match(sw, /"SKIP_WAITING"/);
+  assert.match(sw, /"GET_VERSION"/);
+  assert.match(sw, /\?r=\$\{REVISION\}/, "사전 캐시 요청에 리비전 쿼리(CDN·HTTP 캐시 우회)");
+  assert.match(sw, /includes\(`\?v=\$\{VERSION\}`\)/, "설치 때 index.html 버전 확인");
+  assert.match(sw, /new URL\("sw\.js", SCOPE\)/, "sw.js 자체는 캐시를 거치지 않음");
+  const pwa = await readFile("js/ui/pwa.js", "utf8");
+  assert.match(pwa, /updateViaCache: "none"/);
+  assert.match(pwa, /cache: "no-store"/);
+  assert.match(pwa, /type: "SKIP_WAITING"/);
+  assert.match(pwa, /type: "GET_VERSION"/);
 });

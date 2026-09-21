@@ -217,6 +217,28 @@ test("슬라이드 편집: 자유배치 전환, 요소 추가, 슬라이드 추�
   assert.ok(allDeckSlides().some(s => s.id === first.id), "숨겨도 목록 자체에서는 안 없어짐(복원 가능)");
 });
 
+test("슬라이드 편집: 슬라이드를 지우면 그 자리를 이은 슬라이드가 선택돼 목록이 맨 위로 튀지 않음", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  const ids = () => allDeckSlides().map(s => s.id);
+  const selectedIn = html => /class="pe-thumb on"[^>]*data-id="([^"]+)"/.exec(html)?.[1];
+  presentEdit.actions["pe-select"]({ dataset: { id: ids()[3] } });
+  presentEdit.actions["pe-add-slide"](); // 4번째 뒤에 새 슬라이드(5번째, 선택됨)
+  const order = ids(), added = order[4];
+  assert.equal(selectedIn(presentEdit.render({})), added, "새 슬라이드가 선택됨");
+  presentEdit.actions["pe-delete-slide"]();
+  assert.deepEqual(ids(), order.filter(id => id !== added));
+  assert.equal(selectedIn(presentEdit.render({})), order[5], "지운 자리를 이은(다음) 슬라이드가 선택됨");
+  // 맨 끝 슬라이드를 지우면 앞 슬라이드
+  presentEdit.actions["pe-select"]({ dataset: { id: ids().at(-1) } });
+  presentEdit.actions["pe-add-slide"]();
+  const tail = ids().at(-1);
+  assert.equal(selectedIn(presentEdit.render({})), tail);
+  presentEdit.actions["pe-delete-slide"]();
+  assert.equal(selectedIn(presentEdit.render({})), ids().at(-1), "맨 끝을 지우면 바로 앞 슬라이드");
+  assert.ok(!ids().includes(tail));
+});
+
 test("슬라이드 편집: 슬라이드 배경색·발표자 노트는 자동 슬라이드에도, 저장·복원·프로젝트 파일을 거쳐도 유지", async () => {
   const f = "2026_진로탐색_사전사후.xlsx";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
