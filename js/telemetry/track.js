@@ -5,6 +5,7 @@
 import { rpcRequest } from "../auth/api.js";
 
 const ANON_ID_KEY = "survey-v5-anon-id";
+const SRC_KEY = "survey-v5-src";
 const FLUSH_MS = 15000;
 const MAX_BATCH = 20;
 const MAX_STR = 40;
@@ -40,20 +41,36 @@ function getAnonId() {
   return anonId;
 }
 
+// 접속 경로 태그: 배포 링크에 ?src=경기도청 처럼 붙이면 그 값을 세션 동안 기억해 모든 이벤트에 함께 보냄.
+// 리퍼러(어디서 왔는지)는 보지 않는다 — README 의 "리퍼러 전송 안 함" 약속은 그대로 유지.
+let srcTag = null;
+function getSrcTag() {
+  if (srcTag !== null) return srcTag;
+  try {
+    const fromUrl = new URLSearchParams(location.search).get("src");
+    if (fromUrl) { srcTag = fromUrl.trim().slice(0, MAX_STR); sessionStorage.setItem(SRC_KEY, srcTag); }
+    else srcTag = sessionStorage.getItem(SRC_KEY) || "";
+  } catch { srcTag = ""; }
+  return srcTag;
+}
+
 let appVersion = "";
+let getOrg = () => ""; // main.js 가 state.settings.orgName 을 넘겨줌(설정이 바뀌면 다음 이벤트부터 바로 반영되도록 매번 호출)
 let sender = events => rpcRequest("track_events", { events });
 let queue = [];
 let timer = 0;
 
 /** main.js 부트스트랩에서 한 번 호출. send 를 넘기면 테스트에서 실제 네트워크 대신 목(mock)을 쓸 수 있음 */
-export function initTelemetry({ version = "", send } = {}) {
+export function initTelemetry({ version = "", send, getOrg: g } = {}) {
   appVersion = version;
   if (send) sender = send;
+  if (g) getOrg = g;
 }
 
 export function trackEvent(view, event, extra) {
   if (!(event in ALLOW)) return; // 등록 안 된 이벤트 이름은 구조적으로 버림
-  queue.push({ anon_id: getAnonId(), view, event, extra: sanitizeExtra(event, extra), app_version: appVersion });
+  const org = String(getOrg() || "").trim().slice(0, MAX_STR);
+  queue.push({ anon_id: getAnonId(), view, event, extra: sanitizeExtra(event, extra), app_version: appVersion, org: org || undefined, src: getSrcTag() || undefined });
   if (queue.length >= MAX_BATCH) flush();
   else scheduleFlush();
 }

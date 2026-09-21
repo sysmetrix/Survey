@@ -1,5 +1,5 @@
-// 관리자 — 사용 통계 탭: 단계별 도달(퍼널)·핵심 지표 요약·추세를 먼저 보여주고,
-// 원본 일별 표는 아래 접이식에 둔다(로그가 아니라 "무엇을 결정할 수 있는가"가 먼저 보이게).
+// 관리자 — 사용 통계 탭: 단계별 도달(퍼널)·핵심 지표 요약·기관(지역)별·시간대별·접속 경로별 분포를
+// 먼저 보여주고, 원본 일별 표는 아래 접이식에 둔다(로그가 아니라 "무엇을 결정할 수 있는가"가 먼저 보이게).
 import { restRequest, rpcRequest } from "../../../auth/api.js";
 import { getSession } from "../../../auth/session.js";
 import { esc, toast } from "../../util.js";
@@ -16,20 +16,24 @@ const FUNNEL = [
   { view: "report", label: "5 보고서" },
   { view: "present", label: "6 발표" },
 ];
+const HOUR_ROWS = Array.from({ length: 24 }, (_, h) => h);
 
-let loading = false, error = "", rows = null, logins = null, loaded = false;
+let loading = false, error = "", rows = null, orgRows = null, srcRows = null, hourRows = null, logins = null, loaded = false;
 
 async function load() {
   const s = getSession();
   if (!s) return;
   loading = true; error = ""; refresh();
   try {
-    const [countRows, logRows, profileRows] = await Promise.all([
+    const [countRows, orgs, srcs, hours, logRows, profileRows] = await Promise.all([
       restRequest("/usage_daily_counts?order=day.desc&limit=400", { token: s.access_token }),
+      restRequest("/usage_org_counts?limit=10", { token: s.access_token }),
+      restRequest("/usage_src_counts?limit=10", { token: s.access_token }),
+      restRequest("/usage_hourly_counts", { token: s.access_token }),
       restRequest("/access_log?select=user_id,event,created_at&order=created_at.desc&limit=20", { token: s.access_token }),
       restRequest("/profiles?select=id,display_name", { token: s.access_token }),
     ]);
-    rows = countRows || [];
+    rows = countRows || []; orgRows = orgs || []; srcRows = srcs || []; hourRows = hours || [];
     const nameOf = Object.fromEntries((profileRows || []).map(p => [p.id, p.display_name]));
     logins = (logRows || []).map(r => ({ ...r, name: nameOf[r.user_id] || "(알 수 없음)" }));
   } catch (e) {
@@ -80,6 +84,28 @@ function funnelHtml(rows) {
   return `<div class="chart-wrap">${chart.svg}</div>`;
 }
 
+function orgHtml(orgRows) {
+  if (!orgRows.length) return "";
+  const data = orgRows.map(r => ({ label: r.org, value: Number(r.distinct_sessions) || 0 }));
+  const chart = hbar(data, { title: "기관(로컬 설정에 입력한 기관명)별 방문 세션 — 상위 10", unit: "회", theme: resolvedTheme(), width: 640, labelWidth: 200 });
+  return `<div class="chart-wrap">${chart.svg}</div><p class="small muted">직원이 로컬 설정에서 기관·부서명을 입력하지 않으면 "(미상)"으로 묶입니다.</p>`;
+}
+
+function srcHtml(srcRows) {
+  if (!srcRows.length) return "";
+  const data = srcRows.map(r => ({ label: r.src, value: Number(r.distinct_sessions) || 0 }));
+  const chart = hbar(data, { title: "접속 경로(배포 링크에 ?src=태그를 붙인 경우)별 방문 — 상위 10", unit: "회", theme: resolvedTheme(), width: 640, labelWidth: 200 });
+  return `<div class="chart-wrap">${chart.svg}</div>`;
+}
+
+function hourHtml(hourRows) {
+  const byHour = Object.fromEntries((hourRows || []).map(r => [Number(r.hour_kst), Number(r.distinct_sessions) || 0]));
+  const data = HOUR_ROWS.map(h => ({ label: `${h}시`, value: byHour[h] || 0 }));
+  if (!data.some(d => d.value > 0)) return `<p class="small muted">아직 시간대 기록이 없습니다.</p>`;
+  const chart = hbar(data, { title: "시간대별 사용(한국 시간)", unit: "회", theme: resolvedTheme(), width: 640, labelWidth: 60 });
+  return `<div class="chart-wrap">${chart.svg}</div>`;
+}
+
 function detailHtml(rows) {
   return `<details class="admin-raw">
     <summary>원본 일별 데이터 보기(${rows.length}행)</summary>
@@ -95,11 +121,14 @@ export function render() {
   if (!rows) return `<p class="muted">${loading ? "불러오는 중…" : ""}</p>`;
   return `
     <div class="row gap wrap" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-      <p class="small muted">최근 ${rows.length ? esc(rows[rows.length - 1].day) : "-"} ~ ${rows[0] ? esc(rows[0].day) : "-"} · 설문 데이터는 포함되지 않음</p>
+      <p class="small muted">최근 ${rows.length ? esc(rows[rows.length - 1].day) : "-"} ~ ${rows[0] ? esc(rows[0].day) : "-"} · 설문 데이터·IP·리퍼러는 포함되지 않음</p>
       <button class="btn sm" data-act="admin-stats-reload">${icon("history", 14)}새로고침</button>
     </div>
     ${summaryHtml(rows)}
     ${funnelHtml(rows)}
+    ${orgHtml(orgRows || [])}
+    ${hourHtml(hourRows || [])}
+    ${srcHtml(srcRows || [])}
     <div class="row gap" style="margin:14px 0">
       <button class="btn sm danger" data-act="admin-stats-cleanup">90일 지난 원본 이벤트 정리</button>
     </div>
@@ -112,7 +141,7 @@ export function render() {
 }
 
 export const actions = {
-  "admin-stats-reload": () => { loaded = false; rows = null; logins = null; load(); },
+  "admin-stats-reload": () => { loaded = false; rows = null; orgRows = null; srcRows = null; hourRows = null; logins = null; load(); },
   "admin-stats-cleanup": async () => {
     const s = getSession();
     if (!s) return;

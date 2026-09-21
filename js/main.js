@@ -290,7 +290,7 @@ initPwa({
   isPersistent: () => !!localProject()?.hasData, isSaving: () => historyCache.saving, prepareReload: prepareUpdateReload,
 });
 initHistory({ onUpdate: () => { if (currentId === "history" || currentId === "load") refresh(); else renderChrome(currentId); } }).then(() => resumeAfterUpdate(updateResume));
-initTelemetry({ version: APP_VERSION });
+initTelemetry({ version: APP_VERSION, getOrg: () => state.settings.orgName });
 installAutoFlush();
 installIdleWatch(() => { toast("자리를 비운 동안 자동으로 로그아웃되었습니다", "info", 6000); refresh(); });
 render();
