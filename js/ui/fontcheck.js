@@ -8,7 +8,9 @@ const KNOWN_ALIASES = {
   "함초롬바탕": ["HCR Batang", "HCRBatang"],
   "함초롬돋움": ["HCR Dotum", "HCRDotum"],
   "휴먼명조": ["Human Myeongjo", "HumanMyeongjo"],
-  "HY헤드라인M": ["HYHeadLine-M", "HY HeadLine M"],
+  // DirectWrite(크롬·엣지)는 이 글꼴을 "HYHeadLine"(굵기 접미사 없는 이름)으로만 노출함 —
+  // GDI/한글 쪽 이름("HYHeadLine-M" 등)으로는 화면에서 조용히 폴백됨(HWPX는 원래부터 문제없음)
+  "HY헤드라인M": ["HYHeadLine", "HYHeadLine-M", "HY HeadLine M"],
   "맑은 고딕": ["Malgun Gothic"],
   "나눔고딕": ["NanumGothic", "Nanum Gothic"],
   // 크롬/엣지는 글꼴을 DirectWrite로 찾는데, KoPub 배포판은 굵기별(Medium/Bold/Light)로 다른 이름을 등록한

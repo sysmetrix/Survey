@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.35.5", date: "2026-09-21", title: "표제부 HY헤드라인M이 웹 화면에서 실제로 적용되도록 수정",
+    groups: {
+      "보고서": [
+        "상단 표제부(붙임 서식) 글꼴이 이 PC에 HY헤드라인M이 설치돼 있는데도 화면에서는 다른 글꼴로 보이던 문제 수정 — 크롬·엣지가 이 글꼴을 찾을 때 쓰는 이름(HYHeadLine)이 빠져 있었음(HWPX 파일 자체는 원래부터 정상)",
+      ],
+    },
+  },
+  {
     version: "5.35.4", date: "2026-09-21", title: "웹 미리보기 표제부 제목 글꼴 누락 수정",
     groups: {
       "보고서": [
