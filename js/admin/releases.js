@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.36.0", date: "2026-09-22", title: "HWPX 개조식 내어쓰기를 글자 크기에 비례하도록 재설계",
+    groups: {
+      "보고서(HWPX)": [
+        "□·○ 개조식 내어쓰기가 특정 글자 크기(12pt)에서만 맞는 고정값이었던 것을, 글자 크기에 정비례하는 계산으로 바꿔 크기를 바꿔도 항상 맞도록 함(기본 크기에서 □=10pt, ○=20pt)",
+        "표 안 '· ' 항목과 요약상자 '□ ' 항목은 지금까지 내어쓰기가 전혀 없어 줄바꿈된 둘째 줄이 왼쪽에 그대로 붙던 것을, 개조식과 같은 방식(글자 크기 비례)으로 내어쓰기를 추가함",
+      ],
+    },
+  },
+  {
     version: "5.35.6", date: "2026-09-22", title: "HWPX 개조식 내어쓰기·줄 나눔 기준 값 재수정",
     groups: {
       "보고서(HWPX)": [

@@ -113,6 +113,52 @@ test("개조식 항목(□○-·)은 단계와 무관하게 모두 설정한 본
   assert.deepEqual(validateHwpx(entries, DOMParser), []);
 });
 
+test("□·○ 내어쓰기는 한글 문단 모양 대화상자 기준 정확히 10pt·20pt이고 baseSize에 비례함(23.8pt로 어긋나던 문제 수정)", () => {
+  // 한글 대화상자는 paraPr의 hp:case(HwpUnitChar) 분기 값을 절반·포인트(값÷100)로 보여준다(이번 세션에 실측 확인).
+  // 문단 안에 텍스트 run보다 앞서는(예: 쪽번호) run이 있을 수 있어 <hp:p>에 바로 이어 붙이지 않고, 텍스트 앞의 마지막 paraPrIDRef를 찾는다.
+  const paraPrIdFor = (sec, textStart) => {
+    const i = sec.indexOf(`<hp:t>${textStart}`);
+    const before = [...sec.slice(0, i).matchAll(/<hp:p id="0" paraPrIDRef="(\d+)"/g)];
+    return before[before.length - 1][1];
+  };
+  const paraPrOf = (header, id) => header.match(new RegExp(`<hh:paraPr id="${id}"[\\s\\S]*?</hh:paraPr>`))[0];
+  const caseMarginPt = (block, key) => +block.match(/<hp:case[^>]*>([\s\S]*?)<\/hp:case>/)[1].match(new RegExp(`<hc:${key} value="(-?\\d+)"`))[1] / 100;
+
+  for (const [baseSize, wantSquare, wantCircle] of [[12, 10, 20], [15, 12.5, 25]]) {
+    const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "t", baseSize });
+    doc.bullet(1, "사업명 확인").bullet(2, "목표1 확인");
+    const entries = doc.finish();
+    const header = part(entries, "Contents/header.xml");
+    const sec = part(entries, "Contents/section0.xml");
+    const squareId = paraPrIdFor(sec, "□ 사업명");
+    const circleId = paraPrIdFor(sec, "○ 목표1");
+    assert.equal(caseMarginPt(paraPrOf(header, squareId), "left"), wantSquare, `baseSize=${baseSize} □ 왼쪽 여백`);
+    assert.equal(caseMarginPt(paraPrOf(header, circleId), "left"), wantCircle, `baseSize=${baseSize} ○ 왼쪽 여백`);
+    assert.deepEqual(validateHwpx(entries, DOMParser), []);
+  }
+});
+
+test("표 안 '·'·요약상자 '□' 줄도 개조식과 같은 방식으로 내어쓰기가 생김(이전엔 전혀 없었음)", () => {
+  const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "t", baseSize: 12 });
+  doc.box(["□ 요약 확인"]).table({ columns: [{ weight: 1, align: "LEFT" }], rows: [["· 표 안 확인"]], headerRows: 0 });
+  const entries = doc.finish();
+  const header = part(entries, "Contents/header.xml");
+  const sec = part(entries, "Contents/section0.xml");
+  const paraPrIdFor = (s, textStart) => {
+    const i = s.indexOf(`<hp:t>${textStart}`);
+    const before = [...s.slice(0, i).matchAll(/<hp:p id="0" paraPrIDRef="(\d+)"/g)];
+    return before[before.length - 1][1];
+  };
+  const paraPrOf = (h, id) => h.match(new RegExp(`<hh:paraPr id="${id}"[\\s\\S]*?</hh:paraPr>`))[0];
+  const caseMarginPt = (block, key) => +block.match(/<hp:case[^>]*>([\s\S]*?)<\/hp:case>/)[1].match(new RegExp(`<hc:${key} value="(-?\\d+)"`))[1] / 100;
+  for (const text of ["□ 요약 확인", "· 표 안 확인"]) {
+    const id = paraPrIdFor(sec, text);
+    const left = caseMarginPt(paraPrOf(header, id), "left");
+    assert.ok(left > 0, `"${text}" 줄에 내어쓰기가 있어야 함(현재 ${left}pt)`);
+  }
+  assert.deepEqual(validateHwpx(entries, DOMParser), []);
+});
+
 test("문서 기본 위아래 여백은 10mm", () => {
   const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "여백 확인" });
   const sec = part(doc.finish(), "Contents/section0.xml");
