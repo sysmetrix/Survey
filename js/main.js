@@ -234,6 +234,9 @@ document.addEventListener("survey:loaded", () => {
 });
 document.addEventListener("survey:exported", e => {
   saveSnapshot("export", { label: e.detail?.title ? `내보냄: ${e.detail.title}` : "" }).catch(err => console.warn("내역 저장 실패:", err));
+  const kind = e.detail?.kind;
+  if (kind === "hwpx") trackEvent("report", "export_hwpx");
+  else if (kind === "present-pptx") trackEvent("present", "export_pptx");
 });
 
 // 예상하지 못한 오류도 사용자에게 알림 (화면이 조용히 멈추지 않도록)

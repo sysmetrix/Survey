@@ -10,6 +10,7 @@ import { cache as historyCache, relTime, resumeProject } from "../history/manage
 import { selectProject } from "./history.js";
 import { glyphMarkup } from "../sample-glyphs.js";
 import { startLoadMotion, ENTRANCE_MS } from "../load-motion.js";
+import { trackEvent } from "../../telemetry/track.js";
 
 export const MAX_FILE_MB = 50;
 
@@ -186,6 +187,7 @@ export const actions = {
       const res = await fetch(`samples/${encodeURIComponent(el.dataset.file)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       state.pendingProject = null;
+      trackEvent("load", "sample_load", { file: el.dataset.file });
       await openBytes(new Uint8Array(await res.arrayBuffer()), el.dataset.file);
     } catch (e) { busy(false); toast(`샘플을 불러오지 못했습니다(${e.message}). 웹 주소(https://…)로 접속했는지 확인하세요.`, "bad", 6000); }
   },

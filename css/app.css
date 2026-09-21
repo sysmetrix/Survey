@@ -460,6 +460,16 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 .tbl.kpi { min-width: 1180px; } .tbl.kpi td { vertical-align: middle; } .calc { font-weight: 700; font-variant-numeric: tabular-nums; }
 .tbl.kpi td:nth-child(2) { min-width: 180px; } .tbl.kpi td:nth-child(3) select, .tbl.kpi td:nth-child(4) select, .tbl.kpi td:nth-child(10) select { min-width: 90px; }
 .tbl.kpi td:nth-child(5) select { min-width: 170px; } .tbl.kpi td:nth-child(6) input { min-width: 130px; }
+/* ── 관리자 대시보드 요약 카드·차트·접이식 원본 표 ── */
+.stat-tiles { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.stat-tile { flex: 1 1 150px; background: var(--surface-2); border-radius: var(--radius); padding: 12px 16px; }
+.stat-tile .n { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.stat-tile .l { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+.chart-wrap { max-width: 100%; overflow-x: auto; margin-bottom: 6px; }
+.chart-wrap svg { display: block; max-width: 100%; height: auto; }
+details.admin-raw { margin: 18px 0; }
+details.admin-raw > summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--text-2); padding: 6px 0; }
+details.admin-raw[open] > summary { margin-bottom: 8px; }
 /* 문항 설정 표: #(순번)·원래 열 이름 두 열을 함께 고정해 가로 스크롤해도 어느 행인지 계속 보임 */
 .tbl.setup th:nth-child(1) { position: sticky; left: 0; z-index: 3; min-width: 40px; max-width: 40px; }
 .tbl.setup td:nth-child(1) { position: sticky; left: 0; z-index: 1; background: var(--surface); min-width: 40px; max-width: 40px; }
