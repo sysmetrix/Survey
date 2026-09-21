@@ -1,7 +1,7 @@
 // ③ 성과지표(선택)·사업정보·논리모형(선택) 입력 화면
 // 처음 쓰는 직원도 부담 없도록: 성과지표는 '빠른 추가'로 시작, 사업정보·논리모형은 항상 펼쳐서 바로 보여줌
 import { state, compute, invalidate } from "../store.js";
-import { LOGIC_STAGES, KPI_STAGES, normalizeLogicModel, hasLogicModel, hasProgramInfo } from "../../evaluation/logic-model.js";
+import { LOGIC_STAGES, KPI_STAGES, normalizeLogicModel, hasLogicModel, hasProgramInfo, emptyLogicModel } from "../../evaluation/logic-model.js";
 import { METRICS, newKpi } from "../../evaluation/kpi.js";
 import { readBusinessFromHwpx, tagDraftKpis, previewPlanDocDraft } from "../../evaluation/business-doc.js";
 import { readHwpxText } from "../../report/hwpx/read.js";
@@ -160,6 +160,7 @@ export function render() {
           <button class="rt-btn" data-act="toggle-plan-doc-help" aria-expanded="${planDocHelpOpen}" aria-haspopup="true" aria-label="문서에서 채우기 사용법" title="문서에서 채우기 사용법">${icon("help", 16)}</button>
           ${planDocHelpOpen ? `<div class="rt-pop wide right" role="dialog" aria-label="문서에서 채우기 사용법">${planDocHelpPanel()}</div>` : ""}
         </div>
+        ${hasLm ? `<div class="rt-sep" aria-hidden="true"></div><button class="rt-btn" data-act="clear-business" title="사업정보·논리모형 입력 내용 지우기">${icon("trash", 16)}지우기</button>` : ""}
       </div>
     </div>
     <p class="small muted">입력하면 보고서에 ‘사업 개요’와 ‘논리모형’ 표, 목표별 달성 평가가 추가됩니다. 몰라도 보고서 작성에는 문제없습니다.</p>
@@ -192,6 +193,14 @@ export const actions = {
     invalidate(); refresh();
   },
   "lm-stage": el => { state.logicModel[el.dataset.stage] = el.value.split(/\n+/).map(s => s.trim()).filter(Boolean); invalidate(); refresh(); },
+  "clear-business": () => {
+    if (!confirm("사업정보·논리모형에 입력한 내용을 모두 지울까요? 성과지표 표는 그대로 유지됩니다.")) return;
+    state.logicModel = emptyLogicModel();
+    state.businessFound = { ...(state.businessFound || {}), business: false, doc: false };
+    invalidate();
+    toast("사업정보·논리모형을 지웠습니다", "ok");
+    refresh();
+  },
   kpi: el => {
     const k = state.kpis[+el.dataset.i], f = el.dataset.field;
     if (!k) return;

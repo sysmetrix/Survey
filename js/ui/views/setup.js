@@ -9,6 +9,7 @@ import { maskPII, isBlank } from "../../core/util.js";
 import { esc, option, levelBadge, toast, busy, busyDone, nextFrame } from "../util.js";
 import { refresh, go } from "../router.js";
 import { scoreBasisPanel, scoreBasisActions } from "../score-basis.js";
+import { icon } from "../icons.js";
 
 const SHEET_ROLE = { data: "응답", pre: "사전 응답", post: "사후 응답", codebook: "문항정보", business: "사업정보", kpi: "성과지표", guide: "안내" };
 const IS_NUM = s => /^[-+]?\d+(\.\d+)?$/.test(s);
@@ -28,7 +29,7 @@ function labelPanel(c, unm) {
   const { min = 1, max = 5 } = c.scale || {};
   const range = unm.filter(u => u.reason === "range");
   const key = esc(c.key);
-  return `<tr class="labelrow"><td colspan="9"><div class="labelpanel">
+  return `<tr class="labelrow"><td colspan="10"><div class="labelpanel">
     <div class="row between wrap"><b>‘${esc(c.label)}’ 보기별 점수</b><span class="small muted">척도 ${min}~${max}점 · 숫자로 입력된 응답은 그대로 사용 · 빈칸 = 무응답 처리</span></div>
     ${entries.length ? `<table class="tbl mini"><tr><th>응답 문구</th><th class="c">응답 수</th><th>점수</th></tr>${entries.map(([s, n]) => `<tr class="${map[s] === undefined ? "unmapped" : ""}"><td>${esc(s)}</td><td class="c">${n}</td><td><input class="in num" type="number" min="${min}" max="${max}" step="1" value="${map[s] ?? ""}" placeholder="?" data-change="labelmap" data-key="${key}" data-raw="${esc(s)}"></td></tr>`).join("")}</table>` : `<p class="small muted">문자 응답이 없습니다(모두 숫자).</p>`}
     ${range.length ? `<p class="small bad-text">척도 범위(${min}~${max}) 밖 값: ${range.map(u => `${esc(u.value)}(${u.n}건)`).join(", ")} — 척도 범위를 확인하세요.</p>` : ""}
@@ -55,7 +56,7 @@ function yearBucketPanel(c) {
   const groupList = [...counts.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]), "ko"));
   const activeObj = schemes.find(s => s.id === active);
   const key = esc(c.key);
-  return `<tr class="labelrow"><td colspan="9"><div class="labelpanel">
+  return `<tr class="labelrow"><td colspan="10"><div class="labelpanel">
     <div class="row between wrap"><b>‘${esc(c.label)}’ 연도 → 구간 설정</b>
       <span class="small muted">${kind === "birth" ? "출생연도를 연령대로 바꿔 응답자 특성별 비교에 사용합니다" : "활동 시작연도를 년차로 바꿔 응답자 특성별 비교에 사용합니다"}</span></div>
     <div class="row gap wrap">
@@ -81,6 +82,23 @@ function autoMapLabels(c) {
   const ls = matchLabelSet(vals, 0.5);
   if (ls) { c.labelMap = { ...(c.labelMap || {}), ...Object.fromEntries(ls.map) }; c.scale = { min: ls.set.min, max: ls.set.max }; c.labelSetId = ls.set.id; }
   if (texts.some(t => (c.labelMap || {})[t] === undefined)) expanded = c.key;
+}
+
+const shallowEq = (a, b) => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const ak = Object.keys(a), bk = Object.keys(b);
+  return ak.length === bk.length && ak.every(k => a[k] === b[k]);
+};
+
+/** 자동 판별 값(c.auto)에서 손으로 고친 게 있는지 — 되돌리기 버튼을 보일지 결정 */
+function colEdited(cb, c) {
+  const a = c.auto;
+  if (!a) return false;
+  const domainName = c.domain ? cb.domains.find(d => d.id === c.domain)?.name ?? null : null;
+  return c.label !== a.label || c.role !== a.role || c.reverse !== a.reverse || c.time !== a.time || c.isOverall !== a.isOverall
+    || c.labelSetId !== a.labelSetId || domainName !== a.domainName || c.yearScheme !== a.yearScheme || c.yearRefYear !== a.yearRefYear
+    || !shallowEq(c.scale, a.scale) || !shallowEq(c.labelMap, a.labelMap);
 }
 
 function sampleValues(col) {
@@ -131,6 +149,7 @@ export function render() {
       <td>${c.role === "likert" ? `<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="(없음)" data-change="col" data-key="${esc(c.key)}" data-field="domain">` : ""}</td>
       <td>${numeric ? `<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time">${option("", "-", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select>` : ""}</td>
       <td class="c">${c.role === "likert" && c.time !== "pre" ? `<input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall">` : ""}</td>
+      <td class="c">${colEdited(cb, c) ? `<button class="icon-btn sm" data-act="col-reset" data-key="${esc(c.key)}" title="자동 판별 값으로 되돌리기" aria-label="'${esc(c.label)}' 자동 판별 값으로 되돌리기">${icon("undo", 14)}</button>` : ""}</td>
     </tr>`) + (scaled && expanded === c.key ? labelPanel(c, unm) : "") + (yearKind && expanded === c.key ? yearBucketPanel(c) : "");
   }).join("");
   const unmappedWarn = unmappedCols.length ? `<li>${levelBadge("error")} 점수로 바뀌지 않은 응답이 있는 문항 ${unmappedCols.length}개: ${unmappedCols.slice(0, 4).map(u => `${esc(u.c.label)}(${u.n}건)`).join(", ")}${unmappedCols.length > 4 ? " 등" : ""} — 아래 표의 <b>보기 점수</b>에서 문구별 점수를 지정하세요(지정 전에는 무응답으로 처리).</li>` : "";
@@ -188,7 +207,7 @@ export function render() {
       <span class="small muted">역할: 척도 문항=리커트, 응답자 특성=집단 비교 기준, 복수응답=쉼표 구분 선택형 · 영역: 같은 이름끼리 묶어 영역 점수 계산 · 출생연도·활동 시작연도 등 연도 열은 연령대·년차 구간으로 바꿔 특성 비교에 사용합니다('연도 구간' 버튼에서 방식 변경)</span></div>
     <datalist id="domainList">${cb.domains.map(d => `<option value="${esc(d.name)}">`).join("")}</datalist>
     <div class="tblwrap"><table class="tbl setup">
-      <thead><tr><th>#</th><th>원래 열 이름 · 응답 예</th><th>표시 이름</th><th>역할</th><th>척도 범위</th><th>역문항</th><th>영역</th><th>시점</th><th>전반 만족</th></tr></thead>
+      <thead><tr><th>#</th><th>원래 열 이름 · 응답 예</th><th>표시 이름</th><th>역할</th><th>척도 범위</th><th>역문항</th><th>영역</th><th>시점</th><th>전반 만족</th><th></th></tr></thead>
       <tbody>${colRows}</tbody>
     </table></div>
     <div class="row end gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button></div>
@@ -314,6 +333,25 @@ export const actions = {
       c.pairKey = c.time ? (cb.design === "prepost-sheets" ? normKey(c.header) : normKey(c.label)) : null;
       if (c.time && cb.design === "single") cb.design = "prepost-wide";
     }
+    invalidate(); refresh();
+  },
+  "col-reset": el => {
+    const cb = state.codebook;
+    const c = colByKey(el.dataset.key);
+    if (!c?.auto) return;
+    const a = c.auto;
+    c.label = a.label; c.role = a.role; c.scale = a.scale ? { ...a.scale } : null;
+    c.labelMap = a.labelMap ? { ...a.labelMap } : null; c.labelSetId = a.labelSetId; c.labelAmbiguous = a.labelAmbiguous;
+    c.reverse = a.reverse; c.time = a.time; c.isOverall = a.isOverall;
+    c.yearScheme = a.yearScheme; c.yearRefYear = a.yearRefYear;
+    if (a.domainName) {
+      let d = cb.domains.find(x => x.name === a.domainName);
+      if (!d) { d = { id: `D${cb.domains.reduce((mx, x) => Math.max(mx, +x.id.slice(1) || 0), 0) + 1}`, name: a.domainName }; cb.domains.push(d); }
+      c.domain = d.id;
+    } else c.domain = null;
+    cb.domains = cb.domains.filter(d => cb.columns.some(x => x.domain === d.id));
+    c.pairKey = c.time ? (cb.design === "prepost-sheets" ? normKey(c.header) : normKey(c.label)) : null;
+    toast(`'${a.label}' 열을 자동 판별 값으로 되돌렸습니다`, "ok");
     invalidate(); refresh();
   },
 };

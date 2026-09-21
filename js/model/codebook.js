@@ -116,6 +116,16 @@ export function buildCodebook(dataset, { dataSheetIndex = null } = {}) {
   // ID 열 (사전/사후 매칭용)
   const idCols = responseSheets.map(si => columns.find(c => c.sheet === si && c.role === "id")?.key || null);
 
+  // 자동 판별 원본값 스냅샷 — 문항 설정 화면의 열별 '자동으로 되돌리기'에서 기준으로 사용(영역은 그 사이 이름이 바뀔 수 있어 id 대신 이름으로 저장)
+  columns.forEach(c => {
+    c.auto = {
+      label: c.label, role: c.role, scale: c.scale ? { ...c.scale } : null,
+      labelMap: c.labelMap ? { ...c.labelMap } : null, labelSetId: c.labelSetId, labelAmbiguous: c.labelAmbiguous,
+      reverse: c.reverse, domainName: c.domain ? domains.find(d => d.id === c.domain)?.name ?? null : null,
+      time: c.time, isOverall: c.isOverall, yearScheme: c.yearScheme, yearRefYear: c.yearRefYear,
+    };
+  });
+
   return {
     version: CODEBOOK_VERSION,
     fileName: dataset.fileName,
@@ -192,8 +202,8 @@ export function applySavedCodebook(saved, dataset) {
     const s = byHeader.get(`${fresh.sheets[c.sheet]?.role}|${c.header}`);
     if (!s) return c;
     matched++;
-    const { key, sheet, index, header, detected } = c;
-    return { ...s, key, sheet, index, header, detected };
+    const { key, sheet, index, header, detected, auto } = c;
+    return { ...s, key, sheet, index, header, detected, auto };
   });
   fresh.domains = saved.domains || fresh.domains;
   fresh.design = saved.design || fresh.design;
