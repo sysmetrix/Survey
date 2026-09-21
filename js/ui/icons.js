@@ -81,6 +81,7 @@ const P = {
   arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   arrowDown: '<path d="M12 5v14M6 13l6 6 6-6"/>',
   pointer: '<path d="M6 4l12 6.5-5.2 1.6L11 18z"/>',
+  lock: '<rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
 };
 
 /** @param {keyof P} name */

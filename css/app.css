@@ -65,6 +65,12 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .skip { position: absolute; left: 12px; top: -48px; z-index: 100; background: var(--brand); color: var(--on-brand); border: 0; padding: 10px 14px; border-radius: var(--radius-sm); font: inherit; font-weight: 700; }
 .skip:focus { top: 10px; }
 
+/* ── 로그인 ── */
+.login-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+.login-card { max-width: 360px; width: 100%; }
+.login-brand { display: flex; align-items: center; gap: 10px; color: var(--brand-text); margin-bottom: 2px; }
+.login-brand h1 { font-size: 19px; margin: 0; }
+
 /* ── 상단바 · 단계 ── */
 .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 18px; min-height: var(--topbar-h); padding: 8px max(20px, env(safe-area-inset-left)); background: color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--border); }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; flex: none; }
@@ -106,6 +112,7 @@ h3 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; letter-spacing: -.
 .c { text-align: center; } .l { text-align: left; } .nowrap { white-space: nowrap; }
 .hint { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--info-soft); color: var(--text); font-size: 14px; }
 .hint.ok { background: var(--ok-soft); }
+.hint.bad { background: var(--bad-soft); color: var(--bad); }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 16px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 14.5px; font-weight: 650; cursor: pointer; text-decoration: none; white-space: nowrap; transition: background .15s, border-color .15s, box-shadow .15s, transform .05s; }
 .btn:hover { background: var(--surface-2); border-color: var(--text-3); }

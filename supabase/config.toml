@@ -1,0 +1,22 @@
+# Supabase CLI 설정 — `supabase link --project-ref <ref>` 로 스테이징/운영에 연결한 뒤
+# `supabase db push` 로 migrations/ 를 적용한다. 로컬 도커 스택은 이 프로젝트에서 쓰지 않는다
+# (팀에 백엔드 운영 경험이 없어 실제 프로젝트로 바로 검증하는 쪽을 택함 — plan 문서 참고).
+project_id = "survey-admin"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "https://sysmetrix.github.io"
+additional_redirect_urls = ["https://sysmetrix.github.io/Survey/"]
+jwt_expiry = 3600
+enable_signup = false

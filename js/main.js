@@ -23,11 +23,14 @@ import * as presentEdit from "./ui/views/present-edit.js";
 import * as history from "./ui/views/history.js";
 import * as settings from "./ui/views/settings.js";
 import * as updates from "./ui/views/updates.js";
+import * as login from "./ui/views/login.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
+import { getSession, installIdleWatch } from "./auth/session.js";
+import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 
 export const APP_VERSION = "5.29.0";
-const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates };
+const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates, login };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
 
@@ -56,7 +59,10 @@ function renderChrome(id) {
 function render({ keepScroll = false } = {}) {
   const { view, sub } = parseHash();
   const allowedView = view === "updates" && !hasReleaseAccess() ? "load" : view;
-  const id = !NO_DATA_VIEWS.includes(allowedView) && !state.dataset ? "load" : allowedView;
+  let id = !NO_DATA_VIEWS.includes(allowedView) && !state.dataset ? "load" : allowedView;
+  // 일반 이용에는 로그인이 필요 없음(누구나 링크로 바로 사용) — #/login 은 관리자만 아는 별도 경로.
+  // 이미 로그인된 채로 그 경로에 다시 오면 그냥 첫 화면으로 보낸다.
+  if (id === "login" && getSession()) id = "load";
   const changed = id !== currentId;
   if (changed && currentId && currentId !== id) setPrevView(currentId);
   if (changed) current.unmount?.();
@@ -73,6 +79,7 @@ function render({ keepScroll = false } = {}) {
     main.innerHTML = `<section class="card"><h2>화면을 표시하지 못했습니다</h2><p class="bad-text">${esc(e.message)}</p><p class="muted small">데이터 설정(열 역할·척도)을 확인하거나 파일을 다시 불러오세요. 직전 상태로 돌아가려면 <b>되돌리기(Ctrl+Z)</b> 또는 <b>작업 내역</b>을 이용하세요.</p><div class="row gap"><button class="btn" data-act="goto" data-to="setup">데이터 설정으로</button><button class="btn" data-act="goto" data-to="history">작업 내역</button></div></section>`;
   }
   syncGuide();
+  if (changed) trackEvent(id, "view_enter");
   if (keepScroll && !changed) window.scrollTo(0, y);
   else if (changed) window.scrollTo(0, 0);
 }
@@ -229,6 +236,7 @@ document.addEventListener("survey:exported", e => {
 window.addEventListener("error", e => {
   if (!e.message || /ResizeObserver/.test(e.message)) return;
   toast(`오류가 발생했습니다: ${e.message}`, "bad", 6000);
+  trackEvent(currentId, "js_error"); // 화면 이름만 — 메시지·스택트레이스는 보내지 않음
 });
 window.addEventListener("unhandledrejection", e => {
   const msg = e.reason?.message || String(e.reason || "");
@@ -275,5 +283,8 @@ initPwa({
   isPersistent: () => !!localProject()?.hasData, isSaving: () => historyCache.saving, prepareReload: prepareUpdateReload,
 });
 initHistory({ onUpdate: () => { if (currentId === "history" || currentId === "load") refresh(); else renderChrome(currentId); } }).then(() => resumeAfterUpdate(updateResume));
+initTelemetry({ version: APP_VERSION });
+installAutoFlush();
+installIdleWatch(() => { toast("자리를 비운 동안 자동으로 로그아웃되었습니다", "info", 6000); refresh(); });
 render();
 offerFirstRun();

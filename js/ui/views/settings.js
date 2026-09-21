@@ -3,9 +3,10 @@ import { themePref, setTheme, THEME_LABEL } from "../theme.js";
 import { state, persistSettings, invalidate } from "../store.js";
 import { scoreBasisPanel, scoreBasisActions } from "../score-basis.js";
 import { esc, toast, option } from "../util.js";
-import { refresh, prevView, viewLabel } from "../router.js";
+import { refresh, prevView, viewLabel, go } from "../router.js";
 import { icon } from "../icons.js";
 import { ORG_EXAMPLE, AUTHOR_EXAMPLE } from "../examples.js";
+import { currentUser, logout as signOut } from "../../auth/session.js";
 
 export function render() {
   const st = cache.storage;
@@ -14,6 +15,10 @@ export function render() {
   return `<div class="page-head"><div><span class="eyebrow">이 브라우저에만 적용</span><h1>로컬 설정</h1><p class="muted">여기서 바꾼 값은 서버로 전송되지 않으며 현재 브라우저에만 저장됩니다.</p></div><button class="btn" data-act="back">${icon("left", 16)}저장 확인·${esc(backTo)} 화면으로</button></div>
   <div class="settings-cols">
     <div class="settings-col">
+    ${currentUser() ? `<section class="card"><h2>관리자 계정</h2>
+      <p class="small muted">로그인: ${esc(currentUser().email)}</p>
+      <button class="btn sm" data-act="logout">로그아웃</button>
+    </section>` : ""}
     <section class="card"><h2>보고서 기본 정보</h2>
       <p class="small muted">보고서 표지와 발표 자료 표지에 자동으로 들어갑니다. 회색 글씨는 입력 예시입니다.</p>
       <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" placeholder="${ORG_EXAMPLE}" data-change="local-org"></label>
@@ -58,6 +63,7 @@ export function render() {
 
 export const actions = {
   ...scoreBasisActions,
+  logout: async () => { await signOut(); toast("로그아웃했습니다", "info"); go("login"); },
   "local-org": el => { state.settings.orgName = el.value.trim(); persistSettings(); invalidate(); toast("기관·부서명을 저장했습니다", "ok"); refresh(); },
   "local-author": el => { state.settings.author = el.value.trim(); persistSettings(); invalidate(); toast("담당자명을 저장했습니다", "ok"); refresh(); },
   "local-theme": el => { setTheme(el.value); toast(`화면 테마: ${THEME_LABEL[el.value]}`); refresh(); },
