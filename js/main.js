@@ -24,13 +24,14 @@ import * as history from "./ui/views/history.js";
 import * as settings from "./ui/views/settings.js";
 import * as updates from "./ui/views/updates.js";
 import * as login from "./ui/views/login.js";
+import * as admin from "./ui/views/admin.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 import { getSession, installIdleWatch } from "./auth/session.js";
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 
 export const APP_VERSION = "5.29.0";
-const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates, login };
+const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates, login, admin };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
 
@@ -60,9 +61,12 @@ function render({ keepScroll = false } = {}) {
   const { view, sub } = parseHash();
   const allowedView = view === "updates" && !hasReleaseAccess() ? "load" : view;
   let id = !NO_DATA_VIEWS.includes(allowedView) && !state.dataset ? "load" : allowedView;
-  // 일반 이용에는 로그인이 필요 없음(누구나 링크로 바로 사용) — #/login 은 관리자만 아는 별도 경로.
-  // 이미 로그인된 채로 그 경로에 다시 오면 그냥 첫 화면으로 보낸다.
-  if (id === "login" && getSession()) id = "load";
+  // 일반 이용에는 로그인이 필요 없음(누구나 링크로 바로 사용) — #/login·#/admin 은 관리자만 아는 별도 경로.
+  if (id === "admin") {
+    const s = getSession();
+    if (!s) id = "login"; // 로그인 안 됐으면 로그인 화면으로
+    else if (s.role !== "admin") { id = "load"; toast("관리자만 접근할 수 있습니다", "bad"); }
+  } else if (id === "login" && getSession()) id = "load"; // 이미 로그인된 채로 로그인 화면에 다시 오면 첫 화면으로
   const changed = id !== currentId;
   if (changed && currentId && currentId !== id) setPrevView(currentId);
   if (changed) current.unmount?.();
@@ -287,4 +291,4 @@ initTelemetry({ version: APP_VERSION });
 installAutoFlush();
 installIdleWatch(() => { toast("자리를 비운 동안 자동으로 로그아웃되었습니다", "info", 6000); refresh(); });
 render();
-offerFirstRun();
+if (currentId !== "login" && currentId !== "admin") offerFirstRun(); // 관리자 화면에서는 일반 이용자용 가이드를 띄우지 않음

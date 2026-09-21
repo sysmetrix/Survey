@@ -1,5 +1,5 @@
 // 로그인 세션 관리 — 비밀번호 해시·토큰 서명은 전부 서버(Supabase Auth/GoTrue)가 담당, 여기선 세션만 다룬다
-import { authRequest, rpcRequest, isConfigured } from "./api.js";
+import { authRequest, restRequest, rpcRequest, isConfigured } from "./api.js";
 
 const KEY = "survey-v5-session";
 export const IDLE_MS = 12 * 60 * 60 * 1000; // 12시간 미조작 시 재로그인 요구
@@ -47,13 +47,20 @@ export function getSession() {
   return s;
 }
 export const currentUser = () => getSession()?.user || null;
+export const isAdmin = () => getSession()?.role === "admin";
 export const clearSession = () => write(null);
 
 export async function login(email, password, remember = false) {
   const res = await authRequest("/token?grant_type=password", { method: "POST", body: { email, password } });
-  const session = buildSession(res, remember);
+  let session = buildSession(res, remember);
   write(session);
   touchActivity();
+  try {
+    const rows = await restRequest(`/profiles?id=eq.${encodeURIComponent(session.user.id)}&select=role,is_active`, { token: session.access_token });
+    const p = rows?.[0];
+    session = { ...session, role: p?.is_active ? p.role : "staff" };
+    write(session);
+  } catch { /* 역할 조회 실패 — role 없이 진행(관리자 화면은 role 검사에서 자연히 막힘) */ }
   try { await rpcRequest("log_login", { p_event: "login" }, { token: session.access_token }); }
   catch { /* 감사 로그 기록 실패는 로그인 자체를 막지 않음 */ }
   return session;

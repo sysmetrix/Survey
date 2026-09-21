@@ -47,7 +47,7 @@ async function submit() {
   try {
     await login(email, password, remember);
     busy = false;
-    go("load");
+    go("admin");
   } catch (e) {
     busy = false; errorMsg = KOREAN_ERR[e.message] || e.message || "로그인에 실패했습니다"; refresh();
   }

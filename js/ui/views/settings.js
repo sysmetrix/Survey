@@ -17,7 +17,7 @@ export function render() {
     <div class="settings-col">
     ${currentUser() ? `<section class="card"><h2>관리자 계정</h2>
       <p class="small muted">로그인: ${esc(currentUser().email)}</p>
-      <button class="btn sm" data-act="logout">로그아웃</button>
+      <div class="row gap"><button class="btn sm" data-act="goto" data-to="admin">관리자 화면으로</button><button class="btn sm" data-act="logout">로그아웃</button></div>
     </section>` : ""}
     <section class="card"><h2>보고서 기본 정보</h2>
       <p class="small muted">보고서 표지와 발표 자료 표지에 자동으로 들어갑니다. 회색 글씨는 입력 예시입니다.</p>

@@ -82,6 +82,7 @@ const P = {
   arrowDown: '<path d="M12 5v14M6 13l6 6 6-6"/>',
   pointer: '<path d="M6 4l12 6.5-5.2 1.6L11 18z"/>',
   lock: '<rect x="4.5" y="11" width="15" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
+  users: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 8.5a3 3 0 1 0 0-6M18.5 14.7c2 .5 3.5 2.5 3.5 5.3"/>',
 };
 
 /** @param {keyof P} name */
