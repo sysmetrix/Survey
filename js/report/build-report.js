@@ -109,9 +109,9 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     B("s.design", 1, `조사 설계: ${DESIGN_LABELS[A.meta.design]}`, true),
     B("s.n", 1, `응답자: ${A.meta.n}명${S.excludedCount ? `(불성실 응답 ${S.excludedCount}명 제외 후)` : ""}`, true),
   ];
-  if (P?.matching) ov.push(B("s.match", 2, `사전·사후 매칭 ${P.matching.pairs}명(사전만 응답 ${P.matching.preOnly}명, 사후만 응답 ${P.matching.postOnly}명) — 매칭 기준: ${P.matching.keyDesc}`, true));
+  if (P?.matching) ov.push(B("s.match", 2, `사전·사후 매칭 ${P.matching.pairs}명(사전만 응답 ${P.matching.preOnly}명, 사후만 응답 ${P.matching.postOnly}명) · 매칭 기준: ${P.matching.keyDesc}`, true));
   ov.push(B("s.items", 1, `조사 내용: ${parts.join(", ")}`, true));
-  if (scaleRange) ov.push(B("s.scale", 1, `척도: ${scaleRange.min}~${scaleRange.max}점(점수가 높을수록 긍정)`, true), B("s.score100", 2, `100점 환산 점수 = (평균 − 최소점) ÷ (최대점 − 최소점) × 100${A.meta.scoreBasis === "rounded" ? "(표에 적힌 소수 둘째 자리 평균으로 계산)" : "(반올림 전 평균으로 계산)"}, 긍정응답률 = 상위 2개 척도 응답 비율`, true));
+  if (scaleRange) ov.push(B("s.scale", 1, `척도: ${scaleRange.min}~${scaleRange.max}점(점수가 높을수록 긍정)`, true), B("s.score100", 2, `100점 환산 점수 = (평균 - 최소점) ÷ (최대점 - 최소점) × 100${A.meta.scoreBasis === "rounded" ? "(표에 적힌 소수 둘째 자리 평균으로 계산)" : "(반올림 전 평균으로 계산)"}, 긍정응답률 = 상위 2개 척도 응답 비율`, true));
   if (A.reliability && Number.isFinite(A.reliability.alpha)) {
     const { alpha } = A.reliability;
     const [aLo, aHi] = A.reliability.alphaCi || [];
@@ -170,7 +170,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     push({
       type: "table", caption: "성과지표 달성 현황", columns: [{ weight: 2.6, align: "LEFT" }, { weight: 1.1 }, { weight: 2.3, align: "LEFT" }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1.1 }], rows,
       notes: [
-        `주: 달성률 = 실적 ÷ 목표 × 100(하향 지표는 {1 − (실적 − 목표) ÷ |목표|} × 100). 판정: ${t.kpiAchieved}% 이상 달성, ${t.kpiMostly}~${t.kpiAchieved - 1}% 대체로 달성, ${t.kpiMostly}% 미만 미달성`,
+        `주: 달성률 = 실적 ÷ 목표 × 100(하향 지표는 {1 - (실적 - 목표) ÷ |목표|} × 100). 판정: ${t.kpiAchieved}% 이상 달성, ${t.kpiMostly}~${t.kpiAchieved - 1}% 대체로 달성, ${t.kpiMostly}% 미만 미달성`,
         `종합 평가: (달성 지표 수 + 대체로 달성 지표 수 × 0.5) ÷ 측정 지표 수가 ${t.overallGood}% 이상 우수, ${t.overallFair}% 이상 보통, 그 미만 미흡`,
       ],
     });
@@ -202,7 +202,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     const sigDown = P.items.filter(i => i.primary.p < 0.05 && i.diff < 0);
     if (sigUp.length) pb.push(B("pp.sigup", 1, `유의한 향상을 보인 문항(${sigUp.length}개): ${sigUp.map(i => `${q(i.label)}(${signed(i.diff)}점)`).join(", ")}`));
     if (nonSig.length) pb.push(B("pp.nonsig", 1, `유의한 변화가 확인되지 않은 문항(${nonSig.length}개): ${nonSig.map(i => q(i.label)).join(", ")}`));
-    if (sigDown.length) pb.push(B("pp.sigdown", 1, `유의하게 감소한 문항: ${sigDown.map(i => `${q(i.label)}(${signed(i.diff)}점)`).join(", ")} — 원인 점검 필요`));
+    if (sigDown.length) pb.push(B("pp.sigdown", 1, `유의하게 감소한 문항(원인 점검 필요): ${sigDown.map(i => `${q(i.label)}(${signed(i.diff)}점)`).join(", ")}`));
     bullets(pb);
     const rows = [["구분", "n", "사전 M(SD)", "사후 M(SD)", "변화량", "검정", "p", "효과크기"].map(cellH)];
     const row = (r, isDom) => [
@@ -249,7 +249,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       ib.push(B("sat.hilo", 1, `문항별로는 ${josa(q(hi.label), "이")} ${f2(hi.score100)}점으로 가장 높고, ${josa(q(lo.label), "이")} ${f2(lo.score100)}점으로 가장 낮음`));
       const high = detailItems.filter(i => i.score100 >= t.level[1]), low = detailItems.filter(i => i.score100 < t.level[2]);
       if (high.length) ib.push(B("sat.high", 2, `높은 수준(${t.level[1]}점 이상): ${high.map(i => q(i.label)).join(", ")}`));
-      if (low.length) ib.push(B("sat.low", 2, `보통 이하(${t.level[2]}점 미만): ${low.map(i => q(i.label)).join(", ")} — 개선 검토 필요`));
+      if (low.length) ib.push(B("sat.low", 2, `보통 이하(${t.level[2]}점 미만, 개선 검토 필요): ${low.map(i => q(i.label)).join(", ")}`));
       const neg = detailItems.filter(i => i.bottom2 >= 20);
       if (neg.length) ib.push(B("sat.neg", 2, `부정응답(하위 2개 척도)이 20% 이상인 문항: ${neg.map(i => `${q(i.label)}(${f1(i.bottom2)}%)`).join(", ")}`));
     }
@@ -346,7 +346,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
         columns: [{ weight: 2.2, align: "LEFT" }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }],
         rows: [["주제", "언급 건수", "비율", "긍정", "개선 요구"].map(cellH), ...tx.themes.map(th => [{ text: th.name, align: "LEFT" }, String(th.n), f1(th.pct), String(th.positive), String(th.negative)])],
         notes: [
-          "주: 미리 정한 8개 주제의 키워드 일치로 분류하는 규칙 기반 자동 분류로, 사람이 직접 읽고 분류한 것보다 정확도가 낮을 수 있고 한 응답이 여러 주제에 포함될 수 있음 — 원문·대표 의견 검토를 권장함",
+          "주: 미리 정한 8개 주제의 키워드 일치로 분류하는 규칙 기반 자동 분류로, 사람이 직접 읽고 분류한 것보다 정확도가 낮을 수 있고 한 응답이 여러 주제에 포함될 수 있음. 원문·대표 의견 검토를 권장함",
           tx.unclassified ? `주: 유효 응답 ${tx.nSubstantive}건 중 ${tx.unclassified}건(${f1(tx.unclassified / tx.nSubstantive * 100)}%)은 위 8개 주제 중 어느 것에도 해당하지 않아 표에서 빠짐` : null,
         ].filter(Boolean),
       });
@@ -436,10 +436,10 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   }
   push({ type: "table", caption: "주요 산식 정의", compact: true, columns: [{ weight: 1.6, align: "LEFT" }, { weight: 4, align: "LEFT" }], rows: [
     [cellH("지표"), cellH("산식·기준")],
-    ["100점 환산 점수", "(평균 − 척도 최소점) ÷ (척도 최대점 − 척도 최소점) × 100"],
+    ["100점 환산 점수", "(평균 - 척도 최소점) ÷ (척도 최대점 - 척도 최소점) × 100"],
     ["긍정응답률(Top2)", "상위 2개 척도 응답 수 ÷ 유효 응답 수 × 100"],
-    ["순추천지수(NPS)", "추천(9~10점) 비율 − 비추천(0~6점) 비율"],
-    ["달성률", "실적 ÷ 목표 × 100 (하향 지표: {1 − (실적 − 목표) ÷ |목표|} × 100)"],
+    ["순추천지수(NPS)", "추천(9~10점) 비율 - 비추천(0~6점) 비율"],
+    ["달성률", "실적 ÷ 목표 × 100 (하향 지표: {1 - (실적 - 목표) ÷ |목표|} × 100)"],
     ["효과크기 d", "평균 차이 ÷ 표준편차 (0.2 작음, 0.5 중간, 0.8 큼)"],
     ["수준 구분(100점 환산)", `${t.level[0]}점 이상 매우 높음, ${t.level[1]}점 이상 높음, ${t.level[2]}점 이상 보통 이상, ${t.level[3]}점 이상 보통, 그 미만 낮음`],
     ["Cronbach α", "0.9 이상 매우 우수, 0.8 이상 양호, 0.7 이상 수용 가능, 0.6 미만 낮음"],

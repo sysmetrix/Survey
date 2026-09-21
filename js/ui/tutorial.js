@@ -1,7 +1,6 @@
 // 처음 사용자를 위한 자막형 화면 가이드. 진행 상태는 현재 브라우저에만 저장합니다.
 import { go } from "./router.js";
 import { icon } from "./icons.js";
-import { notify } from "./util.js";
 
 const DONE_KEY = "survey-v5-tutorial-complete";
 const SAMPLE = "2026_청소년센터_만족도_구글폼.csv";
@@ -181,10 +180,29 @@ export function stopGuide(completed = false) {
 /** 화면이 다시 그려지면 강조 표시가 지워지므로 곧바로 다시 표시 */
 export function syncGuide() { if (active) { shown = -1; showStep(); } }
 
+/** 첫 접속 안내 띠(상단바 바로 아래·가운데) — js/ui/update-banner.js 와 같은 자리·모양, 아이콘에 은은한 펄스로 눈에 띄게 함 */
+function ensureOfferUi() {
+  if (document.getElementById("guideOffer")) return;
+  const el = document.createElement("div");
+  el.id = "guideOffer";
+  el.className = "update-banner guide-offer no-print";
+  el.setAttribute("role", "region");
+  el.setAttribute("aria-label", "화면 가이드 안내");
+  el.hidden = true;
+  el.innerHTML = `<div class="update-body"><span class="update-ico" aria-hidden="true">${icon("sparkle", 20)}</span>
+    <div class="update-text"><span class="update-msg">처음이시라면 화면 가이드로 3분 안에 사용법을 둘러보세요</span></div>
+    <div class="update-actions"><button type="button" class="btn sm guide-now">${icon("play", 14)}가이드 보기</button><button type="button" class="icon-btn sm guide-later" aria-label="닫기">${icon("x", 15)}</button></div></div>`;
+  el.querySelector(".guide-now").addEventListener("click", () => { el.hidden = true; startGuide(); });
+  el.querySelector(".guide-later").addEventListener("click", () => { el.hidden = true; });
+  el.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); el.hidden = true; } });
+  const top = document.querySelector(".topbar");
+  if (top) top.after(el); else document.body.append(el);
+}
+
 /** 처음 방문이어도 곧바로 가이드를 틀지 않고, 볼지 말지 직접 고르게 안내만 띄움 */
 export function offerFirstRun() {
   ensureUi();
   if (localStorage.getItem(DONE_KEY) || sessionStorage.getItem(`${DONE_KEY}-offered`)) return;
   sessionStorage.setItem(`${DONE_KEY}-offered`, "1");
-  setTimeout(() => notify("처음이시라면 화면 가이드로 사용법을 둘러보실 수 있어요.", { action: "가이드 보기", onAction: startGuide, sticky: true }), 550);
+  setTimeout(() => { ensureOfferUi(); document.getElementById("guideOffer").hidden = false; }, 550);
 }

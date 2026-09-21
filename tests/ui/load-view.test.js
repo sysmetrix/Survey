@@ -47,7 +47,7 @@ test("불러오기: 모든 동작 훅이 남아 있다 (내역 없음)", () => {
   for (const s of load.FLOW) { assert.ok(html.includes(`<b>${s.name}</b>`), s.name); assert.ok(html.includes(`title="${s.desc}"`), s.desc); }
   assert.match(html, /<a href="legacy\/v4\.html">이전 버전\(v4\.3\)<\/a>/);
   // 내역이 없으면 최근 작업 행이 없다 · 데이터가 없으면 '현재 데이터 계속'도 없다
-  assert.doesNotMatch(html, /class="ld-recent"|resume-project|전체 작업 내역/);
+  assert.doesNotMatch(html, /class="ld-recent"|resume-project/);
   assert.doesNotMatch(html, /현재 데이터 계속/);
   // 제목·롤링 강조어(첫 단어가 실제 문구)
   assert.match(html, /<span class="rw">분석부터<\/span><span class="rw" data-alt>보고서까지<\/span><span class="rw" data-alt>발표까지<\/span>/);
@@ -66,17 +66,14 @@ test("불러오기: 샘플 타일의 접근 가능한 이름은 그대로(그래
   });
 });
 
-test("불러오기: 최근 작업은 실제 내역에서 최대 2개, 버튼 동작·비활성 상태 유지", () => {
+test("불러오기: 최근 작업은 실제 내역에서 최대 2개, 한 줄 칩으로 표시", () => {
   const html = withState({ projects: [proj(1), proj(2, { hasData: false, name: "<b>위험</b> & 이름" }), proj(3)] }, () => load.render());
   assert.equal(bad(html), null);
-  assert.equal(count(html, /class="recent-item"/g), 2);
+  assert.equal(count(html, /class="ld-recent-chip"/g), 2);
   assert.doesNotMatch(html, /p-3/);
-  for (const id of ["p-1", "p-2"]) for (const act of ["resume-project", "present-project", "open-project"]) assert.ok(html.includes(`data-act="${act}" data-id="${id}"`), `${act} ${id}`);
-  assert.match(html, /data-act="present-project" data-id="p-2" disabled/);
-  assert.doesNotMatch(html, /data-act="present-project" data-id="p-1" disabled/);
-  assert.match(html, /data-act="goto" data-to="history">.*?전체 작업 내역/s);
+  for (const id of ["p-1", "p-2"]) assert.ok(html.includes(`data-act="resume-project" data-id="${id}"`), `resume-project ${id}`);
+  assert.match(html, /data-act="goto" data-to="history">전체 보기/);
   assert.ok(html.includes("&lt;b&gt;위험&lt;/b&gt; &amp; 이름"), "이름은 이스케이프");
-  assert.match(html, /원자료 보관됨/); assert.match(html, /파일 연결 필요/);
 });
 
 test("불러오기: 데이터가 있으면 '현재 데이터 계속', 저장된 설정만 있으면 안내 문구", () => {

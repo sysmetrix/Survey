@@ -69,7 +69,8 @@ export async function renderHwpx(blocks, env) {
       case "figure": {
         const { svg, width, height } = chartSvg(b.chart);
         const img = await env.rasterize(svg, width, height);
-        doc.figure({ png: img.png, wPx: img.wPx, hPx: img.hPx, widthMm: b.widthMm || Math.min(165, width / 720 * 160) });
+        // 차트는 보고서 여백에 맞춰 본문 폭 그대로 키움(비율은 그대로, 좌우 빈 여백만 최소화) — 블록에서 폭을 따로 지정했으면 그 값 사용
+        doc.figure({ png: img.png, wPx: img.wPx, hPx: img.hPx, widthMm: b.widthMm || doc.bodyWidthMm });
         doc.caption(b.display, { before: 60, after: 120, keepNext: !!(b.notes || []).length });
         (b.notes || []).forEach(n => doc.note(n, { align: "CENTER" }));
         env.onProgress?.(++figDone, nFig);

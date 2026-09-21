@@ -31,7 +31,7 @@ import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 import { getSession, installIdleWatch } from "./auth/session.js";
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 
-export const APP_VERSION = "5.34.0";
+export const APP_VERSION = "5.35.0";
 const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates, login, admin };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;

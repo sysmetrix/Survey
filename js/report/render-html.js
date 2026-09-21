@@ -53,6 +53,11 @@ function tableHtml(b) {
     (b.notes || []).map(n => `<div class="r-note">${inlineHtml(n)}</div>`).join("");
 }
 
+/** 상단 표제부(공문서 붙임 서식) 미리보기 — HWPX writer.js 의 titleBlock() 과 같은 모양(붙임 칸은 항상 HY헤드라인M) */
+export function titleBlockHtml(text) {
+  return `<div class="r-titleblock" aria-hidden="true"><span class="r-tb-label">붙임</span><span class="r-tb-title">${esc(text)}</span></div>`;
+}
+
 /**
  * @param {object[]} blocks  finalizeBlocks 결과
  * @param {{editable?:boolean, figureHtml?:(b)=>string, theme?:'light'|'dark'}} opts  theme: 화면 표시용 차트 테마(보고서·HWPX는 항상 light)

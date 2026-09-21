@@ -12,7 +12,7 @@ export const mm = v => Math.round(v * HWPUNIT_PER_MM);
 
 const HNC_UNIT_NS = "http://www.hancom.co.kr/hwpml/2016/HwpUnitChar";
 // 글꼴 id 약속 (fonts.js applyFontsToHeader 와 동일)
-const FONT_ID = { dotum: 0, batang: 1, bold: 2 };
+const FONT_ID = { dotum: 0, batang: 1, bold: 2, headline: 3 };
 
 // ─────────────────────────── 헤더 레지스트리 ───────────────────────────
 function createRegistry(headerXml, { boldFace = false, headingOnly = false } = {}) {
@@ -101,6 +101,18 @@ export const SHADES = {
 };
 
 const BULLET_SYMBOL = { 1: "□", 2: "○", 3: "-", 4: "·" };
+
+/**
+ * "주: …"·"※ …" 처럼 앞에 붙는 표시 뒤에 오는 첫 글자 폭을 재서 내어쓰기 값을 만든다.
+ * 둘째 줄부터 표시가 아니라 본문 첫 글자 자리에 맞춰짐. 표시가 없으면 0(내어쓰기 없음).
+ */
+function leadIndent(text, size) {
+  const m = /^(\S+\s+)/.exec(String(text ?? ""));
+  if (!m) return 0;
+  let w = 0;
+  for (const ch of m[1]) w += /[ㄱ-ㆎ가-힣■-◿※]/.test(ch) ? 1 : ch === " " ? 0.5 : 0.55;
+  return Math.round(size * 100 * w);
+}
 
 // ─────────────────────────── 문서 작성기 ───────────────────────────
 /**
@@ -193,7 +205,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
         `<hp:cellAddr colAddr="${c}" rowAddr="0"/><hp:cellSpan colSpan="1" rowSpan="1"/>` +
         `<hp:cellSz width="${w}" height="${cellH}"/><hp:cellMargin left="${m}" right="${m}" top="141" bottom="141"/></hp:tc>`;
       const cells =
-        tc(0, colW[0], bfLabel, 510, cellP("CENTER", runs("붙임", { font: "dotum", size: sz, color: "#FFFFFF" }))) +
+        tc(0, colW[0], bfLabel, 510, cellP("CENTER", runs("붙임", { font: "headline", size: sz, color: "#FFFFFF" }))) +
         tc(1, colW[1], bfGap, 0, cellP("CENTER", runs("", { font: "dotum", size: sz }))) +
         tc(2, colW[2], bfTitle, 510, cellP("LEFT", runs(text || "", { font: "batang", size: sz }), 2000));
       const tblBf = reg.borderFill({ left: NOLINE, right: NOLINE, top: NOLINE, bottom: NOLINE, fill: null });
@@ -213,13 +225,13 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
       else addPara(text, { font: "dotum", size: B + 2, bold: true }, { align: "LEFT", before: 900, after: 300, line: 150, keepNext: true });
       return api;
     },
-    /** 개조식 항목: level 1 □, 2 ○, 3 -, 4 · */
+    /** 개조식 항목: level 1 □, 2 ○, 3 -, 4 · — 글머리 폭만큼 내어쓰기(둘째 줄부터 첫 글자에 맞춰짐), 왼쪽 정렬 */
     bullet(level, text) {
       const lv = Math.min(4, Math.max(1, level));
       const size = B; // 미리보기(HTML)와 동일하게 모든 단계 본문 글자 크기를 그대로 사용(설정한 크기와 일치)
       const symbolW = Math.round(size * 100 * (lv >= 3 ? 1.1 : 1.6));
       const left = [0, 0, 1100, 2400, 3500][lv];
-      addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "JUSTIFY", left: left + symbolW, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: LS });
+      addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "LEFT", left: left + symbolW, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: LS });
       return api;
     },
     paragraph(text, { size = B, align = "JUSTIFY", color = "#000000", bold = false, before = 100, after = 100, font = "batang" } = {}) {
@@ -231,8 +243,11 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
       addPara(text, { font: "sub", size: B - 1, bold: true }, { align, before, after, line: 140, keepNext });
       return api;
     },
+    /** 표/그림 아래 주석("주: …" 등) — 왼쪽 정렬, 앞표시 뒤 첫 글자에 맞춰 내어쓰기(가운데 정렬 등으로 바꾸면 내어쓰기 없음) */
     note(text, { align = "LEFT", before = 60, after = 60, keepNext = false } = {}) {
-      addPara(text, { font: "batang", size: B - 2, color: "#404040" }, { align, before, after, line: 140, keepNext });
+      const size = B - 2;
+      const w = align === "LEFT" ? leadIndent(text, size) : 0;
+      addPara(text, { font: "batang", size, color: "#404040" }, { align, left: w, intent: -w, before, after, line: 140, keepNext });
       return api;
     },
     pageBreak() { pendingPageBreak = true; return api; },

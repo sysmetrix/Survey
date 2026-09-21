@@ -25,6 +25,9 @@ export const DEFAULT_LINE_SPACING = 160;
 const HANCOM = { body: "함초롬바탕", heading: "함초롬돋움" };
 const defaultPreset = () => FONT_PRESETS.find(x => x.id === DEFAULT_FONT_PRESET) || FONT_PRESETS[0];
 
+/** 상단 표제부('붙임' 글자)는 본문 글꼴 설정과 무관하게 항상 이 글꼴로 고정(원본 표제부 서식과 동일) */
+export const TITLE_BLOCK_FONT = "HY헤드라인M";
+
 /** 글꼴 이름 정리 (XML·CSS 안전): 한글·영문·숫자·공백·일부 기호, 최대 40자 */
 export const cleanFontName = s => String(s ?? "").replace(/[^\p{L}\p{N} ._\-()]/gu, "").replace(/\s+/g, " ").trim().slice(0, 40);
 
@@ -66,14 +69,14 @@ const fontXml = (id, face, subst) => {
 
 /**
  * header.xml 의 모든 언어 글꼴 목록을 지정 글꼴로 교체
- * 글꼴 id 약속: 0 = 제목(돋움 계열), 1 = 본문(바탕 계열), 2 = 굵은 글꼴(별도 Bold 글꼴이 있을 때)
+ * 글꼴 id 약속: 0 = 제목(돋움 계열), 1 = 본문(바탕 계열), 2 = 굵은 글꼴(별도 Bold 글꼴이 있을 때), 3 = 표제부 고정 글꼴(TITLE_BLOCK_FONT)
  */
 export function applyFontsToHeader(headerXml, fonts) {
   return headerXml.replace(/<hh:fontface lang="([A-Z]+)" fontCnt="\d+">([\s\S]*?)<\/hh:fontface>/g, (m, lang, inner) => {
     const existing = [...inner.matchAll(/<hh:font id="(\d+)" face="([^"]*)"[\s\S]*?<\/hh:font>/g)];
-    const rest = existing.filter(f => +f[1] > 2).map(f => f[0]);
+    const rest = existing.filter(f => +f[1] > 3).map(f => f[0]);
     const f2 = fonts.boldFace || existing.find(f => f[1] === "2")?.[2] || fonts.heading;
-    const list = [fontXml(0, fonts.heading, fonts.substHeading), fontXml(1, fonts.body, fonts.substBody), fontXml(2, f2, fonts.boldFace ? fonts.substHeading : null), ...rest];
+    const list = [fontXml(0, fonts.heading, fonts.substHeading), fontXml(1, fonts.body, fonts.substBody), fontXml(2, f2, fonts.boldFace ? fonts.substHeading : null), fontXml(3, TITLE_BLOCK_FONT, HANCOM.heading), ...rest];
     return `<hh:fontface lang="${lang}" fontCnt="${list.length}">${list.join("")}</hh:fontface>`;
   });
 }

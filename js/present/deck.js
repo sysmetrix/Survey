@@ -58,7 +58,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       title: `성과지표 ${s.total}개 중 ${s.achieved}개 달성${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}`,
       subtitle: `종합 평가 ${s.grade} · 평균 달성률 ${f1(s.avgRate)}%`,
       chart: measured.length ? { kind: "kpiBullet", data: measured.map(r => ({ label: r.name, rate: r.rate })), opts: { mostly: t.kpiMostly, width: 900 } } : null,
-      aside: miss.length ? { title: "미달성 지표", items: miss.map(r => `${r.name} — ${f1(r.rate)}%`) } : { title: "모든 지표 목표 근접", items: E.results.map(r => `${r.name} ${f1(r.rate)}%`).slice(0, 4) },
+      aside: miss.length ? { title: "미달성 지표", items: miss.map(r => `${r.name} ${f1(r.rate)}%`) } : { title: "모든 지표 목표 근접", items: E.results.map(r => `${r.name} ${f1(r.rate)}%`).slice(0, 4) },
       notes: E.results.map(r => `${r.name}: 목표 ${r.targetValue}${r.unit || ""}, 실적 ${Number.isFinite(r.actualValue) ? r.actualValue.toFixed(2).replace(/\.00$/, "") : "-"}${r.unit || ""}, ${r.judgment}${r.facts ? ` (${r.facts})` : ""}`),
       source: `달성률 = 실적 ÷ 목표 × 100 · 판정: ${t.kpiAchieved}% 이상 달성, ${t.kpiMostly}% 이상 대체로 달성`,
     });
@@ -110,7 +110,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       subtitle: tot && Number.isFinite(tot.score100) ? `세부 문항 평균 ${f2(tot.score100)}점(100점 환산, ${levelWord(tot.score100, t)})` : "",
       chart: { kind: "hbar", data: detail.slice(0, 12).map(i => ({ label: i.label, value: i.score100 })), opts: { max: 100, refValue: tot?.score100 ?? null, refLabel: "평균", unit: "점", width: 900, labelWidth: 280, valueFmt: f2 } },
       notes: detail.map(i => `${i.label}: ${f2(i.mean)}점(100점 ${f2(i.score100)}, 긍정 ${f1(i.top2)}%, 부정 ${f1(i.bottom2)}%)`),
-      source: `100점 환산 = (평균 − 최소) ÷ (최대 − 최소) × 100${A.meta.scoreBasis === "rounded" ? "(표시된 소수 둘째 자리 평균 기준)" : "(반올림 전 평균 기준)"} · n=${Math.min(...detail.map(i => i.n))}`,
+      source: `100점 환산 = (평균 - 최소) ÷ (최대 - 최소) × 100${A.meta.scoreBasis === "rounded" ? "(표시된 소수 둘째 자리 평균 기준)" : "(반올림 전 평균 기준)"} · n=${Math.min(...detail.map(i => i.n))}`,
     });
   }
 
@@ -143,7 +143,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       title: `순추천지수(NPS)는 ${signed(s.nps, 1)}점입니다`,
       subtitle: `추천 ${f1(s.promoters)}% · 중립 ${f1(s.passives)}% · 비추천 ${f1(s.detractors)}%`,
       chart: { kind: "npsBar", data: s, opts: { width: 900 } },
-      notes: ["NPS = 추천(9~10점) 비율 − 비추천(0~6점) 비율, 범위 −100~+100"],
+      notes: ["NPS = 추천(9~10점) 비율 - 비추천(0~6점) 비율, 범위 -100~+100"],
       source: `n=${s.n}`,
     });
   }
@@ -190,7 +190,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       chart: themes.length ? { kind: "hbar", data: themes.map(th => ({ label: th.name, value: th.negative })), opts: { width: 560, labelWidth: 150, unit: "건", valueFmt: v => String(Math.round(v)) } } : null,
       quotes: { positive: positiveTx.quotes.positive.slice(0, 2), improve: improveTx.quotes.improve.slice(0, 2) },
       notes: texts.map(tx => `${tx.label}: 긍정 ${tx.types.positive}, 개선·건의 ${tx.types.negative + tx.types.suggestion}, 주요 키워드 ${tx.keywords.slice(0, 6).map(k => k.word).join(", ")}`),
-      source: "키워드 규칙 기반 자동 분류 — 원문 검토 권장",
+      source: "키워드 규칙 기반 자동 분류 · 원문 검토 권장",
     });
   }
 

@@ -43,15 +43,13 @@ function sheetArt() {
     + `<path class="sh-grid" d="M0 42H560M0 76H560M0 110H560M0 144H560M0 178H560M84 0V300M172 0V300M260 0V300M348 0V300M436 0V300"/></svg>`;
 }
 
+/** 최근 작업 한 줄 — 이름을 누르면 바로 이어서 분석, 자세한 내용·발표 시작은 '전체 보기'에서 */
 function recentRow(list) {
-  return `<section class="ld-recent" aria-label="최근 작업">
-      <h2 class="ld-lbl">최근 작업</h2>
-      <div class="recent-list">${list.map(p => `<article class="recent-item">
-        <div class="recent-copy"><b class="recent-name">${esc(p.name)}</b><span class="small muted recent-meta">${relTime(p.updatedAt)} · 버전 ${p.snapshotCount ?? "-"}개${p.summary?.n ? ` · 응답 ${p.summary.n}명` : ""} · ${p.hasData ? "원자료 보관됨" : "파일 연결 필요"}</span></div>
-        <div class="recent-actions"><button class="btn sm" data-act="resume-project" data-id="${esc(p.id)}">분석 계속</button><button class="btn sm primary" data-act="present-project" data-id="${esc(p.id)}" ${p.hasData ? "" : "disabled"}>${icon("play", 14)}발표</button><button class="icon-btn sm" data-act="open-project" data-id="${esc(p.id)}" aria-label="작업 이력" title="작업 이력">${icon("history", 15)}</button></div>
-      </article>`).join("")}</div>
-      <button class="btn sm ghost" data-act="goto" data-to="history">${icon("history", 15)}전체 작업 내역</button>
-    </section>`;
+  return `<div class="ld-recent" role="group" aria-label="최근 작업">
+      <span class="ld-recent-lbl">${icon("history", 13)}최근 작업</span>
+      <div class="ld-recent-items">${list.map(p => `<button class="ld-recent-chip" data-act="resume-project" data-id="${esc(p.id)}" data-tip="${esc(`${p.name} · ${relTime(p.updatedAt)} · 이어서 분석`)}">${esc(p.name)}<span class="muted">${relTime(p.updatedAt)}</span></button>`).join("")}</div>
+      <button class="btn sm ghost" data-act="goto" data-to="history">전체 보기</button>
+    </div>`;
 }
 
 export function render() {
@@ -106,6 +104,7 @@ export function render() {
     </section>
 
     <section class="ld-samples" aria-labelledby="ld-samples-h">
+      <hr class="ld-divider" aria-hidden="true">
       <h2 id="ld-samples-h" class="ld-lbl">샘플로 체험하기</h2>
       <div class="samples ld-sample-row">
         ${SAMPLES.map((s, i) => `<button class="sample" style="--i:${i}" data-act="sample" data-file="${esc(s.file)}" data-tip="${esc(`${s.title} — ${s.desc}`)}">${glyphMarkup(s.file)}<b>${esc(s.title)}${s.file.includes("청소년센터") ? ` <span class="badge info">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 16, "go")}</button>`).join("")}

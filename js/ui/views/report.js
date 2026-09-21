@@ -1,7 +1,7 @@
 // ⑤ 보고서 화면: 편집 가능한 미리보기 + 한글 문서 서식(글꼴·크기·줄 간격) + HWPX/인쇄/복사/프로젝트 저장
 import { state, compute, reportBlocks, invalidate, persistSettings } from "../store.js";
 import { finalizeBlocks, blocksToText, chartSvg } from "../../report/model.js";
-import { blocksToHtml, splitChapters } from "../../report/render-html.js";
+import { blocksToHtml, splitChapters, titleBlockHtml } from "../../report/render-html.js";
 import { renderHwpx } from "../../report/render-hwpx.js";
 import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, DEFAULT_FONT_PRESET, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING, resolveFonts, cleanFontName } from "../../report/hwpx/fonts.js";
 import { svgToPng } from "../../charts/rasterize.js";
@@ -183,7 +183,7 @@ export function render() {
         <p class="small muted">프로젝트 파일에는 문항 설정·사업정보·성과지표·문장 수정·문서 서식이 저장되어 다음에 같은 설문을 올리면 그대로 적용됩니다.</p>
       </div>` : ""}
     </aside>
-    <div class="paper edit" id="reportPaper" style="${esc(paperStyle())}">${blocksToHtml(blocks, { editable: true })}</div>
+    <div class="paper edit" id="reportPaper" style="${esc(paperStyle())}">${state.settings.headerBlock ? titleBlockHtml(title) : ""}${blocksToHtml(blocks, { editable: true })}</div>
   </div>`;
 }
 
