@@ -10,6 +10,7 @@ import { installTooltips } from "./ui/tooltip.js";
 import { installFormatToolbar } from "./ui/format-toolbar.js";
 import { markupToHtml, htmlToMarkup } from "./ui/inline-edit.js";
 import { installScrollHints } from "./ui/scrollhint.js";
+import { installStickyThead } from "./ui/sticky-thead.js";
 import { createPressGuard } from "./ui/press-guard.js";
 import { parseDeckKey } from "./present/edit/keys.js";
 import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redoChange, canUndo, canRedo, resumeProject, cache as historyCache } from "./ui/history/manager.js";
@@ -30,7 +31,7 @@ import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 import { getSession, installIdleWatch } from "./auth/session.js";
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 
-export const APP_VERSION = "5.32.1";
+export const APP_VERSION = "5.32.2";
 const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates, login, admin };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -277,6 +278,7 @@ watchSystemTheme(() => refresh());
 installTooltips();
 installFormatToolbar();
 installScrollHints();
+installStickyThead();
 // 업데이트 적용(js/ui/pwa.js): 다시 불러오기 직전에 작업을 저장하고, 새로고침 뒤 같은 작업·화면을 이어서 연다
 const updateResume = takeUpdateResume();
 const localProject = () => (state.codebook ? historyCache.projects.find(p => p.id === projectIdOf(state.codebook)) : null);

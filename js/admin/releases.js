@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.32.2", date: "2026-09-21", title: "표 제목행 고정 방식 개선(페이지 스크롤은 그대로 유지)",
+    groups: {
+      "데이터 설정": [
+        "문항(열) 설정 등 표의 제목행 고정 방식을 표 안에서만 스크롤되던 것에서, 페이지 전체는 그대로 스크롤하며 제목행만 화면에 고정되는 방식으로 변경. 가로 스크롤 위치도 그대로 맞춰 따라감",
+      ],
+    },
+  },
+  {
     version: "5.32.1", date: "2026-09-21", title: "보고서 '사업 개요' 문장부호 오류 수정",
     groups: {
       "보고서": [
