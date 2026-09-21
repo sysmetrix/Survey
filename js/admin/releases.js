@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.35.6", date: "2026-09-22", title: "HWPX 개조식 내어쓰기·줄 나눔 기준 값 재수정",
+    groups: {
+      "보고서(HWPX)": [
+        "한글 문단 모양 대화상자에 실제로 16.8pt로 뜨도록 □·○ 내어쓰기 값 계산을 수정(대화상자는 저장값의 절반을 포인트로 보여줌 — 직접 화면으로 확인해 반영)",
+        "줄 나눔 기준(한글 단위)이 '글자'로 표시되던 것을 '어절'로 수정(저장 속성 이름과 대화상자 표시가 반대로 매핑돼 있었음)",
+      ],
+    },
+  },
+  {
     version: "5.35.5", date: "2026-09-21", title: "표제부 HY헤드라인M이 웹 화면에서 실제로 적용되도록 수정",
     groups: {
       "보고서": [

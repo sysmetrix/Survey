@@ -57,7 +57,9 @@ function createRegistry(headerXml, { boldFace = false, headingOnly = false } = {
       const margin = h => `<hh:margin><hc:intent value="${Math.round(s.intent * h)}" unit="HWPUNIT"/><hc:left value="${Math.round(s.left * h)}" unit="HWPUNIT"/><hc:right value="0" unit="HWPUNIT"/><hc:prev value="${Math.round(s.before * h)}" unit="HWPUNIT"/><hc:next value="${Math.round(s.after * h)}" unit="HWPUNIT"/></hh:margin><hh:lineSpacing type="PERCENT" value="${s.line}" unit="HWPUNIT"/>`;
       return `<hh:paraPr id="${id}" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" suppressLineNumbers="0" checked="0" textDir="LTR">` +
         `<hh:align horizontal="${s.align}" vertical="BASELINE"/><hh:heading type="NONE" idRef="0" level="0"/>` +
-        `<hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="KEEP_WORD" widowOrphan="0" keepWithNext="${s.keepNext ? 1 : 0}" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>` +
+        // 실제 한글 대화상자로 직접 확인함: breakNonLatinWord="KEEP_WORD"는 "글자"로 표시되고
+        // "BREAK_WORD"가 "어절"로 표시됨(이름과 반대) — 영어(breakLatinWord)는 그대로 둠
+        `<hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="BREAK_WORD" widowOrphan="0" keepWithNext="${s.keepNext ? 1 : 0}" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>` +
         `<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>` +
         `<hp:switch><hp:case hp:required-namespace="${HNC_UNIT_NS}">${margin(0.5)}</hp:case><hp:default>${margin(1)}</hp:default></hp:switch>` +
         `<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" connect="0" ignoreMargin="0"/></hh:paraPr>`;
@@ -229,7 +231,10 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     bullet(level, text) {
       const lv = Math.min(4, Math.max(1, level));
       const size = B; // 미리보기(HTML)와 동일하게 모든 단계 본문 글자 크기를 그대로 사용(설정한 크기와 일치)
-      const symbolW = lv <= 2 ? mm(16.8) : Math.round(size * 100 * 1.1); // □·○: 한글에서 확인한 내어쓰기 값(16.8mm) 고정
+      // 한글 문단 모양 대화상자는 paraPr의 hp:case(HwpUnitChar) 값을 포인트(값÷100)로 보여주고,
+      // 이 값은 항상 hp:default(우리가 넘기는 원값)의 절반이다(margin() 참고) — 그래서 대화상자에
+      // 정확히 16.8pt를 띄우려면 원값을 16.8*200 으로 넣어야 한다(실제 대화상자 캡처로 확인함).
+      const symbolW = lv <= 2 ? Math.round(16.8 * 200) : Math.round(size * 100 * 1.1); // □·○: 내어쓰기 16.8pt 고정
       const left = [0, 0, 1100, 2400, 3500][lv];
       addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "LEFT", left: left + symbolW, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: LS });
       return api;
