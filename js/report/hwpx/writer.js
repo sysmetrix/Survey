@@ -206,8 +206,8 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
         `<hp:cellSz width="${w}" height="${cellH}"/><hp:cellMargin left="${m}" right="${m}" top="141" bottom="141"/></hp:tc>`;
       const cells =
         tc(0, colW[0], bfLabel, 510, cellP("CENTER", runs("붙임", { font: "headline", size: sz, color: "#FFFFFF" }))) +
-        tc(1, colW[1], bfGap, 0, cellP("CENTER", runs("", { font: "dotum", size: sz }))) +
-        tc(2, colW[2], bfTitle, 510, cellP("LEFT", runs(text || "", { font: "batang", size: sz }), 2000));
+        tc(1, colW[1], bfGap, 0, cellP("CENTER", runs("", { font: "headline", size: sz }))) +
+        tc(2, colW[2], bfTitle, 510, cellP("LEFT", runs(text || "", { font: "headline", size: sz }), 2000));
       const tblBf = reg.borderFill({ left: NOLINE, right: NOLINE, top: NOLINE, bottom: NOLINE, fill: null });
       const id = objId++;
       const tbl = `<hp:tbl id="${id}" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="1" rowCnt="1" colCnt="3" cellSpacing="0" borderFillIDRef="${tblBf}" noAdjust="0">` +
@@ -215,7 +215,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
         `<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>` +
         `<hp:outMargin left="0" right="0" top="0" bottom="${mm(3)}"/><hp:inMargin left="510" right="510" top="141" bottom="141"/>` +
         `<hp:tr>${cells}</hp:tr></hp:tbl>`;
-      paras.push(pOpen(pp({ align: "LEFT", line: 100, before: 0, after: 0 })) + `<hp:run charPrIDRef="${cp({ font: "batang", size: sz })}">${tbl}<hp:t/></hp:run></hp:p>`);
+      paras.push(pOpen(pp({ align: "LEFT", line: 100, before: 0, after: 0 })) + `<hp:run charPrIDRef="${cp({ font: "headline", size: sz })}">${tbl}<hp:t/></hp:run></hp:p>`);
       preview.push(`붙임 ${stripMarks(text || "")}`);
       return api;
     },
@@ -229,7 +229,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     bullet(level, text) {
       const lv = Math.min(4, Math.max(1, level));
       const size = B; // 미리보기(HTML)와 동일하게 모든 단계 본문 글자 크기를 그대로 사용(설정한 크기와 일치)
-      const symbolW = Math.round(size * 100 * (lv >= 3 ? 1.1 : 1.6));
+      const symbolW = lv <= 2 ? mm(16.8) : Math.round(size * 100 * 1.1); // □·○: 한글에서 확인한 내어쓰기 값(16.8mm) 고정
       const left = [0, 0, 1100, 2400, 3500][lv];
       addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "LEFT", left: left + symbolW, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: LS });
       return api;

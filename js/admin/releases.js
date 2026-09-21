@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.35.2", date: "2026-09-21", title: "HWPX 상단 표제부 글꼴 통일, 개조식 내어쓰기 값 수정",
+    groups: {
+      "보고서(HWPX)": [
+        "상단 표제부(붙임 서식) 표 안의 모든 글자(붙임 칸·제목 칸)를 HY헤드라인M으로 통일(이전에는 제목 칸만 본문 글꼴을 따름)",
+        "□·○ 개조식 문단의 내어쓰기 값을 16.8mm로 정확히 맞춤(이전에는 글자 크기 기반으로 어림잡아 계산해 값이 어긋났음)",
+      ],
+    },
+  },
+  {
     version: "5.35.1", date: "2026-09-21", title: "보고서 화면 '사용법' 안내를 화면 기능에 맞춰 전면 개편",
     groups: {
       "보고서": [
