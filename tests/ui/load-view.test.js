@@ -45,7 +45,7 @@ test("불러오기: 모든 동작 훅이 남아 있다 (내역 없음)", () => {
   // 진행 순서 5단계 (이름과 전체 설명) · 이전 버전 링크
   assert.equal(count(html, /<li style="--i:\d"/g), 5);
   for (const s of load.FLOW) { assert.ok(html.includes(`<b>${s.name}</b>`), s.name); assert.ok(html.includes(`title="${s.desc}"`), s.desc); }
-  assert.match(html, /<a href="legacy\/v4\.html">여기<\/a>/);
+  assert.match(html, /<a href="legacy\/v4\.html">이전 버전\(v4\.3\)<\/a>/);
   // 내역이 없으면 최근 작업 행이 없다 · 데이터가 없으면 '현재 데이터 계속'도 없다
   assert.doesNotMatch(html, /class="ld-recent"|resume-project|전체 작업 내역/);
   assert.match(html, /ld-stage ld-norecent/);

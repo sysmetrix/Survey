@@ -18,9 +18,9 @@ export const SAMPLES = [
   { file: "2026_진로탐색_사전사후.xlsx", title: "사전·사후 + 성과지표", desc: "사전/사후 시트 ID 매칭, 사업정보·성과지표 시트 포함" },
   { file: "2026_청소년센터_만족도_구글폼.csv", title: "구글폼 만족도", desc: "텍스트 응답(매우 그렇다…), 복수응답, 추천의향" },
   { file: "2026_진로체험_네이버폼.csv", title: "네이버폼 원본", desc: "제목 행·긴 문항·‘매우 만족’ 문자 응답·이모지 의견" },
-  { file: "2026_참여위원회_회고식.xlsx", title: "회고식 사전·사후", desc: "소표본(24명), 이전/현재 응답" },
-  { file: "2026_리더십캠프_사전사후_한시트.xlsx", title: "한 시트 사전·사후", desc: "사전_/사후_ 접두어 문항, 동일 응답자" },
-  { file: "2026_생태탐험_7점척도_NPS.xlsx", title: "7점 척도 + 역문항 + NPS", desc: "7점 척도, 역채점 문항 자동 인식, 0~10 추천의향" },
+  { file: "2026_참여위원회_회고식.xlsx", title: "회고식 사전·사후", desc: "소표본(24명), 이전/현재 응답, 사업정보·성과지표 포함" },
+  { file: "2026_리더십캠프_사전사후_한시트.xlsx", title: "한 시트 사전·사후", desc: "사전_/사후_ 접두어 문항, 동일 응답자, 사업정보·성과지표 포함" },
+  { file: "2026_생태탐험_7점척도_NPS.xlsx", title: "7점 척도 + 역문항 + NPS", desc: "7점 척도, 역채점 문항 자동 인식, 0~10 추천의향, 성과지표 포함" },
 ];
 
 /** 진행 순서 — desc 는 단계 위에 올리면 보이는 전체 설명, short 는 화면에 바로 보이는 한 줄 */
@@ -113,7 +113,7 @@ export function render() {
     </section>
     ${recent.length ? recentRow(recent) : ""}
   </div>
-  <div class="ld-foot no-print"><span class="ld-priv">${icon("shield", 14)}모든 분석은 이 브라우저 안에서만 처리되며 파일은 외부로 전송되지 않습니다</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy">이전 버전(v4.3) 화면은 <a href="legacy/v4.html">여기</a>에서 계속 사용할 수 있습니다</span></div>`;
+  <div class="ld-foot no-print"><span class="ld-priv">${icon("shield", 14)}모든 분석은 이 브라우저 안에서만 처리되며 파일은 외부로 전송되지 않습니다</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy"><a href="legacy/v4.html">이전 버전(v4.3)</a></span></div>`;
 }
 
 // ── 화면 표시·정리 (main.js 가 렌더 뒤 mount, 다른 화면으로 옮길 때 unmount 호출) ──
