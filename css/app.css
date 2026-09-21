@@ -638,10 +638,10 @@ h3.flush { margin: 0; }
 .r-pb { border-top: 1px dashed var(--paper-line); margin: 28px 0; }
 .r-err { color: var(--bad); }
 
-/* ── 차트 상호작용 · 툴팁 ── */
+/* ── 차트 상호작용 · 안내 툴팁([data-tip], js/ui/tooltip.js) ── */
 .viz-mark .m { transition: opacity .15s ease; }
 svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
-.viz-tip { position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none; display: flex; flex-direction: column; gap: 1px; max-width: 320px; padding: 8px 11px; border-radius: 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-lg); font-size: 12.5px; line-height: 1.4; }
+.viz-tip { position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none; display: flex; flex-direction: column; gap: 1px; max-width: 320px; padding: 8px 11px; border-radius: 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-lg); font-size: 12.5px; line-height: 1.45; }
 .viz-tip strong { font-size: 14.5px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .viz-tip span { color: var(--text-2); }
 

@@ -92,7 +92,7 @@ export function render() {
       </label>
       <div class="ld-side-row">
         <div class="ld-open">
-          <label class="btn" title="지난번 '프로젝트 파일 저장'으로 내려받은 설정 파일(.json)을 열면 문항 설정·성과지표·문장 수정이 이어집니다. 처음 쓰신다면 몰라도 됩니다 — 아래에서 설문 데이터부터 올리세요.">${icon("folder", 17)}프로젝트 파일 열기<input type="file" accept=".json" data-change="pick-project" hidden></label>
+          <label class="btn" data-tip="${esc("지난번 '프로젝트 파일 저장'으로 내려받은 설정 파일(.json)을 열면 문항 설정·성과지표·문장 수정이 이어집니다. 처음 쓰신다면 몰라도 됩니다 — 아래에서 설문 데이터부터 올리세요.")}">${icon("folder", 17)}프로젝트 파일 열기<input type="file" accept=".json" data-change="pick-project" hidden></label>
           ${state.dataset ? `<button class="btn primary" data-act="goto" data-to="setup">현재 데이터 계속 (${esc(state.dataset.fileName)}) ${icon("right", 16)}</button>` : ""}
         </div>
         <div class="ld-tpl"><b>입력 템플릿</b>
@@ -101,13 +101,13 @@ export function render() {
         </div>
       </div>
       ${state.pendingProject && !state.dataset ? `<p class="hint ok ld-hint">저장된 설정을 준비했습니다. 같은 설문 데이터 파일을 올리면 설정이 적용됩니다.</p>` : ""}
-      <p class="ld-tpl-note small muted" title="처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다(선택).">처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다(선택).</p>
+      <p class="ld-tpl-note small muted" data-tip="${esc("처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다(선택).")}">처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다(선택).</p>
     </section>
 
     <section class="ld-samples" aria-labelledby="ld-samples-h">
       <h2 id="ld-samples-h" class="ld-lbl">샘플로 체험하기</h2>
       <div class="samples ld-sample-row">
-        ${SAMPLES.map((s, i) => `<button class="sample" style="--i:${i}" data-act="sample" data-file="${esc(s.file)}" title="${esc(`${s.title} — ${s.desc}`)}">${glyphMarkup(s.file)}<b>${esc(s.title)}${s.file.includes("문화의집") ? ` <span class="badge info">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 16, "go")}</button>`).join("")}
+        ${SAMPLES.map((s, i) => `<button class="sample" style="--i:${i}" data-act="sample" data-file="${esc(s.file)}" data-tip="${esc(`${s.title} — ${s.desc}`)}">${glyphMarkup(s.file)}<b>${esc(s.title)}${s.file.includes("문화의집") ? ` <span class="badge info">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 16, "go")}</button>`).join("")}
       </div>
     </section>
     ${recent.length ? recentRow(recent) : ""}

@@ -271,8 +271,8 @@ function insertBarHtml(slide, custom, canRevertAuto, charts) {
     ${menu("chart", "chart", "분석 차트 넣기", chartBody, { dis, text: "차트" })}
     <span class="rt-sep" aria-hidden="true"></span>
     ${custom
-      ? (canRevertAuto ? `<button type="button" class="rt-btn pe-ib has-text" data-act="pe-revert-auto" title="자유배치를 버리고 자동 구성으로 되돌립니다">${icon("undo", 16)}<span>자동으로 되돌리기</span></button>` : `<span class="badge info">자유배치 슬라이드</span>`)
-      : `<button type="button" class="btn sm primary" data-act="pe-detach" title="이 슬라이드를 요소별로 옮기고 꾸밀 수 있게 바꿉니다">${icon("edit", 14)}자유배치로 바꾸기</button>`}
+      ? (canRevertAuto ? `<button type="button" class="rt-btn pe-ib has-text" data-act="pe-revert-auto" data-tip="자유배치를 버리고 자동 구성으로 되돌립니다">${icon("undo", 16)}<span>자동으로 되돌리기</span></button>` : `<span class="badge info">자유배치 슬라이드</span>`)
+      : `<button type="button" class="btn sm primary" data-act="pe-detach" data-tip="이 슬라이드를 요소별로 옮기고 꾸밀 수 있게 바꿉니다">${icon("edit", 14)}자유배치로 바꾸기</button>`}
     <span class="rt-spacer"></span>
     ${menu("keys", "help", "단축키 안내", `<b class="pe-menu-title">편집 단축키</b><dl class="rt-keys">${KEYS.map(([k, v]) => `<dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd>`).join("")}</dl>`, { right: true, text: "단축키" })}
   </div>`;
@@ -293,7 +293,7 @@ function formatBarHtml(custom, el) {
     if (textual) {
       const fam = el.fontFamily || "";
       const fonts = FONT_CHOICES.includes(fam) || !fam ? FONT_CHOICES : [...FONT_CHOICES, fam];
-      groups.push(`<select class="rt-select pe-font" data-change="pe-el-prop" data-prop="fontFamily" aria-label="글꼴" title="글꼴 — 받는 PC에 설치된 글꼴만 보입니다"><option value=""${fam ? "" : " selected"}>기본 글꼴</option>${fonts.map(f => `<option value="${esc(f)}"${f === fam ? " selected" : ""}>${esc(f)}</option>`).join("")}</select>${size}`);
+      groups.push(`<select class="rt-select pe-font" data-change="pe-el-prop" data-prop="fontFamily" aria-label="글꼴" data-tip="글꼴 — 받는 PC에 설치된 글꼴만 보입니다"><option value=""${fam ? "" : " selected"}>기본 글꼴</option>${fonts.map(f => `<option value="${esc(f)}"${f === fam ? " selected" : ""}>${esc(f)}</option>`).join("")}</select>${size}`);
       groups.push([
         ib("pe-toggle", "bold", "굵게", { pressed: el.weight === "bold", attrs: 'data-prop="weight"' }),
         ib("pe-toggle", "italic", "기울임", { pressed: !!el.italic, attrs: 'data-prop="italic"' }),

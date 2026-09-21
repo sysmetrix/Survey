@@ -1,5 +1,6 @@
-// 차트 툴팁 레이어: [data-tip] 요소에 포인터를 올리면 값(굵게)·이름 순으로 표시
-// 라벨은 설문 데이터(신뢰할 수 없는 문자열)이므로 textContent 로만 삽입
+// 안내 툴팁 레이어: [data-tip] 요소에 포인터를 올리거나 키보드로 포커스하면 표시.
+// 차트 값은 "이름\n값" 형식(값은 굵게)이고, 그 밖의 설명글은 줄바꿈 없이 그대로 넣으면 화면 폭에 맞춰 자동으로 줄바꿈됨.
+// 텍스트는 신뢰할 수 없는 문자열(설문 데이터 등)일 수 있으므로 textContent 로만 삽입
 let tipEl = null;
 
 function ensure() {
@@ -14,12 +15,19 @@ function ensure() {
 
 function show(raw, px, py) {
   const el = ensure();
-  const [label, value] = String(raw).split("\n");
-  const v = document.createElement("strong");
-  v.textContent = value ?? "";
-  const l = document.createElement("span");
-  l.textContent = label ?? "";
-  el.replaceChildren(v, l);
+  const text = String(raw);
+  const nl = text.indexOf("\n");
+  if (nl === -1) {
+    const l = document.createElement("span");
+    l.textContent = text;
+    el.replaceChildren(l);
+  } else {
+    const v = document.createElement("strong");
+    v.textContent = text.slice(nl + 1);
+    const l = document.createElement("span");
+    l.textContent = text.slice(0, nl);
+    el.replaceChildren(v, l);
+  }
   el.hidden = false;
   const pad = 14, rect = el.getBoundingClientRect();
   let left = px + pad, top = py + pad;
@@ -41,4 +49,18 @@ export function installTooltips() {
   }, { passive: true });
   document.addEventListener("pointerleave", hide);
   document.addEventListener("scroll", hide, { passive: true, capture: true });
+  // 키보드로 Tab 이동해 포커스했을 때도 같은 설명이 보이도록(마우스 없이도 접근 가능)
+  document.addEventListener("focusin", e => {
+    const g = e.target instanceof Element ? e.target.closest("[data-tip]") : null;
+    if (!g || g === hot) return;
+    hot?.classList.remove("hot");
+    g.classList.add("hot");
+    hot = g;
+    const r = g.getBoundingClientRect();
+    show(g.getAttribute("data-tip"), r.left, r.bottom);
+  });
+  document.addEventListener("focusout", e => {
+    const g = e.target instanceof Element ? e.target.closest("[data-tip]") : null;
+    if (g && g === hot) { g.classList.remove("hot"); hot = null; hide(); }
+  });
 }
