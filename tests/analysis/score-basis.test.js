@@ -114,7 +114,7 @@ test("발표 자료: 기준에 관계없이 슬라이드 구성은 같고 근거
   assert.ok(JSON.stringify(a).includes("반올림 전 평균 기준"));
 });
 
-test("선택 화면: 데이터 설정·로컬 설정 둘 다 다른 카드와 어울리게 요약으로 접혀 있다가 '자세히'로 펼쳐짐(펼침 상태는 공유)", async () => {
+test("선택 화면: 데이터 설정은 다른 카드와 어울리게 요약으로 접혀 있다가 '자세히'로 펼쳐짐, 로컬 설정은 항상 펼쳐짐", async () => {
   const file = "2026_청소년센터_만족도_구글폼.csv";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa }));
   const fullChecks = (html, name, basis) => {
@@ -129,25 +129,30 @@ test("선택 화면: 데이터 설정·로컬 설정 둘 다 다른 카드와 �
   for (const basis of ["exact", "rounded"]) {
     state.settings.scoreBasis = basis; invalidate(); compute();
 
-    // 기본은 둘 다 요약 한 줄 + '자세히' 버튼만 있고, 산식 그림·긴 설명은 없음
-    for (const [name, html] of [["setup(접힘)", setup.render()], ["settings(접힘)", settingsView.render()]]) {
-      fullChecks(html, name, basis);
-      assert.ok(html.includes("산식·예시 보기"), `${name}: 펼치기 버튼`);
-      assert.ok(!html.includes("basis-formula") && !html.includes("basis-diagram"), `${name}: 산식 그림은 숨겨짐`);
-      assert.ok(!html.includes("최대 ±0.125점"), `${name}: 긴 설명은 숨겨짐`);
-    }
+    // 로컬 설정은 접기·펼치기 버튼 없이 항상 산식 그림까지 펼쳐서 보여줌
+    const settingsHtml = settingsView.render();
+    fullChecks(settingsHtml, "settings", basis);
+    assert.ok(!settingsHtml.includes("산식·예시 보기") && !settingsHtml.includes("간단히"), "settings: 접기·펼치기 버튼 없음(항상 펼침)");
+    assert.ok(settingsHtml.includes("최대 ±0.125점"), "settings: 오차 크기 설명(항상 펼침)");
+    assert.ok(settingsHtml.includes("basis-formula") && settingsHtml.includes("반올림 후(조정)"), "settings: 반올림 전·후 산식이 그림으로 보임(항상 펼침)");
 
-    // '자세히'를 누르면(두 화면이 펼침 상태를 공유) 두 화면 모두 산식 그림까지 보여줌
+    // 데이터 설정은 기본은 요약 한 줄 + '자세히' 버튼만 있고, 산식 그림·긴 설명은 없음
+    const setupCollapsed = setup.render();
+    fullChecks(setupCollapsed, "setup(접힘)", basis);
+    assert.ok(setupCollapsed.includes("산식·예시 보기"), "setup(접힘): 펼치기 버튼");
+    assert.ok(!setupCollapsed.includes("basis-formula") && !setupCollapsed.includes("basis-diagram"), "setup(접힘): 산식 그림은 숨겨짐");
+    assert.ok(!setupCollapsed.includes("최대 ±0.125점"), "setup(접힘): 긴 설명은 숨겨짐");
+
+    // '자세히'를 누르면 데이터 설정도 산식 그림까지 보여줌
     scoreBasisActions["basis-toggle"]();
-    for (const [name, html] of [["setup(펼침)", setup.render()], ["settings(펼침)", settingsView.render()]]) {
-      fullChecks(html, name, basis);
-      assert.ok(html.includes("최대 ±0.125점"), `${name}: 오차 크기 설명`);
-      assert.ok(html.includes("높아질 수도(올림), 낮아질 수도(내림)"), `${name}: 방향이 다를 수 있다는 설명`);
-      assert.ok(html.includes("· 올림") && html.includes("· 내림") && html.includes("예 1.") && html.includes("예 2."), `${name}: 올림·내림 예시 두 개(산식 그림)`);
-      assert.ok(html.includes("basis-formula") && html.includes("반올림 후(조정)"), `${name}: 반올림 전·후 산식이 그림으로 보임`);
-      assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(html), `${name}: 이 파일에서의 영향 수`);
-      assert.ok(html.includes("간단히"), `${name}: 접기 버튼`);
-    }
+    const setupExpanded = setup.render();
+    fullChecks(setupExpanded, "setup(펼침)", basis);
+    assert.ok(setupExpanded.includes("최대 ±0.125점"), "setup(펼침): 오차 크기 설명");
+    assert.ok(setupExpanded.includes("높아질 수도(올림), 낮아질 수도(내림)"), "setup(펼침): 방향이 다를 수 있다는 설명");
+    assert.ok(setupExpanded.includes("· 올림") && setupExpanded.includes("· 내림") && setupExpanded.includes("예 1.") && setupExpanded.includes("예 2."), "setup(펼침): 올림·내림 예시 두 개(산식 그림)");
+    assert.ok(setupExpanded.includes("basis-formula") && setupExpanded.includes("반올림 후(조정)"), "setup(펼침): 반올림 전·후 산식이 그림으로 보임");
+    assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(setupExpanded), "setup(펼침): 이 파일에서의 영향 수");
+    assert.ok(setupExpanded.includes("간단히"), "setup(펼침): 접기 버튼");
     scoreBasisActions["basis-toggle"](); // 다음 반복을 위해 다시 접음
   }
   state.settings.scoreBasis = "exact"; invalidate();

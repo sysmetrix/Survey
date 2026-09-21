@@ -8,6 +8,8 @@ import { icon } from "../icons.js";
 import { ORG_EXAMPLE, AUTHOR_EXAMPLE } from "../examples.js";
 import { currentUser, logout as signOut } from "../../auth/session.js";
 
+const THEME_ICON = { system: "monitor", light: "sun", dark: "moon" };
+
 export function render() {
   const st = cache.storage;
   const usage = st ? `${fmtBytes(st.usage)} / ${fmtBytes(st.quota)}` : "확인 불가";
@@ -21,8 +23,10 @@ export function render() {
     </section>` : ""}
     <section class="card"><h2>보고서 기본 정보</h2>
       <p class="small muted">보고서 표지와 발표 자료 표지에 자동으로 들어갑니다. 회색 글씨는 입력 예시입니다.</p>
-      <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" placeholder="${ORG_EXAMPLE}" data-change="local-org"></label>
-      <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="${AUTHOR_EXAMPLE}" data-change="local-author"></label>
+      <div class="grid-2in">
+        <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" placeholder="${ORG_EXAMPLE}" data-change="local-org"></label>
+        <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="${AUTHOR_EXAMPLE}" data-change="local-author"></label>
+      </div>
     </section>
     <section class="card"><h2>자동 저장과 보관</h2>
       <label class="check"><input type="checkbox" ${prefs.autosave ? "checked" : ""} data-change="local-autosave"> 변경 사항 자동 저장</label>
@@ -32,9 +36,11 @@ export function render() {
       ${cache.persisted ? "" : `<button class="btn sm" data-act="local-persist">영구 보관 요청</button>`}
     </section>
     <section class="card"><h2>화면</h2>
-      <label class="field">화면 테마<select class="in" data-change="local-theme">${Object.entries(THEME_LABEL).map(([v, label]) => option(v, label, themePref() === v)).join("")}</select></label>
+      <label class="field">화면 테마
+        <div class="fontpick" role="radiogroup" aria-label="화면 테마">${Object.entries(THEME_LABEL).map(([v, label]) => `<button type="button" class="chip-btn fontpick-chip${themePref() === v ? " on" : ""}" data-act="local-theme" data-value="${v}" role="radio" aria-checked="${themePref() === v}">${icon(THEME_ICON[v], 14)}${esc(label)}</button>`).join("")}</div>
+      </label>
       <p class="small muted">시스템 설정은 Windows 또는 브라우저의 밝은·어두운 화면 설정을 따릅니다.</p>
-      <button class="btn sm" data-act="tutorial">3분 화면 가이드 다시 보기</button>
+      <button class="btn sm primary" data-act="tutorial">${icon("play", 15)}화면 가이드 다시 보기</button>
     </section>
     <section class="card"><h2>단축키</h2>
       <p class="small muted">입력창에 글자를 쓰는 중에는 동작하지 않습니다.</p>
@@ -44,14 +50,12 @@ export function render() {
         <dt><kbd>Shift</kbd>+<kbd>P</kbd></dt><dd>발표 모드로 이동(설문 자료를 불러온 뒤)</dd>
         <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>되돌리기</dd>
         <dt><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></dt><dd>다시 실행</dd>
-        <dt><kbd>Ctrl</kbd>+<kbd>B</kbd></dt><dd>보고서 문장 편집 중 선택한 글자를 굵게</dd>
-        <dt><kbd>Enter</kbd></dt><dd>보고서 문장 편집 확정</dd>
         <dt><kbd>Ctrl</kbd>+<kbd>F5</kbd></dt><dd>앱 캐시 비우고 새로고침('앱 파일 새로고침' 카드 참고)</dd>
       </dl>
     </section>
     </div>
     <div class="settings-col">
-    ${scoreBasisPanel(state.results?.analysis?.items || [], { compact: true })}
+    ${scoreBasisPanel(state.results?.analysis?.items || [], { compact: false })}
     <section class="card refresh-card"><h2>앱 파일 새로고침</h2>
       <p>화면이 이전 버전으로 보이거나 업데이트가 적용되지 않을 때 사용하세요.</p>
       <button class="btn danger" data-act="hard-refresh">캐시 비우고 새로고침 <kbd>Ctrl</kbd>+<kbd>F5</kbd></button>
@@ -66,7 +70,7 @@ export const actions = {
   logout: async () => { await signOut(); toast("로그아웃했습니다", "info"); go("login"); },
   "local-org": el => { state.settings.orgName = el.value.trim(); persistSettings(); invalidate(); toast("기관·부서명을 저장했습니다", "ok"); refresh(); },
   "local-author": el => { state.settings.author = el.value.trim(); persistSettings(); invalidate(); toast("담당자명을 저장했습니다", "ok"); refresh(); },
-  "local-theme": el => { setTheme(el.value); toast(`화면 테마: ${THEME_LABEL[el.value]}`); refresh(); },
+  "local-theme": el => { const v = el.dataset.value ?? el.value; setTheme(v); toast(`화면 테마: ${THEME_LABEL[v]}`); refresh(); },
   "local-autosave": el => { savePrefs({ autosave: el.checked }); toast(el.checked ? "자동 저장을 켰습니다" : "자동 저장을 껐습니다"); refresh(); },
   "local-max": el => { savePrefs({ maxAuto: Number(el.value) }); toast("자동 버전 보관 수를 변경했습니다", "ok"); refresh(); },
   "local-age": el => { savePrefs({ maxAgeDays: Number(el.value) }); toast("보관 기간을 변경했습니다", "ok"); refresh(); },

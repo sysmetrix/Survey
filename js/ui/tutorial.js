@@ -6,7 +6,7 @@ import { notify } from "./util.js";
 const DONE_KEY = "survey-v5-tutorial-complete";
 const SAMPLE = "2026_청소년센터_만족도_구글폼.csv";
 const STEPS = [
-  { view: "load", target: "[data-act='tutorial']", title: "처음 사용자를 위한 화면 가이드", text: "실제 화면을 따라가며 샘플 설문을 분석하고 한글 보고서까지 만드는 과정을 보여 드립니다.\n샘플만 사용하므로 내 파일과 작업 내역은 바뀌지 않습니다." },
+  { view: "load", target: ".ld-h1", title: "처음 사용자를 위한 화면 가이드", text: "실제 화면을 따라가며 샘플 설문을 분석하고 한글 보고서까지 만드는 과정을 보여 드립니다.\n샘플만 사용하므로 내 파일과 작업 내역은 바뀌지 않습니다." },
   { view: "load", target: "[data-drop='data']", title: "① 설문 파일 불러오기", text: "엑셀·CSV 파일을 이 자리에 끌어다 놓거나 눌러서 고르면 됩니다.\n구글폼·네이버폼에서 내려받은 원본 파일도 그대로 쓸 수 있습니다." },
   { view: "load", target: `[data-act='sample'][data-file='${SAMPLE}']`, title: "샘플 설문으로 따라 하기", text: "가장 단순한 만족도 조사 샘플을 자동으로 불러오겠습니다.", run: el => el.click(), wait: true },
   { view: "setup", target: ".facts", title: "② 자동 인식 결과 확인", text: "응답자 수와 조사 설계를 먼저 확인하세요.\n대부분은 자동으로 판별되며, 경고가 표시된 항목만 고치면 됩니다." },
@@ -186,5 +186,5 @@ export function offerFirstRun() {
   ensureUi();
   if (localStorage.getItem(DONE_KEY) || sessionStorage.getItem(`${DONE_KEY}-offered`)) return;
   sessionStorage.setItem(`${DONE_KEY}-offered`, "1");
-  setTimeout(() => notify("처음이시라면 3분 화면 가이드로 사용법을 둘러보실 수 있어요.", { action: "가이드 보기", onAction: startGuide, sticky: true }), 550);
+  setTimeout(() => notify("처음이시라면 화면 가이드로 사용법을 둘러보실 수 있어요.", { action: "가이드 보기", onAction: startGuide, sticky: true }), 550);
 }

@@ -130,7 +130,6 @@ h3 { font-size: 15.5px; margin: 20px 0 8px; font-weight: 700; letter-spacing: -.
 .btn.sub { border-radius: 999px; background: var(--surface-2); border-color: var(--border); color: var(--text-2); font-weight: 600; }
 .btn.sub:hover { background: var(--surface-3); border-color: var(--border-strong); color: var(--text); }
 .btn.block.sub { border-radius: 10px; }
-.hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
 .tutorial-focus { position: relative; z-index: 42 !important; border-radius: 12px; outline: 4px solid color-mix(in srgb, var(--accent) 85%, white); outline-offset: 5px; box-shadow: 0 0 0 9999px rgba(6, 10, 16, .58), 0 12px 36px rgba(0,0,0,.24) !important; }
 .tutorial-bar { position: fixed; z-index: 50; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(860px, calc(100% - 28px)); display: grid; grid-template-columns: 1fr auto; gap: 14px 22px; padding: 20px 22px 18px; border: 1px solid rgba(255,255,255,.25); border-radius: 16px; background: rgba(15,20,27,.96); color: #fff; box-shadow: 0 20px 70px rgba(0,0,0,.42); backdrop-filter: blur(16px); }
 .tutorial-progress { position: absolute; inset: 0 0 auto; height: 4px; overflow: hidden; border-radius: 16px 16px 0 0; background: rgba(255,255,255,.16); }
@@ -226,8 +225,6 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 .ld-hero .lead { font-size: clamp(14px, 2.05vh, 17.5px); line-height: 1.6; max-width: 36em; margin: 0; }
 .ld-trust { margin: clamp(10px, 1.8vh, 18px) 0 0; font-size: clamp(12.5px, calc(.6vh + 8.2px), 14px); gap: 5px 14px; }
 .ld-trust .ico { width: 15px; height: 15px; }
-.ld-hero .hero-actions { margin-top: clamp(12px, 2.6vh, 28px); }
-.ld-hero .hero-actions .btn.lg { min-height: clamp(44px, 5.2vh, 56px); box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--brand) 70%, transparent); }
 
 /* ── 진행 순서: 점선 진행선이 그려지며 단계가 켜진다 ── */
 .ld-flow { position: relative; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 12px; }
@@ -330,12 +327,13 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 .gl .g-l-post { stroke: var(--brand); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .gl .g-area { fill: color-mix(in srgb, var(--brand) 12%, transparent); }
 
-/* ── 최근 작업 슬림 행 (내역이 있을 때만 그려진다) ── */
-.ld-recent { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; padding: 8px 12px 8px 16px; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--surface) 72%, transparent); min-width: 0; }
-.ld-recent .recent-list { flex: 1 1 320px; margin: 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); min-width: 0; }
-.ld-recent .recent-item { padding: 6px 8px 6px 12px; background: var(--surface); }
-.ld-recent .recent-name { font-size: 14px; }
-.ld-recent .recent-meta { font-size: 12px; }
+/* ── 최근 작업 카드 (내역이 있을 때만, 첫 화면 왼쪽 상단·가이드 버튼이 있던 자리에 들어감) ── */
+.ld-recent { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; padding: 8px 12px 8px 14px; border: 1px solid var(--border); border-radius: 14px; background: color-mix(in srgb, var(--surface) 72%, transparent); min-width: 0; max-width: 46em; }
+.ld-hero-top .ld-recent { margin-top: clamp(10px, 2vh, 22px); }
+.ld-recent .recent-list { flex: 1 1 260px; margin: 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 6px; min-width: 0; }
+.ld-recent .recent-item { padding: 5px 7px 5px 10px; background: var(--surface); }
+.ld-recent .recent-name { font-size: 13px; }
+.ld-recent .recent-meta { font-size: 11.5px; }
 @media (max-width: 760px) { .ld-recent .recent-item { flex-direction: row; align-items: center; } .ld-recent .recent-actions .btn { flex: none; } .ld-recent .recent-meta { white-space: normal; } }
 
 /* 한 줄 푸터 — 개인정보 안내·이전 버전 링크 */
@@ -349,23 +347,18 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 @media (min-width: 1100px) and (min-height: 690px) {
   body.view-load #main { flex: 1 0 0; }
   .ld-stage { flex: 1 0 0; padding: clamp(10px, 2.2vh, 26px) max(24px, 2.6vw) clamp(8px, 1.3vh, 14px); gap: clamp(10px, 1.7vh, 18px) clamp(28px, 4vw, 72px);
-    grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); grid-template-rows: minmax(min-content, 1fr) auto auto; grid-template-areas: "hero side" "samples samples" "recent recent"; }
-  .ld-stage.ld-norecent { grid-template-rows: minmax(min-content, 1fr) auto; grid-template-areas: "hero side" "samples samples"; }
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); grid-template-rows: minmax(min-content, 1fr) auto; grid-template-areas: "hero side" "samples samples"; }
   .ld-hero { grid-area: hero; justify-content: center; gap: clamp(14px, 5.2vh, 60px); }
   .drop.ld-drop { min-height: 250px; }
   .ld-side { grid-area: side; gap: clamp(8px, 1.4vh, 12px); padding-top: clamp(0px, 1vh, 8px); }
-  .ld-samples, .ld-recent { --gut: 68px; }
-  .ld-samples { grid-area: samples; grid-template-columns: var(--gut) minmax(0, 1fr); align-items: center; gap: 4px 14px; padding: 0 16px; }
-  .ld-recent .ld-lbl { width: var(--gut); flex: none; }
+  .ld-samples { --gut: 68px; grid-area: samples; grid-template-columns: var(--gut) minmax(0, 1fr); align-items: center; gap: 4px 14px; padding: 0 16px; }
   .samples.ld-sample-row { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(6px, .8vw, 12px); }
-  .ld-recent { grid-area: recent; flex-wrap: nowrap; gap: 14px; padding-top: clamp(4px, .8vh, 8px); padding-bottom: clamp(4px, .8vh, 8px); }
-  .ld-recent .recent-list { flex: 1 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ld-h1 { --fs: clamp(32px, min(calc(7.7vh - 15px), 4.4vw), 74px); }
   .ld-hero .lead { font-size: clamp(14px, calc(1.2vh + 5.8px), 18.5px); }
   .ld-drop .drop-main, .ld-drop .drop-over-msg { font-size: clamp(17px, calc(2.3vh + 2px), 28px); }
   .ld-flow li { font-size: clamp(11.5px, 1.7vh, 13px); }
   .ld-sample-row .sample .ico.go { display: none; }
-  /* 3분 화면 가이드의 아래 자막 막대가 하단의 샘플 타일을 가리지 않도록, 타일을 강조할 때는 막대를 위로 옮긴다 */
+  /* 화면 가이드의 아래 자막 막대가 하단의 샘플 타일을 가리지 않도록, 타일을 강조할 때는 막대를 위로 옮긴다 */
   body.view-load:has(.ld-samples .tutorial-focus) .tutorial-bar { bottom: auto; top: calc(var(--topbar-h) + 14px); }
 }
 @media (min-width: 1100px) and (min-height: 690px) and (max-height: 800px) {
@@ -426,7 +419,6 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
   #main.ld-enter .ld-flow li b, #main.ld-enter .ld-flow .fs { animation: ld-up .7s var(--ease-out) backwards; animation-delay: calc(1.4s + var(--i) * .38s + var(--ld-skip, 0s)); }
   #main.ld-enter .ld-samples .ld-lbl { animation: ld-up .7s var(--ease-out) backwards; animation-delay: calc(1.4s + var(--ld-skip, 0s)); }
   #main.ld-enter .ld-sample-row .sample { animation: ld-chip .7s var(--ease-out) backwards; animation-delay: calc(1.5s + var(--i) * 70ms + var(--ld-skip, 0s)); }
-  #main.ld-enter .ld-recent { animation: ld-up .8s var(--ease-out) backwards; animation-delay: calc(1.95s + var(--ld-skip, 0s)); }
   /* 그래프: 타일이 떠오른 뒤 값에 비례해 0에서 자란다 */
   #main.ld-enter .gl .bar { animation: ld-grow .8s var(--ease-out) backwards; animation-delay: calc(1.65s + var(--i, 0) * 70ms + var(--k, 0) * 55ms + var(--ld-skip, 0s)); }
   #main.ld-enter .gl .hbar { animation: ld-growx .8s var(--ease-out) backwards; animation-delay: calc(1.65s + var(--i, 0) * 70ms + var(--k, 0) * 55ms + var(--ld-skip, 0s)); }

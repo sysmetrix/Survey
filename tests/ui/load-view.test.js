@@ -29,8 +29,8 @@ test("불러오기: 모든 동작 훅이 남아 있다 (내역 없음)", () => {
   const html = withState({}, () => load.render());
   assert.equal(bad(html), null, `'${bad(html)?.[0]}' 포함`);
   assert.doesNotMatch(html, /\son(click|change|input|submit|load|error|mouse\w+|key\w+)\s*=|javascript:/i, "인라인 핸들러 금지(CSP)");
-  // 3분 화면 가이드 · 끌어놓기 영역
-  assert.equal(count(html, /data-act="tutorial"/g), 1);
+  // 화면 가이드 버튼은 메인 화면에 없음(로컬 설정으로 옮김) · 끌어놓기 영역
+  assert.doesNotMatch(html, /data-act="tutorial"/);
   assert.match(html, /<label class="drop ld-drop" data-drop="data" role="button" tabindex="0" aria-label="설문 파일 선택">/);
   assert.match(html, /<input type="file" id="fileInput" accept="\.xlsx,\.xls,\.csv,\.tsv" data-change="pick-file" hidden>/);
   assert.match(html, /프로젝트 파일 열기<input type="file" accept="\.json" data-change="pick-project" hidden>/);
@@ -48,7 +48,6 @@ test("불러오기: 모든 동작 훅이 남아 있다 (내역 없음)", () => {
   assert.match(html, /<a href="legacy\/v4\.html">이전 버전\(v4\.3\)<\/a>/);
   // 내역이 없으면 최근 작업 행이 없다 · 데이터가 없으면 '현재 데이터 계속'도 없다
   assert.doesNotMatch(html, /class="ld-recent"|resume-project|전체 작업 내역/);
-  assert.match(html, /ld-stage ld-norecent/);
   assert.doesNotMatch(html, /현재 데이터 계속/);
   // 제목·롤링 강조어(첫 단어가 실제 문구)
   assert.match(html, /<span class="rw">분석부터<\/span><span class="rw" data-alt>보고서까지<\/span><span class="rw" data-alt>발표까지<\/span>/);
@@ -78,7 +77,6 @@ test("불러오기: 최근 작업은 실제 내역에서 최대 2개, 버튼 동
   assert.match(html, /data-act="goto" data-to="history">.*?전체 작업 내역/s);
   assert.ok(html.includes("&lt;b&gt;위험&lt;/b&gt; &amp; 이름"), "이름은 이스케이프");
   assert.match(html, /원자료 보관됨/); assert.match(html, /파일 연결 필요/);
-  assert.doesNotMatch(html, /ld-norecent/);
 });
 
 test("불러오기: 데이터가 있으면 '현재 데이터 계속', 저장된 설정만 있으면 안내 문구", () => {

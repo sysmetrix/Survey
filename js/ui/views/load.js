@@ -56,7 +56,7 @@ function recentRow(list) {
 
 export function render() {
   const recent = historyCache.projects.slice(0, 2);
-  return `<div class="ld-stage${recent.length ? "" : " ld-norecent"}">
+  return `<div class="ld-stage">
     <div class="ld-bg" aria-hidden="true"></div>
 
     <section class="ld-hero">
@@ -74,7 +74,7 @@ export function render() {
           <li>${icon("history", 16)}작업 내역 자동 저장</li>
           <li>${icon("install", 16)}앱 설치 · 오프라인 사용</li>
         </ul>
-        <div class="hero-actions ld-in" style="--d:.85s"><button class="btn primary lg" data-act="tutorial">${icon("play", 17)}3분 화면 가이드</button><span class="small muted">샘플 화면과 자막을 따라 첫 보고서까지 체험합니다.</span></div>
+        ${recent.length ? `<div class="ld-in" style="--d:.85s">${recentRow(recent)}</div>` : ""}
       </div>
       <ol class="ld-flow" aria-label="진행 순서">${FLOW.map((s, i) => `<li style="--i:${i}" title="${esc(s.desc)}"><span class="node">${i + 1}</span><b>${esc(s.name)}</b><span class="fs">${esc(s.short)}</span></li>`).join("")}</ol>
     </section>
@@ -111,7 +111,6 @@ export function render() {
         ${SAMPLES.map((s, i) => `<button class="sample" style="--i:${i}" data-act="sample" data-file="${esc(s.file)}" data-tip="${esc(`${s.title} — ${s.desc}`)}">${glyphMarkup(s.file)}<b>${esc(s.title)}${s.file.includes("청소년센터") ? ` <span class="badge info">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 16, "go")}</button>`).join("")}
       </div>
     </section>
-    ${recent.length ? recentRow(recent) : ""}
   </div>
   <div class="ld-foot no-print"><span class="ld-priv">${icon("shield", 14)}모든 분석은 이 브라우저 안에서만 처리되며 파일은 외부로 전송되지 않습니다</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy"><a href="legacy/v4.html">이전 버전(v4.3)</a></span></div>`;
 }
