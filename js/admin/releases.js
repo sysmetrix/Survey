@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.26.0", date: "2026-09-21", title: "분석 결과 화면 — 핵심 지표 색상 위계, 성과지표 표 판정 열 고정",
+    groups: {
+      "분석 결과": [
+        "핵심 지표 카드(성과지표·사전→사후·만족도·NPS·신뢰도)에 판정에 따라 초록·주황·빨강 색 띠를 넣어, 여러 지표 중 어디를 먼저 봐야 하는지 한눈에 보이도록 함",
+        "성과지표 표의 열이 많아 가로로 스크롤해야 할 때도 달성률·판정 열은 오른쪽에 고정되어 항상 보이도록 함",
+      ],
+    },
+  },
+  {
     version: "5.25.0", date: "2026-09-21", title: "슬라이드 편집 화면 — 뒤로 가기, 선택 표시, 실제 미리보기, 정렬 안내선",
     groups: {
       "발표 모드": [

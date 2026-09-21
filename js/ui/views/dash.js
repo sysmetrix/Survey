@@ -1,7 +1,7 @@
 // ④ 분석 결과 화면: 핵심 지표 카드 + 장별 결과(보고서와 동일한 표·그래프) + 주관식 원문 + 자료 품질
 import { state, compute, reportBlocks, invalidate } from "../store.js";
 import { blocksToHtml, splitChapters } from "../../report/render-html.js";
-import { f1, f2, signed, pText } from "../../narrative/vocab.js";
+import { f1, f2, signed, pText, DEFAULT_THRESHOLDS } from "../../narrative/vocab.js";
 import { alphaLabel } from "../../stats/effectsize.js";
 import { DESIGN_LABELS } from "../../model/codebook.js";
 import { maskPII } from "../../core/util.js";
@@ -22,19 +22,31 @@ export function mount() {
   el.addEventListener("scroll", () => { tabsScrollLeft = el.scrollLeft; }, { passive: true });
 }
 
+// 카드마다 상태색을 살짝 얹어(장식이 아니라 판정 의미로만) 6개 중 어디를 먼저 봐야 할지 한눈에 들어오게 함
+const GRADE_TONE = { 우수: "good", 보통: "mid", 미흡: "bad" };
+const ALPHA_TONE = a => (a >= 0.8 ? "good" : a >= 0.6 ? "mid" : "bad");
+function levelTone(score100, t) {
+  if (!Number.isFinite(score100)) return "";
+  const [a, , c] = t.level;
+  return score100 >= a ? "good" : score100 >= c ? "mid" : "bad";
+}
+
 function cards(r) {
   const A = r.analysis, E = r.evaluation, P = A.prepost;
+  const t = { ...DEFAULT_THRESHOLDS, ...(state.settings.thresholds || {}) };
   const all = P?.domains.find(d => d.id === "ALL") || (P?.items.length === 1 ? P.items[0] : null);
   const sat = A.overallItem ? A.overallItem.score100 : A.total?.score100;
+  const ppTone = all && (all.primary.p >= .05 ? "mid" : all.diff > 0 ? "good" : "bad");
+  const npsTone = A.nps[0] && (A.nps[0].nps > 0 ? "good" : A.nps[0].nps < 0 ? "bad" : "mid");
   const c = [
-    ["응답자", `${A.meta.n}명`, DESIGN_LABELS[A.meta.design]],
-    E && ["성과지표", `${E.summary.achieved}/${E.summary.measured} 달성`, `종합 ${E.summary.grade}`],
-    all && ["사전→사후", `${signed(all.diff)}점`, `${pText(all.primary.p)} · ${all.primary.effectLabel}`],
-    Number.isFinite(sat) && ["만족도(100점)", `${f2(sat)}점`, A.overallItem ? A.overallItem.label : "척도 문항 평균"],
-    A.nps[0] && ["NPS", signed(A.nps[0].nps, 1), `추천 ${f1(A.nps[0].promoters)}%`],
-    A.reliability && Number.isFinite(A.reliability.alpha) && ["신뢰도 α", f2(A.reliability.alpha), alphaLabel(A.reliability.alpha)],
+    ["응답자", `${A.meta.n}명`, DESIGN_LABELS[A.meta.design], ""],
+    E && ["성과지표", `${E.summary.achieved}/${E.summary.measured} 달성`, `종합 ${E.summary.grade}`, GRADE_TONE[E.summary.grade] || ""],
+    all && ["사전→사후", `${signed(all.diff)}점`, `${pText(all.primary.p)} · ${all.primary.effectLabel}`, ppTone],
+    Number.isFinite(sat) && ["만족도(100점)", `${f2(sat)}점`, A.overallItem ? A.overallItem.label : "척도 문항 평균", levelTone(sat, t)],
+    A.nps[0] && ["NPS", signed(A.nps[0].nps, 1), `추천 ${f1(A.nps[0].promoters)}%`, npsTone],
+    A.reliability && Number.isFinite(A.reliability.alpha) && ["신뢰도 α", f2(A.reliability.alpha), alphaLabel(A.reliability.alpha), ALPHA_TONE(A.reliability.alpha)],
   ].filter(Boolean);
-  return `<div class="cards">${c.map(([t, v, s]) => `<div class="kcard"><span>${esc(t)}</span><b>${esc(v)}</b><small>${esc(s)}</small></div>`).join("")}</div>`;
+  return `<div class="cards">${c.map(([title, v, s, tone]) => `<div class="kcard${tone ? ` t-${tone}` : ""}"><span>${esc(title)}</span><b>${esc(v)}</b><small>${esc(s)}</small></div>`).join("")}</div>`;
 }
 
 function textTab(r) {
