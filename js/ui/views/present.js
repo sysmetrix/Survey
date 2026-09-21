@@ -5,6 +5,8 @@ import { inlineHtml } from "../../report/render-html.js";
 import { slideHtmlCustom } from "../../present/edit/render-custom.js";
 import { maskPII } from "../../core/util.js";
 import { buildPresentHtml, EXPORT_ICONS } from "../../present/export-html.js";
+import { renderPptx } from "../../report/render-pptx.js";
+import { svgToPng } from "../../charts/rasterize.js";
 import { esc, busy, download, safeFileName, toast, nextFrame } from "../util.js";
 import { go, refresh, parseHash } from "../router.js";
 import { icon } from "../icons.js";
@@ -157,7 +159,8 @@ export function render({ sub }) {
       ${view.save ? `<div class="p-help p-save" role="dialog" aria-label="발표 자료 내려받기"><b>발표 자료 내려받기</b>
         <button class="btn block" data-act="p-save-pdf">${icon("printer", 16)}PDF로 저장 (인쇄)</button>
         <button class="btn block" data-act="p-save-html">${icon("doc", 16)}HTML 파일로 저장</button>
-        <p class="p-save-note">PDF는 종이·메일용, HTML은 발표용입니다. HTML 파일은 인터넷 없이 열어도 지금 이 화면 그대로 넘기며 발표할 수 있습니다.</p></div>` : ""}
+        <button class="btn block" data-act="p-save-pptx">${icon("grid", 16)}PPTX로 저장 (편집 가능)</button>
+        <p class="p-save-note">PDF는 종이·메일용, HTML은 인터넷 없는 PC에서도 지금 화면 그대로 발표하는 용도, PPTX는 PowerPoint에서 계속 고쳐 쓸 수 있는 편집 가능한 파일입니다.</p></div>` : ""}
     </div>
     ${ui.notes ? notesHtml(slides[idx], idx, slides) : ""}
     ${view.overview ? overviewHtml(idx, theme) : ""}
@@ -225,6 +228,31 @@ export const actions = {
     } catch (e) {
       console.error(e);
       toast(`HTML 만들기 실패: ${e.message}`, "bad", 7000);
+    } finally { busy(false); }
+  },
+  "p-save-pptx": async () => {
+    view.save = false;
+    refresh();
+    busy(true, "PPTX 만드는 중…");
+    await nextFrame();
+    try {
+      const slides = visibleSlides();
+      const title = state.settings.reportTitle || (slides[0] ? displayTitle(slides[0]) : "발표 자료");
+      const rasterizeChart = async el => {
+        if (!el.chart) return null;
+        const { svg } = chartSvg({ ...el.chart, opts: { ...(el.chart.opts || {}), theme: "light" } });
+        const w = Math.max(240, Math.round(el.w / 100 * 1280)), h = Math.max(160, Math.round(el.h / 100 * 720));
+        return svgToPng(svg, w, h, 2);
+      };
+      const bytes = await renderPptx(slides, state.deckOverrides, {
+        title, creator: state.settings.author || "", settings: state.settings, rasterizeChart, JSZip: window.JSZip,
+      });
+      download(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }), `${safeFileName(title)}_발표자료.pptx`);
+      toast("PPTX 파일을 내려받았습니다. PowerPoint에서 계속 고칠 수 있습니다.", "ok", 7000);
+      document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "present-pptx", title } }));
+    } catch (e) {
+      console.error(e);
+      toast(`PPTX 만들기 실패: ${e.message}`, "bad", 7000);
     } finally { busy(false); }
   },
   "p-edit": () => go("presentEdit"),

@@ -2,6 +2,16 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.23.0", date: "2026-09-21", title: "발표 자료를 PowerPoint(PPTX)로 저장 — 편집 가능한 네이티브 파일",
+    groups: {
+      "발표 모드": [
+        "발표 자료 내려받기에 'PPTX로 저장'을 추가 — 화면에 배치한 텍스트·도형·이미지가 스크린샷이 아니라 실제 편집 가능한 PowerPoint 도형·텍스트 상자·그림으로 들어감",
+        "자유배치로 꾸미지 않은 자동 슬라이드도 화면과 같은 위치·비율로 도형 배치되어 PPTX에 들어감(그래프는 그림으로 삽입)",
+        "굵게·글자색 등 문구 서식과 회전값도 그대로 반영되며, 실제 PowerPoint로 열어 복구 프롬프트 없이 곧바로 편집 가능함을 확인함",
+      ],
+    },
+  },
+  {
     version: "5.22.0", date: "2026-09-21", title: "발표 슬라이드 자유배치 편집 — 위치·크기·회전, 이미지·도형 삽입, 슬라이드 추가·삭제·순서변경",
     groups: {
       "발표 모드": [
