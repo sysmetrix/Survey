@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.32.1", date: "2026-09-21", title: "보고서 '사업 개요' 문장부호 오류 수정",
+    groups: {
+      "보고서": [
+        "사업 개요(사업명·사업기간·참여대상·사업예산·추진부서·추진배경·사업목적·추진목표) 항목은 문장이 아닌 개조식 항목인데도 마침표가 붙던 문제 수정 — '지표별 결과', '대표 의견(긍정/개선 요구)' 같은 소제목도 함께 수정",
+      ],
+    },
+  },
+  {
     version: "5.32.0", date: "2026-09-21", title: "데이터 설정·성과지표 화면에 되돌리기·지우기, 표 제목행 고정",
     groups: {
       "데이터 설정": [

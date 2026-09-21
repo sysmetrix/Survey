@@ -72,17 +72,17 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   if (hasProgramInfo(LM) || hasLogicModel(LM)) {
     push(H(1, "사업 개요"));
     const info = [
-      LM.programName && B("p.name", 1, `사업명: ${LM.programName}`),
-      LM.period && B("p.period", 1, `사업기간: ${LM.period}`),
-      LM.target && B("p.target", 1, `참여대상: ${LM.target}`),
-      LM.budget && B("p.budget", 1, `사업예산: ${LM.budget}`),
-      LM.department && B("p.dept", 1, `추진부서: ${LM.department}`),
-      LM.background && B("p.bg", 1, `추진배경: ${LM.background}`),
-      LM.purpose && B("p.purpose", 1, `사업목적: ${LM.purpose}`),
+      LM.programName && B("p.name", 1, `사업명: ${LM.programName}`, true),
+      LM.period && B("p.period", 1, `사업기간: ${LM.period}`, true),
+      LM.target && B("p.target", 1, `참여대상: ${LM.target}`, true),
+      LM.budget && B("p.budget", 1, `사업예산: ${LM.budget}`, true),
+      LM.department && B("p.dept", 1, `추진부서: ${LM.department}`, true),
+      LM.background && B("p.bg", 1, `추진배경: ${LM.background}`, true),
+      LM.purpose && B("p.purpose", 1, `사업목적: ${LM.purpose}`, true),
     ];
     if (LM.goals?.length) {
-      info.push(B("p.goals", 1, "추진목표"));
-      LM.goals.forEach((g, i) => info.push(B(`p.goal.${g.id}`, 2, `목표${i + 1}: ${g.text}`)));
+      info.push(B("p.goals", 1, "추진목표", true));
+      LM.goals.forEach((g, i) => info.push(B(`p.goal.${g.id}`, 2, `목표${i + 1}: ${g.text}`, true)));
     }
     bullets(info);
     if (hasLogicModel(LM)) {
@@ -176,7 +176,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     });
     const measured = E.results.filter(r => Number.isFinite(r.rate));
     if (measured.length) push({ type: "figure", caption: "성과지표 달성률", chart: { kind: "kpiBullet", data: measured.map(r => ({ label: r.name, rate: r.rate })), opts: { mostly: t.kpiMostly } } });
-    const det = [B("kpi.detail", 1, "지표별 결과")];
+    const det = [B("kpi.detail", 1, "지표별 결과", true)];
     E.results.forEach(r => {
       const tv = `${fmtKpi(r.targetValue, r.metric, r.unit)}${r.unit || ""}`, av = `${fmtKpi(r.actualValue, r.metric, r.unit)}${r.unit || ""}`;
       if (r.error && !Number.isFinite(r.rate)) det.push(B(`kpi.${r.id}`, 2, `${q(r.name)}: 측정 불가(${r.error})`));
@@ -338,8 +338,8 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       const tb = [B(`text.${tx.key}.types`, 1, `유효 응답 ${tx.nSubstantive}건(무응답·‘없음’ 제외) 중 긍정 의견 ${ty.positive}건, 개선 요구·건의 ${ty.negative + ty.suggestion}건, 기타 ${ty.neutral}건`)];
       if (tx.themes.length) tb.push(B(`text.${tx.key}.themes`, 1, `주요 언급 주제: ${tx.themes.slice(0, 3).map(th => `${th.name}(${th.n}건)`).join(", ")}`));
       if (tx.keywords.length) tb.push(B(`text.${tx.key}.kw`, 1, `주요 키워드: ${tx.keywords.slice(0, 8).map(k => k.word).join(", ")}`));
-      if (tx.quotes.positive.length) { tb.push(B(`text.${tx.key}.qp`, 1, "대표 의견(긍정)")); tx.quotes.positive.forEach((qt, i) => tb.push(B(`text.${tx.key}.qp${i}`, 3, `“${qt}”`))); }
-      if (tx.quotes.improve.length) { tb.push(B(`text.${tx.key}.qi`, 1, "대표 의견(개선 요구)")); tx.quotes.improve.forEach((qt, i) => tb.push(B(`text.${tx.key}.qi${i}`, 3, `“${qt}”`))); }
+      if (tx.quotes.positive.length) { tb.push(B(`text.${tx.key}.qp`, 1, "대표 의견(긍정)", true)); tx.quotes.positive.forEach((qt, i) => tb.push(B(`text.${tx.key}.qp${i}`, 3, `“${qt}”`))); }
+      if (tx.quotes.improve.length) { tb.push(B(`text.${tx.key}.qi`, 1, "대표 의견(개선 요구)", true)); tx.quotes.improve.forEach((qt, i) => tb.push(B(`text.${tx.key}.qi${i}`, 3, `“${qt}”`))); }
       bullets(tb);
       if (tx.themes.length) push({
         type: "table", caption: `${tx.label} 주제별 분류`, unit: "(단위: 건, %)",
