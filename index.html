@@ -20,9 +20,9 @@
   <link rel="stylesheet" href="css/app.css?v=5.29.0">
   <link rel="stylesheet" href="css/present.css?v=5.29.0">
   <script src="js/boot-check.js"></script>
-  <script src="vendor/papaparse-5.4.1.min.js"></script>
-  <script src="vendor/xlsx-0.20.3.full.min.js"></script>
-  <script src="vendor/jszip-3.10.1.min.js"></script>
+  <script src="vendor/papaparse-5.4.1.min.js" defer></script>
+  <script src="vendor/xlsx-0.20.3.full.min.js" defer></script>
+  <script src="vendor/jszip-3.10.1.min.js" defer></script>
   <script type="module" src="js/main.js?v=5.29.0"></script>
 </head>
 <body>
@@ -46,7 +46,7 @@
     </div>
   </header>
   <main id="main" class="container" tabindex="-1"></main>
-  <footer class="foot no-print"><span>모든 분석은 이 브라우저 안에서만 처리되며 파일은 외부로 전송되지 않습니다</span><span>·</span><span>by Sysmetrix</span></footer>
+  <footer class="foot no-print"><span>모든 분석은 이 브라우저 안에서만 처리되며 파일은 외부로 전송되지 않습니다</span><span>·</span><span data-act="admin-entry">by Sysmetrix</span></footer>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="snack" class="snack" role="status" aria-live="polite" hidden></div>
   <div id="busy" class="busy" role="status" aria-live="polite" hidden><div class="busy-box"><div class="spinner"></div><div class="busy-msg"></div></div></div>

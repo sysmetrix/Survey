@@ -115,7 +115,7 @@ test("발표 자료: 기준에 관계없이 슬라이드 구성은 같고 근거
 });
 
 test("선택 화면: 데이터 설정·로컬 설정 둘 다 다른 카드와 어울리게 요약으로 접혀 있다가 '자세히'로 펼쳐짐(펼침 상태는 공유)", async () => {
-  const file = "2026_문화의집_만족도_구글폼.csv";
+  const file = "2026_청소년센터_만족도_구글폼.csv";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa }));
   const fullChecks = (html, name, basis) => {
     assert.ok(html.includes("반올림 전 평균으로 환산") && html.includes("반올림 후 평균으로 환산"), `${name}: 두 선택지 문구`);

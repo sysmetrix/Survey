@@ -16,7 +16,7 @@ export const MAX_FILE_MB = 50;
 
 export const SAMPLES = [
   { file: "2026_진로탐색_사전사후.xlsx", title: "사전·사후 + 성과지표", desc: "사전/사후 시트 ID 매칭, 사업정보·성과지표 시트 포함" },
-  { file: "2026_문화의집_만족도_구글폼.csv", title: "구글폼 만족도", desc: "텍스트 응답(매우 그렇다…), 복수응답, 추천의향" },
+  { file: "2026_청소년센터_만족도_구글폼.csv", title: "구글폼 만족도", desc: "텍스트 응답(매우 그렇다…), 복수응답, 추천의향" },
   { file: "2026_진로체험_네이버폼.csv", title: "네이버폼 원본", desc: "제목 행·긴 문항·‘매우 만족’ 문자 응답·이모지 의견" },
   { file: "2026_참여위원회_회고식.xlsx", title: "회고식 사전·사후", desc: "소표본(24명), 이전/현재 응답" },
   { file: "2026_리더십캠프_사전사후_한시트.xlsx", title: "한 시트 사전·사후", desc: "사전_/사후_ 접두어 문항, 동일 응답자" },
@@ -108,12 +108,12 @@ export function render() {
     <section class="ld-samples" aria-labelledby="ld-samples-h">
       <h2 id="ld-samples-h" class="ld-lbl">샘플로 체험하기</h2>
       <div class="samples ld-sample-row">
-        ${SAMPLES.map((s, i) => `<button class="sample" style="--i:${i}" data-act="sample" data-file="${esc(s.file)}" data-tip="${esc(`${s.title} — ${s.desc}`)}">${glyphMarkup(s.file)}<b>${esc(s.title)}${s.file.includes("문화의집") ? ` <span class="badge info">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 16, "go")}</button>`).join("")}
+        ${SAMPLES.map((s, i) => `<button class="sample" style="--i:${i}" data-act="sample" data-file="${esc(s.file)}" data-tip="${esc(`${s.title} — ${s.desc}`)}">${glyphMarkup(s.file)}<b>${esc(s.title)}${s.file.includes("청소년센터") ? ` <span class="badge info">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 16, "go")}</button>`).join("")}
       </div>
     </section>
     ${recent.length ? recentRow(recent) : ""}
   </div>
-  <div class="ld-foot no-print"><span class="ld-priv">${icon("shield", 14)}모든 분석은 이 브라우저 안에서만 처리되며 파일은 외부로 전송되지 않습니다</span><span class="ld-dot" aria-hidden="true">·</span><span>by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy">이전 버전(v4.3) 화면은 <a href="legacy/v4.html">여기</a>에서 계속 사용할 수 있습니다</span></div>`;
+  <div class="ld-foot no-print"><span class="ld-priv">${icon("shield", 14)}모든 분석은 이 브라우저 안에서만 처리되며 파일은 외부로 전송되지 않습니다</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy">이전 버전(v4.3) 화면은 <a href="legacy/v4.html">여기</a>에서 계속 사용할 수 있습니다</span></div>`;
 }
 
 // ── 화면 표시·정리 (main.js 가 렌더 뒤 mount, 다른 화면으로 옮길 때 unmount 호출) ──

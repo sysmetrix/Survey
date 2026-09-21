@@ -10,7 +10,7 @@ import { f1, f2 } from "../../narrative/vocab.js";
 import { esc, option, levelBadge, toast, download, readFileText, readFileBytes, busy, nextFrame } from "../util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
-import { PROGRAM_FIELD_EXAMPLES } from "../examples.js";
+import { PROGRAM_FIELD_EXAMPLES, LOGIC_STAGE_EXAMPLES, BACKGROUND_EXAMPLE, PURPOSE_EXAMPLE, GOALS_EXAMPLE } from "../examples.js";
 
 const MAX_PLAN_DOC_MB = 20;
 
@@ -46,9 +46,9 @@ function targetOptions() {
 }
 
 /**
- * 문항·영역 이름에서 키워드로 실제 맞는 대상을 찾음(없으면 "" → 전체 문항으로 계산됨).
+ * 문항·영역 이름에서 키워드로 실제 맞는 대상을 찾음(없으면 "").
  * '지역사회 소속감 향상' 같은 특정 주제 지표는 그 주제를 실제로 묻는 문항이 있을 때만
- * 정확히 대상을 채우고, 없으면 버튼 문구로 '전체로 계산됨'을 알려 착각을 막는다.
+ * 추천한다 — 관련 문항이 없는데 "전체로 계산"하며 추천하면 재지 않은 것을 잰 것처럼 보일 수 있어서다.
  */
 function findTarget(r, keywords) {
   const labels = [
@@ -63,10 +63,11 @@ function findTarget(r, keywords) {
 function quickKpis(r) {
   const A = r.analysis, P = A.prepost;
   const overall = A.overallItem?.label;
-  // 특정 주제를 직접 묻는 문항·영역이 있으면 그 이름을 대상으로, 없으면 빈 값(전체로 계산 — 버튼에 표시)
+  // 특정 주제를 직접 묻는 문항·영역이 실제로 있을 때만 추천(없으면 이 지표 자체를 제안하지 않음)
   const topic = (id, name, keywords, metric, target, unit, stage) => {
     const t = findTarget(r, keywords);
-    return { id, label: t ? `${name} (${t.length > 12 ? t.slice(0, 12) + "…" : t})` : `${name} — 관련 문항 없어 전체로 계산`, kpi: { name: `${name}${metric === "prepostDiff100" ? "" : "(100점 환산)"}`, stage, metric, targetRef: t, target, unit } };
+    if (!t) return null;
+    return { id, label: `${name} (${t.length > 12 ? t.slice(0, 12) + "…" : t})`, kpi: { name: `${name}${metric === "prepostDiff100" ? "" : "(100점 환산)"}`, stage, metric, targetRef: t, target, unit } };
   };
   return [
     A.items.length && { id: "sat", label: "만족도 92점 이상", kpi: { name: overall ? `${overall}(100점 환산)` : "만족도(100점 환산)", stage: "단기성과", metric: "score100", targetRef: overall || "전체", target: 92, unit: "점" } },
@@ -77,7 +78,7 @@ function quickKpis(r) {
     { id: "count", label: "참여 인원 (직접 입력)", kpi: { name: "참여 인원(실인원)", stage: "산출", metric: "manual", target: null, unit: "명" } },
     { id: "sessions", label: "운영 횟수 (직접 입력)", kpi: { name: "프로그램 운영 횟수", stage: "산출", metric: "manual", target: null, unit: "회" } },
     // 청소년 사업 성과지표(여성가족부·한국청소년정책연구원 「인구감소지역 청소년 성장지원 성과지표 개발」 2024.12.23 참고)
-    // 대상은 문항·영역 이름에 주제 키워드가 있으면 자동으로 채우고, 없으면 버튼에 '전체로 계산'을 밝혀 검토를 유도함
+    // 업로드된 설문에 그 주제를 실제로 묻는 문항·영역이 있을 때만 추천(문항 파악 기반 추천 — 없으면 목록에 안 나타남)
     A.items.length && topic("belonging", "지역사회 소속감 향상", ["소속감", "소속"], "score100", 80, "점", "단기성과"),
     A.items.length && topic("lifeSat", "삶의 만족도 향상", ["삶의 만족", "삶 만족", "행복"], "score100", 80, "점", "단기성과"),
     P && topic("socialConn", "사회연결성 향상", ["관계", "연결", "또래", "네트워크"], "prepostDiff100", 10, "점", "중기성과"),
@@ -166,15 +167,15 @@ export function render() {
       ${FIELDS.map(([k, l]) => `<label class="field">${l}<input class="in" value="${esc(lm[k] || "")}" placeholder="${PROGRAM_FIELD_EXAMPLES[k] || ""}" data-change="lm" data-field="${k}"></label>`).join("")}
     </div>
     <div class="grid2">
-      <label class="field">추진배경<textarea class="in" rows="2" data-change="lm" data-field="background">${esc(lm.background)}</textarea></label>
-      <label class="field">사업목적<textarea class="in" rows="2" data-change="lm" data-field="purpose">${esc(lm.purpose)}</textarea></label>
+      <label class="field">추진배경<textarea class="in" rows="2" placeholder="${esc(BACKGROUND_EXAMPLE)}" data-change="lm" data-field="background">${esc(lm.background)}</textarea></label>
+      <label class="field">사업목적<textarea class="in" rows="2" placeholder="${esc(PURPOSE_EXAMPLE)}" data-change="lm" data-field="purpose">${esc(lm.purpose)}</textarea></label>
     </div>
     <label class="field">추진목표 <span class="muted small">(한 줄에 하나씩 · 성과지표의 ‘연계목표’로 선택할 수 있습니다)</span>
-      <textarea class="in" rows="3" data-change="lm" data-field="goals">${esc(goals.map(g => g.text).join("\n"))}</textarea></label>
+      <textarea class="in" rows="3" placeholder="${esc(GOALS_EXAMPLE)}" data-change="lm" data-field="goals">${esc(goals.map(g => g.text).join("\n"))}</textarea></label>
     <h3>논리모형 <span class="muted small">(각 칸에 한 줄에 하나씩 · 비워 둔 칸은 표에서 빠집니다)</span></h3>
     <div class="logic">
       ${LOGIC_STAGES.map((s, i) => `<label class="logic-col"><b>${s.label}</b><span class="muted small">${esc(s.hint)}</span>
-        <textarea class="in" rows="5" data-change="lm-stage" data-stage="${s.key}">${esc((lm[s.key] || []).join("\n"))}</textarea></label>${i < LOGIC_STAGES.length - 1 ? `<span class="arrow">→</span>` : ""}`).join("")}
+        <textarea class="in" rows="5" placeholder="${esc(LOGIC_STAGE_EXAMPLES[s.key] || "")}" data-change="lm-stage" data-stage="${s.key}">${esc((lm[s.key] || []).join("\n"))}</textarea></label>${i < LOGIC_STAGES.length - 1 ? `<span class="arrow">→</span>` : ""}`).join("")}
     </div>
   </section>
 

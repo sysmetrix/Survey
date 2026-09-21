@@ -28,7 +28,7 @@ const Papa = require("../../vendor/papaparse-5.4.1.min.js");
 
 const bad = html => /undefined|\[object Object\]|NaN(?!\w)/.exec(html.replace(/data-[a-z-]+="[^"]*"/g, ""));
 
-for (const file of ["2026_진로탐색_사전사후.xlsx", "2026_문화의집_만족도_구글폼.csv", "2026_참여위원회_회고식.xlsx"]) {
+for (const file of ["2026_진로탐색_사전사후.xlsx", "2026_청소년센터_만족도_구글폼.csv", "2026_참여위원회_회고식.xlsx"]) {
   test(`화면 렌더: ${file}`, async () => {
     const ds = parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa });
     loadDataset(ds);
@@ -560,7 +560,7 @@ test("로컬 설정과 업데이트 내역 화면 렌더링", () => {
 });
 
 test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
-  const f = "2026_문화의집_만족도_구글폼.csv";
+  const f = "2026_청소년센터_만족도_구글폼.csv";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
   let html = business.render();
   assert.ok(html.includes("빠른 추가") && html.includes("선택 · 고급") && html.includes("논리모형"), "사업정보·논리모형은 처음부터 펼쳐짐");
@@ -573,10 +573,10 @@ test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   assert.equal(bad(html), null);
 });
 
-test("성과지표 빠른 추가: 청소년 지표는 실제로 그 주제를 묻는 문항이 있으면 그 문항을 대상으로, 없으면 '전체로 계산'을 밝힘", () => {
+test("성과지표 빠른 추가: 청소년 지표는 업로드된 설문에 그 주제를 실제로 묻는 문항이 있을 때만 추천됨", () => {
   const L = ["전혀 아니다", "아니다", "보통", "그렇다", "매우 그렇다"];
   const rows = Array.from({ length: 20 }, (_, i) => [L[i % 5], L[(i + 1) % 5]]);
-  // 1) '소속감'을 직접 묻는 문항이 있는 설문
+  // 1) '소속감'을 직접 묻는 문항이 있는 설문 — 그 문항을 대상으로 추천됨
   loadDataset({ fileName: "belong.csv", source: "file", sheets: [{ name: "응답", headers: ["나는 이 지역에 소속감을 느낀다", "전반적으로 만족한다"], rows }] });
   const c = state.codebook.columns.find(x => x.header.includes("소속감"));
   c.role = "likert"; c.scale = { min: 1, max: 5 }; c.labelMap = Object.fromEntries(L.map((t, i) => [t, i + 1]));
@@ -586,16 +586,14 @@ test("성과지표 빠른 추가: 청소년 지표는 실제로 그 주제를 �
   business.actions["kpi-quick"]({ dataset: { id: "belonging" } });
   assert.equal(state.kpis[0].targetRef, "나는 이 지역에 소속감을 느낀다", "소속감 문항이 대상으로 채워짐");
 
-  // 2) 소속감과 무관한 설문 — 전체로 계산됨을 버튼에서 밝히고, 대상은 비워 둠(전체로 계산)
+  // 2) 소속감과 무관한 설문 — 관련 문항이 없으니 그 지표 자체를 추천하지 않음(버튼이 안 나타남)
   const L2 = L;
   const rows2 = Array.from({ length: 20 }, (_, i) => [L2[i % 5], L2[(i + 2) % 5]]);
   loadDataset({ fileName: "generic.csv", source: "file", sheets: [{ name: "응답", headers: ["프로그램 내용이 흥미로웠다", "강사가 전문적이었다"], rows: rows2 }] });
   state.codebook.columns.forEach(col => { col.role = "likert"; col.scale = { min: 1, max: 5 }; col.labelMap = Object.fromEntries(L2.map((t, i) => [t, i + 1])); });
   invalidate();
   html = business.render();
-  assert.ok(html.includes("지역사회 소속감 향상 — 관련 문항 없어 전체로 계산"), "관련 문항이 없으면 전체로 계산됨을 밝힘");
-  business.actions["kpi-quick"]({ dataset: { id: "belonging" } });
-  assert.equal(state.kpis[0].targetRef, "", "대상 문항이 없으면 targetRef 는 비워 둠(평가 시 전체로 해석됨)");
+  assert.ok(!html.includes("지역사회 소속감 향상"), "관련 문항이 없으면 이 지표는 목록에 나타나지 않음");
 });
 
 test("직접 고친 문장의 근거 수치가 바뀌면 표시(stale)", async () => {

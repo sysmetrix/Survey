@@ -87,7 +87,7 @@ const WISH = ["활동 시간이 짧아서 아쉬웠고 더 길게 했으면 좋�
       ...vals.map((v, k) => (i === 7 && k === 3 ? "" : L[v - 1])), L[overall - 1], motive, Math.max(0, Math.min(10, Math.round(overall * 2 + norm()))),
       rnd() < 0.7 ? pick(GOOD) : "", rnd() < 0.55 ? pick(WISH) : ""]);
   }
-  await writeFile("samples/2026_문화의집_만족도_구글폼.csv", "﻿" + rows.map(r => r.map(csv).join(",")).join("\r\n"), "utf8");
+  await writeFile("samples/2026_청소년센터_만족도_구글폼.csv", "﻿" + rows.map(r => r.map(csv).join(",")).join("\r\n"), "utf8");
 }
 
 // ───── 3) 회고식 소표본 ─────

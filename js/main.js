@@ -34,6 +34,8 @@ export const APP_VERSION = "5.29.0";
 const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates, login, admin };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
+let adminTaps = 0, adminTapTimer = 0;
+const ADMIN_TAP_COUNT = 5;
 
 function renderChrome(id) {
   const curIdx = STEPS.findIndex(s => s.id === id);
@@ -114,6 +116,17 @@ const GLOBAL = {
     versionTapTimer = setTimeout(() => { versionTaps = 0; }, 1800);
   },
   tutorial: () => startGuide(),
+  // 하단 'by Sysmetrix'를 5번 연달아 누르면 관리자 화면으로(주소를 직접 입력하기 어려운 경우를 위한 조용한 진입점)
+  "admin-entry": () => {
+    adminTaps += 1;
+    clearTimeout(adminTapTimer);
+    if (adminTaps >= ADMIN_TAP_COUNT) {
+      adminTaps = 0;
+      go(getSession() ? "admin" : "login");
+      return;
+    }
+    adminTapTimer = setTimeout(() => { adminTaps = 0; }, 1800);
+  },
 };
 
 document.addEventListener("click", e => {

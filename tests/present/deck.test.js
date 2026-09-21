@@ -24,7 +24,7 @@ async function deckFor(file) {
 }
 const wellFormed = svg => { let err = null; new DOMParser({ onError: (l, m) => { if (l !== "warning") err = m; } }).parseFromString(svg, "image/svg+xml"); return err; };
 
-for (const f of ["2026_진로탐색_사전사후.xlsx", "2026_문화의집_만족도_구글폼.csv", "2026_참여위원회_회고식.xlsx"]) {
+for (const f of ["2026_진로탐색_사전사후.xlsx", "2026_청소년센터_만족도_구글폼.csv", "2026_참여위원회_회고식.xlsx"]) {
   test(`발표 슬라이드: ${f}`, async () => {
     const deck = await deckFor(f);
     assert.equal(deck[0].type, "cover"); assert.equal(deck.at(-1).type, "end");

@@ -39,9 +39,9 @@ test("불러오기: 모든 동작 훅이 남아 있다 (내역 없음)", () => {
   for (const s of load.SAMPLES) assert.ok(html.includes(`data-file="${s.file}"`), s.file);
   assert.equal(count(html, /data-act="template" data-kind="satisfaction"/g), 1);
   assert.equal(count(html, /data-act="template" data-kind="prepost"/g), 1);
-  // '처음 추천' 배지는 문화의집 샘플에만
+  // '처음 추천' 배지는 청소년센터 샘플에만
   assert.equal(count(html, /처음 추천/g), 1);
-  assert.match(html, /data-file="2026_문화의집_만족도_구글폼\.csv"[^>]*>.*?처음 추천/s);
+  assert.match(html, /data-file="2026_청소년센터_만족도_구글폼\.csv"[^>]*>.*?처음 추천/s);
   // 진행 순서 5단계 (이름과 전체 설명) · 이전 버전 링크
   assert.equal(count(html, /<li style="--i:\d"/g), 5);
   for (const s of load.FLOW) { assert.ok(html.includes(`<b>${s.name}</b>`), s.name); assert.ok(html.includes(`title="${s.desc}"`), s.desc); }
@@ -63,7 +63,7 @@ test("불러오기: 샘플 타일의 접근 가능한 이름은 그대로(그래
     const text = t.replace(/<span class="ld-gl"[\s\S]*?<\/svg><span class="ld-gl-cap">[^<]*<\/span><\/span>/, "").replace(/<svg[\s\S]*?<\/svg>/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
     const s = load.SAMPLES[i];
     // 원래 마크업과 같은 구조(제목 + 설명)라 글자 이어붙임 결과가 같아야 한다
-    assert.equal(text.replace(/\s+/g, ""), `${s.title}${s.file.includes("문화의집") ? " 처음 추천" : ""}${s.desc}`.replace(/\s+/g, ""));
+    assert.equal(text.replace(/\s+/g, ""), `${s.title}${s.file.includes("청소년센터") ? " 처음 추천" : ""}${s.desc}`.replace(/\s+/g, ""));
   });
 });
 
@@ -107,7 +107,7 @@ test("샘플 그래프: 6개 샘플 모두 서술자가 있고, 막대 수는 �
     // 모든 도형 좌표가 그림 영역 안에 있다
     for (const m of svg.matchAll(/(?:x|y|cx|cy|width|height)="(-?[\d.]+)"/g)) assert.ok(Number.isFinite(+m[1]) && +m[1] >= -0.01 && +m[1] <= 100.01, `${file}: ${m[0]}`);
   }
-  assert.equal(barCount(GLYPHS["2026_문화의집_만족도_구글폼.csv"]), 5, "5점 척도 → 5칸");
+  assert.equal(barCount(GLYPHS["2026_청소년센터_만족도_구글폼.csv"]), 5, "5점 척도 → 5칸");
   assert.equal(barCount(GLYPHS["2026_생태탐험_7점척도_NPS.xlsx"]), 7, "7점 척도 → 7칸");
   assert.equal(barCount(GLYPHS["2026_진로탐색_사전사후.xlsx"]), 6, "3영역 × 사전·사후");
   assert.equal(barCount(GLYPHS["2026_진로체험_네이버폼.csv"]), 5, "문항 5개");
@@ -123,7 +123,7 @@ test("샘플 그래프: 막대 높이 = 값 / 척도 최대값 (분포는 값 / 
   pairs.groups.forEach((g, i) => { near(pr[2 * i].h, g.pre / 5 * 34, "사전"); near(pr[2 * i + 1].h, g.post / 5 * 34, "사후"); near(pr[2 * i].f, g.pre / 5, "사전 f"); });
   assert.equal(count(glyphSvg(pairs), /class="g-goal"/g), 2, "목표선은 목표가 있는 두 영역에만");
   // 구글폼: 5칸, 축 최대 50% → 가장 큰 막대(46.5%)가 93%
-  const dist5 = GLYPHS["2026_문화의집_만족도_구글폼.csv"];
+  const dist5 = GLYPHS["2026_청소년센터_만족도_구글폼.csv"];
   const dr = rects(glyphSvg(dist5)).filter(r => /\bbar\b/.test(r.cls));
   assert.equal(dr.length, 5);
   dist5.values.forEach((v, i) => near(dr[i].f, Math.min(1, v / dist5.axisMax), `구글폼 ${i + 1}점`));
@@ -159,12 +159,12 @@ test("샘플 그래프: 값과 척도는 samples/ 원본 파일과 일치", asyn
   assert.equal(kpi.rows.find(r => r[0] === "K3")[6], 0.5, "K3 목표 = 사전 대비 +0.5점");
   assert.ok(pre.rows.flat().every(v => typeof v !== "number" || (v >= 1 && v <= 5)) || true);
   // 구글폼: 전반적 만족(열 10) 분포 → 1~5점 5칸
-  ds = await load1("2026_문화의집_만족도_구글폼.csv");
+  ds = await load1("2026_청소년센터_만족도_구글폼.csv");
   let s = ds.sheets[0];
   const pts = { "전혀 그렇지 않다": 1, "그렇지 않다": 2, "보통이다": 3, "그렇다": 4, "매우 그렇다": 5 };
   const overall = col(s, 10).filter(v => v).map(v => pts[v]);
   assert.ok(overall.every(Boolean), "응답 문구가 모두 5점 척도 안");
-  GLYPHS["2026_문화의집_만족도_구글폼.csv"].values.forEach((v, i) => close(v, overall.filter(x => x === i + 1).length / overall.length, 0.002, `구글폼 ${i + 1}점`));
+  GLYPHS["2026_청소년센터_만족도_구글폼.csv"].values.forEach((v, i) => close(v, overall.filter(x => x === i + 1).length / overall.length, 0.002, `구글폼 ${i + 1}점`));
   // 네이버폼: 문자 응답을 5점으로 바꾼 문항 1~5(열 3~7) 평균
   ds = await load1("2026_진로체험_네이버폼.csv"); s = ds.sheets[0];
   const nv = { "매우 불만족": 1, "불만족": 2, "보통": 3, "만족": 4, "매우 만족": 5 };
