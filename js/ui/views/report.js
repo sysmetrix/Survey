@@ -39,7 +39,7 @@ if (typeof document !== "undefined") {
 
 const docOptions = () => {
   const s = state.settings;
-  return { fontPreset: s.fontPreset, fontBody: s.fontBody, fontHeading: s.fontHeading, baseSize: s.baseSize, lineSpacing: s.lineSpacing };
+  return { fontPreset: s.fontPreset, fontBody: s.fontBody, fontHeading: s.fontHeading, baseSize: s.baseSize, lineSpacing: s.lineSpacing, headerBlock: s.headerBlock };
 };
 
 /** 미리보기 용지에 서식 반영 (CSS 변수) */
@@ -96,6 +96,7 @@ function formatPanel() {
         <label class="field compact">글자 크기<select class="in" data-change="doc" data-field="baseSize">${FONT_SIZES.map(v => option(v, `${v}pt`, Number(s.baseSize) === v)).join("")}</select></label>
         <label class="field compact">줄 간격<select class="in" data-change="doc" data-field="lineSpacing">${LINE_SPACINGS.map(v => option(v, `${v}%`, Number(s.lineSpacing) === v)).join("")}</select></label>
       </div>
+      <label class="check" data-tip="${esc("문서 맨 위에 공문서 붙임 서식(왼쪽 '붙임' 남색 칸 + 오른쪽 제목 칸)을 넣습니다. 제목 칸에는 보고서 제목이 그대로 들어갑니다.")}"><input type="checkbox" ${s.headerBlock ? "checked" : ""} data-change="doc" data-field="headerBlock"> 상단 표제부 넣기(붙임 서식)</label>
       <div class="font-names">${names.map(n => `<div class="row gap wrap small"><span>${esc(n)} <span class="muted">${esc(roleOf(n))}</span></span>${fontBadge(n)}</div>`).join("")}</div>
       <div class="row gap wrap format-actions">
         <button class="btn sm sub" data-act="font-check" ${checkingFonts ? "disabled aria-busy=\"true\"" : ""}>${icon("check", 15)}${checkingFonts ? "글꼴 확인 중…" : "이 PC의 글꼴 확인"}</button>
@@ -206,7 +207,8 @@ export const actions = {
   },
   doc: el => {
     const f = el.dataset.field;
-    state.settings[f] = ["baseSize", "lineSpacing"].includes(f) ? Number(el.value) : f === "fontPreset" ? el.value : cleanFontName(el.value);
+    if (f === "headerBlock") state.settings.headerBlock = el.checked;
+    else state.settings[f] = ["baseSize", "lineSpacing"].includes(f) ? Number(el.value) : f === "fontPreset" ? el.value : cleanFontName(el.value);
     fontStatus = {};
     persistSettings(); refresh();
   },

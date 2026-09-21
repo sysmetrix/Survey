@@ -174,6 +174,39 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
       if (subtitle) addPara(subtitle, { font: "batang", size: B - 1, color: "#404040" }, { align: "CENTER", after: 900, line: 150 });
       return api;
     },
+    /** 상단 표제부(공문서 붙임 서식): 왼쪽 '붙임' 남색 칸 + 오른쪽 제목 칸(보고서 제목과 연동) — samples/문서 상단 헤더.hwpx 구조를 따름 */
+    titleBlock(text) {
+      const ratios = [5725, 880, 41300]; // 붙임 : 사이간격 : 제목 (원본 표제부 칸 비율)
+      const wsum = ratios.reduce((a, b) => a + b, 0);
+      const colW = ratios.map(w => Math.floor(bodyWidth * w / wsum));
+      colW[2] += bodyWidth - colW.reduce((s, v) => s + v, 0);
+      const sz = B + 5;
+      const cellH = Math.round(sz * 100 * 1.6 + 282);
+      const box = { left: NOLINE, right: NOLINE, top: LINE("0.12 mm"), bottom: LINE("0.12 mm") };
+      const bfLabel = reg.borderFill({ ...box, fill: "#42427F" });
+      const bfGap = reg.borderFill({ left: NOLINE, right: NOLINE, top: NOLINE, bottom: NOLINE, fill: null });
+      const bfTitle = reg.borderFill({ ...box, fill: null });
+      const cellP = (align, run, left = 0) => `<hp:p id="0" paraPrIDRef="${pp({ align, line: 160, left })}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">${run}</hp:p>`;
+      const tc = (c, w, bf, m, para) =>
+        `<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="${bf}">` +
+        `<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">${para}</hp:subList>` +
+        `<hp:cellAddr colAddr="${c}" rowAddr="0"/><hp:cellSpan colSpan="1" rowSpan="1"/>` +
+        `<hp:cellSz width="${w}" height="${cellH}"/><hp:cellMargin left="${m}" right="${m}" top="141" bottom="141"/></hp:tc>`;
+      const cells =
+        tc(0, colW[0], bfLabel, 510, cellP("CENTER", runs("붙임", { font: "dotum", size: sz, color: "#FFFFFF" }))) +
+        tc(1, colW[1], bfGap, 0, cellP("CENTER", runs("", { font: "dotum", size: sz }))) +
+        tc(2, colW[2], bfTitle, 510, cellP("LEFT", runs(text || "", { font: "batang", size: sz }), 2000));
+      const tblBf = reg.borderFill({ left: NOLINE, right: NOLINE, top: NOLINE, bottom: NOLINE, fill: null });
+      const id = objId++;
+      const tbl = `<hp:tbl id="${id}" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="1" rowCnt="1" colCnt="3" cellSpacing="0" borderFillIDRef="${tblBf}" noAdjust="0">` +
+        `<hp:sz width="${bodyWidth}" widthRelTo="ABSOLUTE" height="${cellH}" heightRelTo="ABSOLUTE" protect="0"/>` +
+        `<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>` +
+        `<hp:outMargin left="0" right="0" top="0" bottom="${mm(3)}"/><hp:inMargin left="510" right="510" top="141" bottom="141"/>` +
+        `<hp:tr>${cells}</hp:tr></hp:tbl>`;
+      paras.push(pOpen(pp({ align: "LEFT", line: 100, before: 0, after: 0 })) + `<hp:run charPrIDRef="${cp({ font: "batang", size: sz })}">${tbl}<hp:t/></hp:run></hp:p>`);
+      preview.push(`붙임 ${stripMarks(text || "")}`);
+      return api;
+    },
     /** level 1: 장 제목 (예: "Ⅰ. 사업 개요"), level 2: 절 제목 (예: "1. 추진 배경") */
     heading(level, text) {
       if (level <= 1) addPara(text, { font: "dotum", size: B + 4, bold: true }, { align: "LEFT", before: 1400, after: 500, line: 150, keepNext: true });

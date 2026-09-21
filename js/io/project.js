@@ -8,6 +8,7 @@ export function projectToJson(state, { includeData = false } = {}) {
     settings: {
       orgName: state.settings.orgName, author: state.settings.author, reportTitle: state.settings.reportTitle, date: state.settings.date, thresholds: state.settings.thresholds, scoreBasis: state.settings.scoreBasis,
       fontPreset: state.settings.fontPreset, fontBody: state.settings.fontBody, fontHeading: state.settings.fontHeading, baseSize: state.settings.baseSize, lineSpacing: state.settings.lineSpacing,
+      headerBlock: state.settings.headerBlock,
     },
     codebook: state.codebook, logicModel: state.logicModel, kpis: state.kpis,
     report: { overrides: state.overrides, overrideBase: state.overrideBase || {}, hidden: state.hidden, hiddenChapters: state.hiddenChapters },

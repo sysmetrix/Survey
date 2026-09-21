@@ -32,9 +32,10 @@ export function pickDocSettings(o = {}) {
     fontPreset: FONT_PRESETS.some(p => p.id === o.fontPreset) ? o.fontPreset : DEFAULT_FONT_PRESET,
     fontBody: cleanFontName(o.fontBody), fontHeading: cleanFontName(o.fontHeading),
     baseSize: num(o.baseSize, FONT_SIZES, DEFAULT_BASE_SIZE), lineSpacing: num(o.lineSpacing, LINE_SPACINGS, DEFAULT_LINE_SPACING),
+    headerBlock: !!o.headerBlock,
   };
 }
-const DOC_KEYS = ["fontPreset", "fontBody", "fontHeading", "baseSize", "lineSpacing"];
+const DOC_KEYS = ["fontPreset", "fontBody", "fontHeading", "baseSize", "lineSpacing", "headerBlock"];
 export function persistSettings() {
   const s = state.settings;
   try { localStorage.setItem(LS_KEY, JSON.stringify({ orgName: s.orgName, author: s.author, thresholds: s.thresholds, scoreBasis: s.scoreBasis, ...Object.fromEntries(DOC_KEYS.map(k => [k, s[k]])) })); return true; } catch { return false; }

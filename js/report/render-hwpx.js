@@ -39,13 +39,17 @@ export async function renderHwpx(blocks, env) {
     baseSize, lineSpacing: Number(d.lineSpacing) || DEFAULT_LINE_SPACING,
     fontSettings: { fontPreset: d.fontPreset, fontBody: d.fontBody, fontHeading: d.fontHeading },
   });
+  if (d.headerBlock) doc.titleBlock(env.title || "");
   const tableSize = compact => Math.max(7, baseSize - (compact ? 3 : 2));
   const nFig = blocks.filter(b => b.type === "figure").length;
   let figDone = 0;
   for (const b of blocks) {
     switch (b.type) {
       case "title": doc.title(b.text, b.subtitle); break;
-      case "heading": doc.heading(b.level, b.display); break;
+      case "heading":
+        if (b.level <= 1) doc.blank();
+        doc.heading(b.level, b.display);
+        break;
       case "bullets": b.items.forEach(it => doc.bullet(it.level, it.text)); break;
       case "paragraph":
         if (b.style === "note") doc.note(b.text); else doc.paragraph(b.text);
