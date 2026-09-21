@@ -67,6 +67,35 @@ test("실제 슬라이드 데이터로 만든 PPTX가 구조 검증을 통과함
   assert.match(slide1, /rot="900000"/, "15도 회전이 900000(=15×60000)로 들어감");
 });
 
+test("richtext(문단·글머리)·표 요소가 구조 검증을 통과하고 서식이 옳게 들어감", async () => {
+  const slides = [{
+    elements: [
+      { id: "rt1", kind: "richtext", x: 5, y: 5, w: 40, h: 30, rot: 0, z: 1, fontSize: 1.4, align: "left", blocks: [
+        { type: "paragraph", text: "**굵은** 문단" },
+        { type: "bullet", text: "목록 항목 1" },
+        { type: "bullet", text: "목록 항목 2" },
+      ] },
+      { id: "tb1", kind: "table", x: 50, y: 5, w: 40, h: 20, rot: 0, z: 1, headerRow: true, rows: [["열1", "열2"], ["a", "b"], ["c", "d"]] },
+    ],
+  }];
+  const bytes = await buildPptx({ slides, title: "표·목록 테스트", rasterizeChart: async () => null, JSZip });
+  const zip = await JSZip.loadAsync(bytes);
+  const entries = await Promise.all(Object.values(zip.files).filter(e => !e.dir).map(async e => ({ path: e.name, data: await e.async("uint8array") })));
+  assert.deepEqual(validatePptx(entries, DOMParser), []);
+  const dec = new TextDecoder();
+  const slide1 = dec.decode(entries.find(e => e.path === "ppt/slides/slide1.xml").data);
+  assert.match(slide1, /<a:t>굵은<\/a:t>/, "굵게 표식이 별도 런으로 분리됨");
+  assert.match(slide1, /<a:rPr[^>]*\bb="1"[^>]*>[^<]*<\/a:rPr><a:t>굵은<\/a:t>/, "굵은 텍스트 런에 b=\"1\" 적용");
+  assert.match(slide1, /<a:buChar char="•"\/>/, "글머리 기호 적용");
+  assert.match(slide1, /<a:t>목록 항목 1<\/a:t>/);
+  assert.match(slide1, /<p:graphicFrame>/, "표는 graphicFrame으로 들어감");
+  assert.match(slide1, /<a:t>열1<\/a:t>/);
+  assert.match(slide1, /<a:t>c<\/a:t>/);
+  // XML 파서로도 잘 구성된 문서인지 최종 확인
+  const doc = new DOMParser().parseFromString(slide1, "application/xml");
+  assert.equal(doc.getElementsByTagName("parsererror").length, 0);
+});
+
 test("빈 슬라이드 배열이면 명확한 오류를 던짐(조용히 깨진 파일을 만들지 않음)", async () => {
   await assert.rejects(() => buildPptx({ slides: [], JSZip, rasterizeChart: async () => null }), /슬라이드가 없습니다/);
 });

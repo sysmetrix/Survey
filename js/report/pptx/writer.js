@@ -18,18 +18,30 @@ function runXml(text, marks, sz, fontName) {
   return `<a:r><a:rPr ${attrs.join(" ")}>${fill}${font}</a:rPr><a:t>${escText(text)}</a:t></a:r>`;
 }
 
-/** 텍스트 요소 하나 → <a:p> 문단들(줄바꿈마다 한 문단, 보고서와 같은 표식 문자열의 굵게·색 등 반영) */
+const BULLET_PPR = `<a:buFont typeface="Arial"/><a:buChar char="•"/>`;
+
+/** 한 문단(줄) → <a:p> — 보고서와 같은 표식 문자열의 굵게·색 등을 <a:r> 런으로 옮김 */
+function lineParagraphXml(line, { sz, algn, weight, color, fontName, bullet }) {
+  const runs = parseInline(line);
+  const body = runs.length
+    ? runs.map(r => runXml(r.text, { bold: r.bold || weight === "bold", italic: r.italic, underline: r.underline, strike: r.strike, color: r.color || color }, sz, fontName)).join("")
+    : `<a:endParaRPr lang="ko-KR" sz="${sz}" dirty="0"/>`;
+  const pPr = bullet ? `<a:pPr algn="${algn}" marL="228600" indent="-228600">${BULLET_PPR}</a:pPr>` : `<a:pPr algn="${algn}"><a:buNone/></a:pPr>`;
+  return `<a:p>${pPr}${body}</a:p>`;
+}
+
+/** 텍스트 요소 하나 → <a:p> 문단들(줄바꿈마다 한 문단) */
 function paragraphsXml(markup, { fontSize = 1.8, align = "left", weight = null, color = null, fontName = null } = {}) {
   const sz = cqwToHundredthPt(fontSize);
   const algn = ALIGN[align] || "l";
-  const lines = String(markup ?? "").split("\n");
-  return lines.map(line => {
-    const runs = parseInline(line);
-    const body = runs.length
-      ? runs.map(r => runXml(r.text, { bold: r.bold || weight === "bold", italic: r.italic, underline: r.underline, strike: r.strike, color: r.color || color }, sz, fontName)).join("")
-      : `<a:endParaRPr lang="ko-KR" sz="${sz}" dirty="0"/>`;
-    return `<a:p><a:pPr algn="${algn}"/>${body}</a:p>`;
-  }).join("");
+  return String(markup ?? "").split("\n").map(line => lineParagraphXml(line, { sz, algn, weight, color, fontName, bullet: false })).join("");
+}
+
+/** richtext 요소(문단·글머리 블록 배열) → <a:p> 문단들 — 블록 하나가 줄바꿈을 담고 있으면 같은 종류로 이어서 나눔 */
+function richtextParagraphsXml(blocks, { fontSize = 1.4, align = "left", fontName = null } = {}) {
+  const sz = cqwToHundredthPt(fontSize);
+  const algn = ALIGN[align] || "l";
+  return (blocks || []).flatMap(b => String(b.text ?? "").split("\n").map(line => lineParagraphXml(line, { sz, algn, weight: null, color: null, fontName, bullet: b.type === "bullet" }))).join("");
 }
 
 function xfrmXml(el) {
@@ -40,16 +52,42 @@ function xfrmXml(el) {
 let shapeSeq = 1;
 const nextShapeId = () => ++shapeSeq;
 
-/** 텍스트·도형 요소 → <p:sp> */
+const TEXTUAL_KINDS = new Set(["text", "richtext"]);
+
+/** 텍스트·richtext·도형 요소 → <p:sp> */
 function spXml(el, opts) {
   const id = nextShapeId();
+  const isTextual = TEXTUAL_KINDS.has(el.kind);
   const prst = el.kind === "shape" ? (el.shapeType === "ellipse" ? "ellipse" : "rect") : "rect";
   const fill = el.kind === "shape" ? (el.fill ? `<a:solidFill><a:srgbClr val="${hex(el.fill)}"/></a:solidFill>` : `<a:noFill/>`) : "<a:noFill/>";
   const line = el.kind === "shape" && el.strokeWidth ? `<a:ln w="${Math.round(el.strokeWidth * 12700)}"><a:solidFill><a:srgbClr val="${hex(el.stroke || "#000000")}"/></a:solidFill></a:ln>` : "<a:ln><a:noFill/></a:ln>";
-  const body = el.kind === "text"
-    ? `<p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:normAutofit/></a:bodyPr><a:lstStyle/>${paragraphsXml(el.markup, { fontSize: el.fontSize, align: el.align, weight: el.weight, color: el.color, fontName: opts?.fontName })}</p:txBody>`
+  const paragraphs = el.kind === "richtext"
+    ? richtextParagraphsXml(el.blocks, { fontSize: el.fontSize, align: el.align, fontName: opts?.fontName })
+    : paragraphsXml(el.markup, { fontSize: el.fontSize, align: el.align, weight: el.weight, color: el.color, fontName: opts?.fontName });
+  const body = isTextual
+    ? `<p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:normAutofit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody>`
     : `<p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody>`;
-  return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${el.kind === "text" ? "TextBox" : "Shape"} ${id}"/><p:cNvSpPr${el.kind === "text" ? ' txBox="1"' : ""}/><p:nvPr/></p:nvSpPr><p:spPr>${xfrmXml(el)}<a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${fill}${line}</p:spPr>${body}</p:sp>`;
+  return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${isTextual ? "TextBox" : "Shape"} ${id}"/><p:cNvSpPr${isTextual ? ' txBox="1"' : ""}/><p:nvPr/></p:nvSpPr><p:spPr>${xfrmXml(el)}<a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${fill}${line}</p:spPr>${body}</p:sp>`;
+}
+
+/** 표 요소 → <p:graphicFrame><a:tbl> (회전은 표에 적용하지 않음 — OOXML 표 프레임은 회전을 지원하지 않음) */
+function tableXml(el) {
+  const id = nextShapeId();
+  const rows = el.rows || [];
+  const nCols = rows[0]?.length || 1;
+  const colW = Math.max(1, Math.floor(pctToEmuX(el.w) / nCols));
+  const rowH = Math.max(1, Math.floor(pctToEmuY(el.h) / Math.max(1, rows.length)));
+  const grid = `<a:tblGrid>${Array.from({ length: nCols }, () => `<a:gridCol w="${colW}"/>`).join("")}</a:tblGrid>`;
+  const trs = rows.map((row, r) => {
+    const header = el.headerRow && r === 0;
+    const tcs = row.map(cell => {
+      const runs = parseInline(String(cell ?? ""));
+      const body = runs.length ? runs.map(run => runXml(run.text, { bold: run.bold || header, italic: run.italic, underline: run.underline, strike: run.strike, color: run.color }, 1400, null)).join("") : `<a:endParaRPr lang="ko-KR" sz="1400" dirty="0"/>`;
+      return `<a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p>${body}</a:p></a:txBody><a:tcPr anchor="ctr"/></a:tc>`;
+    }).join("");
+    return `<a:tr h="${rowH}">${tcs}</a:tr>`;
+  }).join("");
+  return `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${id}" name="Table ${id}"/><p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="${pctToEmuX(el.x)}" y="${pctToEmuY(el.y)}"/><a:ext cx="${pctToEmuX(el.w)}" cy="${pctToEmuY(el.h)}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1" bandRow="1"><a:tableStyleId>{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}</a:tableStyleId></a:tblPr>${grid}${trs}</a:tbl></a:graphicData></a:graphic></p:graphicFrame>`;
 }
 
 /** 이미지·차트(래스터 PNG) 요소 → <p:pic> + 이 슬라이드의 관계(rels)에 추가할 항목 */
@@ -87,6 +125,8 @@ export async function buildSlideXml(entry, { fontName, rasterizeChart } = {}) {
       const relId = `rId${relSeq}`;
       images.push({ relId, bytes, ext });
       parts.push(picXml(el, relId));
+    } else if (el.kind === "table") {
+      parts.push(tableXml(el));
     } else {
       parts.push(spXml(el, { fontName }));
     }

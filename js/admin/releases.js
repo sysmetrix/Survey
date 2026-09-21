@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.24.0", date: "2026-09-21", title: "발표 슬라이드에 표·글머리 목록 텍스트 상자 추가",
+    groups: {
+      "발표 모드": [
+        "자유배치 슬라이드에 '목록'(문단·글머리 여러 개를 담는 텍스트 상자)과 '표'(행·열 추가·삭제, 첫 행 머리글 지정) 요소를 새로 추가할 수 있음",
+        "표 칸·목록 항목은 각각 눌러서 바로 고칠 수 있고, PPTX로 저장하면 표는 PowerPoint 기본 표 서식(줄무늬 배경)으로, 목록은 실제 글머리 기호가 붙은 문단으로 들어감(둘 다 실제 PowerPoint로 열어 확인함)",
+      ],
+    },
+  },
+  {
     version: "5.23.0", date: "2026-09-21", title: "발표 자료를 PowerPoint(PPTX)로 저장 — 편집 가능한 네이티브 파일",
     groups: {
       "발표 모드": [

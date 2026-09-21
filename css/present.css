@@ -213,6 +213,13 @@ body.presenting .container { max-width: none; padding: 0; }
 .s-el-shape-ellipse { border-radius: 50%; }
 .s-el-chart { width: 100%; height: 100%; }
 .s-el-chart svg { width: 100%; height: 100%; }
+.s-el-richtext { width: 100%; height: 100%; overflow: auto; line-height: 1.35; }
+.s-el-para, .s-el-bullet { margin: 0 0 .5em; }
+.s-el-bullet { display: flex; gap: .4em; }
+.s-el-bullet-dot { flex: none; }
+.s-el-table { width: 100%; border-collapse: collapse; font-size: .85em; }
+.s-el-table th, .s-el-table td { border: 1px solid currentColor; padding: .3em .5em; text-align: left; }
+.s-el-table th { font-weight: 700; background: rgba(128, 128, 128, .15); }
 .editing .s-el { cursor: move; outline: 1px dashed transparent; }
 .editing .s-el:hover { outline-color: var(--brand-soft-2); }
 .editing .s-el-handle { display: none; }

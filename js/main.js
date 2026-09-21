@@ -9,6 +9,7 @@ import { installTooltips } from "./ui/tooltip.js";
 import { installFormatToolbar } from "./ui/format-toolbar.js";
 import { markupToHtml, htmlToMarkup } from "./ui/inline-edit.js";
 import { installScrollHints } from "./ui/scrollhint.js";
+import { parseDeckKey } from "./present/edit/keys.js";
 import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redoChange, canUndo, canRedo } from "./ui/history/manager.js";
 import * as load from "./ui/views/load.js";
 import * as setup from "./ui/views/setup.js";
@@ -23,7 +24,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.23.0";
+export const APP_VERSION = "5.24.0";
 const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -143,15 +144,26 @@ document.addEventListener("focusout", e => {
   const key = el.dataset.edit;
   if (text !== el.dataset.raw) {
     if (key.startsWith("deck:")) {
-      // 발표 슬라이드 문구 편집: "deck:<슬라이드id>.<필드>"(자동 문구) 또는 "deck:<슬라이드id>.el:<요소id>"(자유배치 텍스트 박스)
-      const [slideId, field] = key.slice(5).split(/\.(.+)/);
+      // 발표 슬라이드 문구 편집 — deck-key.js 의 형식 참고(자동 문구·요소 전체·richtext 문단·표 칸)
+      const parsed = parseDeckKey(key);
+      const { slideId } = parsed;
       const bySlide = { ...state.deckOverrides.bySlide };
       const entry = bySlide[slideId] || { mode: "auto", text: {}, textBase: {}, elements: [] };
-      if (field.startsWith("el:")) {
-        const elId = field.slice(3);
-        const elements = (entry.elements || []).map(it => (it.id === elId ? { ...it, markup: text } : it));
+      if (parsed.scope === "element") {
+        const elements = (entry.elements || []).map(it => (it.id === parsed.elId ? { ...it, markup: text } : it));
+        bySlide[slideId] = { ...entry, elements };
+      } else if (parsed.scope === "block") {
+        const elements = (entry.elements || []).map(it => (it.id === parsed.elId
+          ? { ...it, blocks: (it.blocks || []).map((b, i) => (i === parsed.blockIdx ? { ...b, text } : b)) }
+          : it));
+        bySlide[slideId] = { ...entry, elements };
+      } else if (parsed.scope === "cell") {
+        const elements = (entry.elements || []).map(it => (it.id === parsed.elId
+          ? { ...it, rows: (it.rows || []).map((row, r) => (r === parsed.row ? row.map((c, ci) => (ci === parsed.col ? text : c)) : row)) }
+          : it));
         bySlide[slideId] = { ...entry, elements };
       } else {
+        const field = parsed.field;
         bySlide[slideId] = { ...entry, text: { ...entry.text, [field]: text }, textBase: { ...entry.textBase, [field]: el.dataset.auto } };
       }
       state.deckOverrides = { ...state.deckOverrides, bySlide };

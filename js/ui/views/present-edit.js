@@ -37,6 +37,7 @@ function updateElement(slideId, elId, patch) {
 }
 function addElement(slideId, el) { patchEntry(slideId, { elements: [...elementsOf(slideId), el] }); }
 function removeElement(slideId, elId) { patchEntry(slideId, { elements: elementsOf(slideId).filter(x => x.id !== elId) }); }
+const findEl = (slideId, elId) => elementsOf(slideId).find(x => x.id === elId);
 
 function teardownInteractions() { cleanupFns.forEach(fn => fn()); cleanupFns = []; }
 
@@ -97,6 +98,20 @@ function propPanelHtml(slide) {
       <label class="field compact"><span>채우기색</span><input class="in" type="color" value="${el.fill || "#3B5A7A"}" data-change="pe-el-prop" data-prop="fill"></label>
       <label class="field compact"><span>테두리색</span><input class="in" type="color" value="${el.stroke || "#000000"}" data-change="pe-el-prop" data-prop="stroke"></label>
       <label class="field compact"><span>테두리 두께</span><input class="in num" type="number" min="0" value="${el.strokeWidth || 0}" data-change="pe-el-prop" data-prop="strokeWidth"></label>`;
+  } else if (el.kind === "richtext") {
+    kindFields = `
+      <label class="field compact"><span>글자 크기</span><input class="in num" type="number" step="0.1" min="0.6" max="10" value="${el.fontSize ?? 1.4}" data-change="pe-el-prop" data-prop="fontSize"></label>
+      <label class="field compact"><span>정렬</span><select class="in" data-change="pe-el-prop" data-prop="align">${["left", "center", "right"].map(a => `<option value="${a}"${el.align === a ? " selected" : ""}>${{ left: "왼쪽", center: "가운데", right: "오른쪽" }[a]}</option>`).join("")}</select></label>
+      <div class="row gap"><button class="btn sm" data-act="pe-block-add" data-type="paragraph">${icon("doc", 14)}문단 추가</button><button class="btn sm" data-act="pe-block-add" data-type="bullet">${icon("grid", 14)}글머리 추가</button>${(el.blocks || []).length ? `<button class="btn sm danger" data-act="pe-block-remove-last">${icon("x", 14)}마지막 항목 삭제</button>` : ""}</div>`;
+  } else if (el.kind === "table") {
+    kindFields = `
+      <label class="check"><input type="checkbox" data-change="pe-table-header" ${el.headerRow ? "checked" : ""}> 첫 행을 머리글로</label>
+      <div class="row gap wrap">
+        <button class="btn sm" data-act="pe-table-row-add">${icon("grid", 14)}행 추가</button>
+        <button class="btn sm" data-act="pe-table-row-remove">행 삭제</button>
+        <button class="btn sm" data-act="pe-table-col-add">열 추가</button>
+        <button class="btn sm" data-act="pe-table-col-remove">열 삭제</button>
+      </div>`;
   }
   return `<div class="pe-prop-grid">${num("X%", "x", 0.5)}${num("Y%", "y", 0.5)}${num("너비%", "w", 0.5)}${num("높이%", "h", 0.5)}${num("회전°", "rot", 1)}</div>
     <div class="pe-prop-grid">${kindFields}</div>
@@ -134,6 +149,8 @@ export function render() {
         ${custom ? `
         <span class="rt-sep" aria-hidden="true"></span>
         <button class="btn sm" data-act="pe-add-text">${icon("doc", 14)}텍스트</button>
+        <button class="btn sm" data-act="pe-add-richtext">${icon("notes", 14)}목록</button>
+        <button class="btn sm" data-act="pe-add-table">${icon("table", 14)}표</button>
         <label class="btn sm">${icon("chart", 14)}이미지<input type="file" accept="image/*" hidden data-change="pe-add-image"></label>
         <button class="btn sm" data-act="pe-add-shape">${icon("grid", 14)}도형</button>` : ""}
         <span class="rt-spacer"></span>
@@ -210,6 +227,69 @@ export const actions = {
     const el = { id: newElId(), kind: "shape", x: 30, y: 30, w: 30, h: 20, rot: 0, z: nextZ(slide.id), shapeType: "rect", fill: "#3B5A7A", stroke: null, strokeWidth: 0 };
     addElement(slide.id, el);
     selectedElId = el.id;
+    commit();
+  },
+  "pe-add-richtext": () => {
+    const slide = currentSlide(); if (!slide) return;
+    const el = { id: newElId(), kind: "richtext", x: 25, y: 25, w: 50, h: 40, rot: 0, z: nextZ(slide.id), fontSize: 1.4, align: "left", blocks: [{ type: "paragraph", text: "새 문단" }] };
+    addElement(slide.id, el);
+    selectedElId = el.id;
+    commit();
+  },
+  "pe-add-table": () => {
+    const slide = currentSlide(); if (!slide) return;
+    const el = { id: newElId(), kind: "table", x: 20, y: 20, w: 60, h: 30, rot: 0, z: nextZ(slide.id), headerRow: true, rows: [["제목1", "제목2"], ["내용1", "내용2"]] };
+    addElement(slide.id, el);
+    selectedElId = el.id;
+    commit();
+  },
+  "pe-block-add": el => {
+    const slide = currentSlide(); if (!slide || !selectedElId) return;
+    const cur = findEl(slide.id, selectedElId);
+    if (!cur) return;
+    const type = el.dataset.type === "bullet" ? "bullet" : "paragraph";
+    updateElement(slide.id, selectedElId, { blocks: [...(cur.blocks || []), { type, text: type === "bullet" ? "새 항목" : "새 문단" }] });
+    commit();
+  },
+  "pe-block-remove-last": () => {
+    const slide = currentSlide(); if (!slide || !selectedElId) return;
+    const cur = findEl(slide.id, selectedElId);
+    if (!cur?.blocks?.length) return;
+    updateElement(slide.id, selectedElId, { blocks: cur.blocks.slice(0, -1) });
+    commit();
+  },
+  "pe-table-header": el => {
+    const slide = currentSlide(); if (!slide || !selectedElId) return;
+    updateElement(slide.id, selectedElId, { headerRow: el.checked });
+    commit();
+  },
+  "pe-table-row-add": () => {
+    const slide = currentSlide(); if (!slide || !selectedElId) return;
+    const cur = findEl(slide.id, selectedElId);
+    if (!cur) return;
+    const cols = cur.rows[0]?.length || 2;
+    updateElement(slide.id, selectedElId, { rows: [...cur.rows, Array(cols).fill("")] });
+    commit();
+  },
+  "pe-table-row-remove": () => {
+    const slide = currentSlide(); if (!slide || !selectedElId) return;
+    const cur = findEl(slide.id, selectedElId);
+    if (!cur || cur.rows.length <= 1) return;
+    updateElement(slide.id, selectedElId, { rows: cur.rows.slice(0, -1) });
+    commit();
+  },
+  "pe-table-col-add": () => {
+    const slide = currentSlide(); if (!slide || !selectedElId) return;
+    const cur = findEl(slide.id, selectedElId);
+    if (!cur) return;
+    updateElement(slide.id, selectedElId, { rows: cur.rows.map(r => [...r, ""]) });
+    commit();
+  },
+  "pe-table-col-remove": () => {
+    const slide = currentSlide(); if (!slide || !selectedElId) return;
+    const cur = findEl(slide.id, selectedElId);
+    if (!cur || (cur.rows[0]?.length || 0) <= 1) return;
+    updateElement(slide.id, selectedElId, { rows: cur.rows.map(r => r.slice(0, -1)) });
     commit();
   },
   "pe-add-image": async el => {
