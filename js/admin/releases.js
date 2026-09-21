@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.35.4", date: "2026-09-21", title: "웹 미리보기 표제부 제목 글꼴 누락 수정",
+    groups: {
+      "보고서": [
+        "상단 표제부(붙임 서식) 웹 미리보기에서 '붙임' 칸만 HY헤드라인M로 보이고 제목 칸은 본문 글꼴로 보이던 것을 수정 — 이제 HWPX 파일과 동일하게 두 칸 모두 HY헤드라인M로 표시됨",
+      ],
+    },
+  },
+  {
     version: "5.35.3", date: "2026-09-21", title: "보고서 화면 사용법에서 Ctrl+B 단축키 안내 삭제",
     groups: {
       "보고서": [

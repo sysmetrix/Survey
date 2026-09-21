@@ -613,7 +613,7 @@ h3.flush { margin: 0; }
 /* 상단 표제부(공문서 붙임 서식) 미리보기 — 붙임 칸은 설정한 서식과 무관하게 HY헤드라인M 고정(HWPX 내보내기와 동일) */
 .r-titleblock { display: flex; align-items: stretch; border-top: 1px solid var(--paper-rule); border-bottom: 1px solid var(--paper-rule); margin: 0 0 20px; }
 .r-tb-label { flex: none; display: flex; align-items: center; justify-content: center; padding: 8px 26px; background: #42427F; color: #fff; font-family: "HY헤드라인M", var(--paper-heading, "함초롬돋움"), var(--font); font-size: var(--paper-h1-size, 20px); font-weight: 700; white-space: nowrap; }
-.r-tb-title { flex: 1; display: flex; align-items: center; min-width: 0; padding: 8px 20px; font-family: var(--paper-body, "함초롬바탕"), var(--font); font-size: var(--paper-h1-size, 20px); }
+.r-tb-title { flex: 1; display: flex; align-items: center; min-width: 0; padding: 8px 20px; font-family: "HY헤드라인M", var(--paper-heading, "함초롬돋움"), var(--font); font-size: var(--paper-h1-size, 20px); }
 .r-h1 { font-family: var(--paper-heading, "함초롬돋움"), var(--font); font-size: var(--paper-h1-size, 20px); margin: 28px 0 10px; color: var(--paper-ink); scroll-margin-top: calc(var(--topbar-h) + var(--rtbar-h) + 16px); }
 .paper.view .r-h1:first-child { margin-top: 0; }
 .r-h2 { font-family: var(--paper-heading, "함초롬돋움"), var(--font); font-size: var(--paper-h2-size, 17px); margin: 20px 0 6px; }
