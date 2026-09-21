@@ -17,3 +17,7 @@ export const cqwToHundredthPt = cqw => Math.max(100, Math.round((cqw / 100) * SL
 
 /** 회전 각도(도, 시계방향 양수) → PPTX 60,000분의 1도 단위(<a:xfrm rot="">). 음수 각도도 그대로 지원 */
 export const degToRot60000 = deg => Math.round(((Number(deg) || 0) % 360) * 60000);
+
+/** 슬라이드 편집기 입력창용 — 저장 단위(cqw, 슬라이드 폭의 1%)와 사용자가 아는 pt(960pt 폭 기준) 사이 변환. 저장값은 계속 cqw */
+export const cqwToPt = cqw => Math.round((Number(cqw) || 0) * (SLIDE_W_PT / 100) * 10) / 10;
+export const ptToCqw = pt => Math.round(((Number(pt) || 0) / (SLIDE_W_PT / 100)) * 1000) / 1000;

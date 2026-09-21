@@ -86,5 +86,67 @@ export function validatePptx(entries, DOMParserImpl) {
     else if (!/Type="[^"]*\/relationships\/slideLayout"/.test(relsSrc)) errors.push(`${relsPath}: slideLayout 관계 없음`);
   }
 
+  // ── 발표자 노트: notesMaster·notesSlide·theme2 와 그 연결(양방향)이 서로 맞는지 ──
+  const resolve = (fromPath, target) => new URL(target, `file:///${fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/") + 1) : ""}`).pathname.replace(/^\//, "");
+  const relList = p => {
+    const src = text(relsFor(p).relsPath) || "";
+    return [...src.matchAll(/<Relationship\b([^>]*)\/?>/g)].map(m => {
+      const attr = n => (new RegExp(`\\b${n}="([^"]*)"`).exec(m[1]) || [])[1] || "";
+      return { id: attr("Id"), type: attr("Type").replace(/^.*\//, ""), target: /^https?:/.test(attr("Target")) ? attr("Target") : resolve(p, attr("Target")) };
+    });
+  };
+  const OV = { notesMaster: "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml", notesSlide: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml", theme: "application/vnd.openxmlformats-officedocument.theme+xml" };
+  const overrideType = new Map([...ct.matchAll(/<Override PartName="([^"]+)" ContentType="([^"]+)"/g)].map(m => [m[1], m[2]]));
+  const notesMasters = entries.map(e => e.path).filter(p => /^ppt\/notesMasters\/notesMaster\d+\.xml$/.test(p));
+  const notesSlides = entries.map(e => e.path).filter(p => /^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(p));
+  const hasNotesParts = notesMasters.length > 0 || notesSlides.length > 0;
+  const hasIdLst = /<p:notesMasterIdLst>/.test(presXml);
+  if (hasNotesParts && !hasIdLst) errors.push("presentation.xml: 노트 파트가 있는데 notesMasterIdLst 가 없음");
+  if (!hasNotesParts && hasIdLst) errors.push("presentation.xml: notesMasterIdLst 가 있는데 노트 파트가 없음");
+  if (hasIdLst) {
+    // 스키마 순서: sldMasterIdLst → notesMasterIdLst → sldIdLst
+    const iM = presXml.indexOf("<p:sldMasterIdLst>"), iN = presXml.indexOf("<p:notesMasterIdLst>"), iS = presXml.indexOf("<p:sldIdLst>");
+    if (!(iM >= 0 && iM < iN && iN < iS)) errors.push("presentation.xml: notesMasterIdLst 위치 오류(sldMasterIdLst 뒤, sldIdLst 앞이어야 함)");
+    const nmId = (/<p:notesMasterId [^>]*r:id="([^"]+)"/.exec(presXml) || [])[1];
+    const nmRel = relList("ppt/presentation.xml").find(r => r.id === nmId);
+    if (!nmRel) errors.push(`presentation.xml: notesMasterId r:id="${nmId}" 관계 없음`);
+    else if (nmRel.type !== "notesMaster") errors.push(`presentation.xml.rels: ${nmId} 의 관계 종류가 notesMaster 가 아님(${nmRel.type})`);
+    else if (!notesMasters.includes(nmRel.target)) errors.push(`presentation.xml.rels: notesMaster 대상 없음 -> ${nmRel.target}`);
+  }
+  if (notesMasters.length > 1) errors.push(`노트 마스터가 ${notesMasters.length}개(1개여야 함)`);
+  for (const p of notesMasters) {
+    checkRefs(p);
+    if (overrideType.get(`/${p}`) !== OV.notesMaster) errors.push(`[Content_Types].xml 에 notesMaster Override 없음: ${p}`);
+    const themes = relList(p).filter(r => r.type === "theme");
+    if (themes.length !== 1) errors.push(`${p}: theme 관계가 정확히 1개여야 함(${themes.length}개)`);
+    for (const t of themes) {
+      if (overrideType.get(`/${t.target}`) !== OV.theme) errors.push(`[Content_Types].xml 에 theme Override 없음: ${t.target}`);
+      if (t.target === "ppt/theme/theme1.xml") errors.push(`${p}: 슬라이드 마스터와 같은 테마(theme1)를 공유할 수 없음`);
+    }
+    if (!/<p:ph [^>]*type="sldImg"/.test(text(p) || "")) errors.push(`${p}: 슬라이드 그림(sldImg) 자리 없음`);
+    if (!/<p:ph [^>]*type="body"/.test(text(p) || "")) errors.push(`${p}: 본문(body) 자리 없음`);
+  }
+  for (const p of notesSlides) {
+    checkRefs(p);
+    if (overrideType.get(`/${p}`) !== OV.notesSlide) errors.push(`[Content_Types].xml 에 notesSlide Override 없음: ${p}`);
+    const src = text(p) || "";
+    if (!/<p:ph [^>]*type="sldImg"/.test(src)) errors.push(`${p}: 슬라이드 그림(sldImg) 자리 없음`);
+    if (!/<p:ph [^>]*type="body"/.test(src)) errors.push(`${p}: 본문(body) 자리 없음`);
+    const rels = relList(p);
+    const masterRels = rels.filter(r => r.type === "notesMaster"), slideRels = rels.filter(r => r.type === "slide");
+    if (masterRels.length !== 1 || !notesMasters.includes(masterRels[0].target)) errors.push(`${p}: 노트 마스터 관계가 정확히 1개여야 함`);
+    if (slideRels.length !== 1) { errors.push(`${p}: 슬라이드 관계가 정확히 1개여야 함(${slideRels.length}개)`); continue; }
+    if (!slideFiles.includes(slideRels[0].target)) { errors.push(`${p}: 슬라이드 대상 없음 -> ${slideRels[0].target}`); continue; }
+    if (!relList(slideRels[0].target).some(r => r.type === "notesSlide" && r.target === p)) errors.push(`${slideRels[0].target}: ${p} 로 되돌아가는 notesSlide 관계 없음(슬라이드↔노트 짝 불일치)`);
+  }
+  for (const p of slideFiles) {
+    const nrels = relList(p).filter(r => r.type === "notesSlide");
+    if (nrels.length > 1) errors.push(`${p}: notesSlide 관계가 ${nrels.length}개(1개까지)`);
+    for (const r of nrels) {
+      if (!notesSlides.includes(r.target)) continue; // 대상 없음은 checkRefs 가 이미 보고
+      if (!relList(r.target).some(x => x.type === "slide" && x.target === p)) errors.push(`${r.target}: ${p} 로 향하는 slide 관계 없음(슬라이드↔노트 짝 불일치)`);
+    }
+  }
+
   return errors;
 }

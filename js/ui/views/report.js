@@ -12,6 +12,7 @@ import { refresh } from "../router.js";
 import { icon } from "../icons.js";
 import { isFontInstalled, fontNameCandidates } from "../fontcheck.js";
 import { stripInlineMarks } from "../../report/inline-marks.js";
+import { ORG_EXAMPLE, AUTHOR_EXAMPLE } from "../examples.js";
 
 let includeData = false;
 let fontStatus = {}; // 글꼴 이름 → true/false/null (설치 확인 결과)
@@ -157,8 +158,8 @@ export function render() {
     <aside class="card side no-print">
       <h2>보고서 설정</h2>
       <div class="grid-2in">
-        <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" data-change="setting" data-field="orgName"></label>
-        <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="예: 홍길동" data-change="setting" data-field="author"></label>
+        <label class="field">기관·부서명<input class="in" value="${esc(state.settings.orgName)}" placeholder="${ORG_EXAMPLE}" data-change="setting" data-field="orgName"></label>
+        <label class="field">담당자명<input class="in" value="${esc(state.settings.author)}" placeholder="${AUTHOR_EXAMPLE}" data-change="setting" data-field="author"></label>
       </div>
       <p class="small muted">이 브라우저에 저장되어 다음 보고서에도 그대로 쓰입니다.</p>
       <label class="field">보고서 제목<input class="in" value="${esc(state.settings.reportTitle)}" placeholder="${esc(title)}" data-change="setting" data-field="reportTitle"></label>

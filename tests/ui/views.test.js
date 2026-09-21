@@ -18,7 +18,10 @@ import * as updatesView from "../../js/ui/views/updates.js";
 import { splitChapters } from "../../js/report/render-html.js";
 import { makeTemplate } from "../../js/io/template-xlsx.js";
 import { projectToJson, parseProject } from "../../js/io/project.js";
-import { allDeckSlides } from "../../js/ui/store.js";
+import { allDeckSlides, applyEditable, applyProject } from "../../js/ui/store.js";
+import { captureEditable } from "../../js/history/snapshot.js";
+import { chartChoices } from "../../js/ui/present-edit-model.js";
+import { cqwToPt, ptToCqw } from "../../js/report/pptx/emu.js";
 const require = createRequire(import.meta.url);
 const XLSX = require("../../vendor/xlsx-0.20.3.full.min.js");
 const Papa = require("../../vendor/papaparse-5.4.1.min.js");
@@ -214,6 +217,300 @@ test("슬라이드 편집: 자유배치 전환, 요소 추가, 슬라이드 추�
   assert.ok(allDeckSlides().some(s => s.id === first.id), "숨겨도 목록 자체에서는 안 없어짐(복원 가능)");
 });
 
+test("슬라이드 편집: 슬라이드 배경색·발표자 노트는 자동 슬라이드에도, 저장·복원·프로젝트 파일을 거쳐도 유지", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  const first = allDeckSlides()[0];
+  const autoNotes = [...first.notes];
+  assert.ok(autoNotes.length > 0, "표지 자동 노트가 있음");
+  presentEdit.actions["pe-select"]({ dataset: { id: first.id } });
+
+  let html = presentEdit.render({});
+  assert.ok(html.includes("pe-tools") && html.includes('data-act="pe-detach"'), "자동 슬라이드에는 자유배치로 바꾸기 단추");
+  assert.ok(/data-act="pe-add-text"[^>]*disabled/.test(html), "자동 슬라이드에서는 삽입 단추 비활성");
+  assert.ok(html.includes("슬라이드 속성") && html.includes('data-change="pe-slide-notes"'), "선택 요소가 없으면 슬라이드 속성 패널");
+  assert.equal(bad(html), null);
+
+  // 배경색: 자동 슬라이드가 자유배치로 바뀌면 안 되고, 발표·편집 화면 슬라이드에 그대로 반영
+  presentEdit.actions["pe-slide-bg"]({ value: "#112233" });
+  assert.equal(state.deckOverrides.bySlide[first.id].mode, "auto");
+  assert.equal(allDeckSlides()[0].bg, "#112233");
+  assert.equal(present.visibleSlides()[0].bg, "#112233", "발표·내보내기가 쓰는 목록에도 bg");
+  assert.ok(present.render({ sub: "1" }).includes('style="background:#112233"'), "발표 화면 슬라이드에 배경색");
+  presentEdit.actions["pe-slide-bg"]({ value: "red;background:url(x)" });
+  assert.equal(allDeckSlides()[0].bg, undefined, "안전하지 않은 색은 저장하지 않음");
+  presentEdit.actions["pe-slide-bg"]({ value: "#112233" });
+
+  // 발표자 노트: 줄마다 하나, 직접 고친 값이 자동 노트보다 우선(발표 모드 노트 패널·내보내기와 같은 slide.notes)
+  presentEdit.actions["pe-slide-notes"]({ value: "첫 줄\n\n둘째 줄" });
+  assert.deepEqual(allDeckSlides()[0].notes, ["첫 줄", "둘째 줄"]);
+  assert.deepEqual(present.visibleSlides()[0].notes, ["첫 줄", "둘째 줄"]);
+  html = presentEdit.render({});
+  assert.ok(html.includes("첫 줄\n둘째 줄") && html.includes('data-act="pe-slide-notes-reset"'));
+
+  // 저장 → 복원(되돌리기·버전) · 프로젝트 파일 왕복에서도 bg·notes 유지
+  const saved = JSON.parse(JSON.stringify(captureEditable(state)));
+  const fromFile = parseProject(projectToJson(state));
+  assert.equal(fromFile.present.overrides.bySlide[first.id].bg, "#112233");
+  state.deckOverrides = { bySlide: {}, customSlides: {} };
+  assert.equal(allDeckSlides()[0].bg, undefined);
+  applyEditable(saved);
+  assert.equal(allDeckSlides()[0].bg, "#112233");
+  assert.deepEqual(allDeckSlides()[0].notes, ["첫 줄", "둘째 줄"]);
+  state.deckOverrides = { bySlide: {}, customSlides: {} };
+  applyProject(fromFile);
+  assert.equal(allDeckSlides()[0].bg, "#112233");
+  assert.deepEqual(allDeckSlides()[0].notes, ["첫 줄", "둘째 줄"]);
+
+  // 자동 노트와 같은 내용으로 되돌리면 직접 고친 값으로 치지 않음, 지우기·되돌리기
+  presentEdit.actions["pe-slide-notes"]({ value: autoNotes.join("\n") });
+  assert.equal(state.deckOverrides.bySlide[first.id].notes, undefined);
+  assert.deepEqual(allDeckSlides()[0].notes, autoNotes);
+  presentEdit.actions["pe-slide-notes"]({ value: "" });
+  assert.deepEqual(allDeckSlides()[0].notes, [], "비우면 빈 노트가 우선");
+  presentEdit.actions["pe-slide-notes-reset"]();
+  assert.deepEqual(allDeckSlides()[0].notes, autoNotes);
+  presentEdit.actions["pe-slide-bg-clear"]();
+  assert.ok(!("bg" in state.deckOverrides.bySlide[first.id]));
+  assert.equal(allDeckSlides()[0].bg, undefined);
+
+  // 숨기기 체크
+  presentEdit.actions["pe-slide-hide"]({ checked: true });
+  assert.ok(state.deckHidden.includes(first.id));
+  presentEdit.actions["pe-slide-hide"]({ checked: false });
+  assert.ok(!state.deckHidden.includes(first.id));
+});
+
+test("슬라이드 편집: 서식(pt→cqw)·토글·정렬·순서·도형·차트·복사 붙여넣기", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  presentEdit.actions["pe-select"]({ dataset: { id: allDeckSlides()[0].id } });
+  presentEdit.actions["pe-add-slide"](); // 빈 자유배치 슬라이드에서 시작
+  const slide = allDeckSlides().find(s => s.type === "custom");
+  const els = () => state.deckOverrides.bySlide[slide.id].elements;
+  const last = () => els()[els().length - 1];
+
+  // 삽입 도구 모음: 텍스트 → 서식 줄이 나타나고 글자 크기는 pt 로 보임(저장은 cqw)
+  presentEdit.actions["pe-add-text"]();
+  let html = presentEdit.render({});
+  assert.ok(html.includes('aria-label="서식"') && html.includes('data-change="pe-font-pt"'));
+  assert.ok(html.includes('value="17.3"'), "기본 1.8cqw 는 17.3pt 로 표시");
+  assert.equal(bad(html), null);
+  const t = last();
+  presentEdit.actions["pe-font-pt"]({ value: "24" });
+  assert.equal(last().fontSize, ptToCqw(24));
+  presentEdit.actions["pe-font-pt"]({ value: "" });
+  assert.ok(Number.isFinite(last().fontSize) && last().fontSize >= 0.6, "빈 입력은 최솟값(0·NaN 저장 금지)");
+  presentEdit.actions["pe-font-pt"]({ value: "abc" });
+  assert.ok(Number.isFinite(last().fontSize) && last().fontSize >= 0.6);
+  presentEdit.actions["pe-font-pt"]({ value: "0" });
+  assert.ok(last().fontSize >= 0.6);
+  presentEdit.actions["pe-font-step"]({ dataset: { dir: "1" } });
+  assert.equal(cqwToPt(last().fontSize), 8, "최솟값(≈5.8pt)에서 + 를 누르면 8pt");
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "fontSize" }, value: "4" });
+  assert.equal(last().fontSize, 4);
+  html = presentEdit.render({});
+  assert.ok(html.includes('value="38.4"') && !html.includes('data-prop="fontSize"'), "cqw 4 는 38.4pt 로만 보임");
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "fontSize" }, value: "" });
+  assert.ok(last().fontSize >= 0.6, "cqw 경로도 0·NaN 이 저장되지 않음");
+
+  // B I U S · 정렬 · 세로정렬 · 줄간격 · 글꼴 · 색 · 채우기 · 테두리 · 투명도
+  for (const prop of ["italic", "underline", "strike"]) {
+    presentEdit.actions["pe-toggle"]({ dataset: { prop } });
+    assert.equal(last()[prop], true, prop);
+  }
+  presentEdit.actions["pe-toggle"]({ dataset: { prop: "italic" } });
+  assert.equal(last().italic, false);
+  presentEdit.actions["pe-toggle"]({ dataset: { prop: "weight" } });
+  assert.equal(last().weight, "bold");
+  presentEdit.actions["pe-toggle"]({ dataset: { prop: "weight" } });
+  assert.equal(last().weight, null);
+  presentEdit.actions["pe-toggle"]({ dataset: { prop: "kind" } });
+  assert.equal(last().kind, "text", "허용하지 않는 속성은 무시");
+  presentEdit.actions["pe-set"]({ dataset: { prop: "align", value: "center" } });
+  presentEdit.actions["pe-set"]({ dataset: { prop: "valign", value: "middle" } });
+  presentEdit.actions["pe-set"]({ dataset: { prop: "align", value: "diagonal" } });
+  assert.deepEqual([last().align, last().valign], ["center", "middle"]);
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "lineHeight" }, value: "1.5" });
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "fontFamily" }, value: "맑은 고딕" });
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "color" }, value: "#aa0000" });
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "fill" }, value: "#ffee00" });
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "borderColor" }, value: "#00aa00" });
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "borderWidth" }, value: "2" });
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "radius" }, value: "8" });
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "opacity" }, value: "0.5" });
+  assert.deepEqual(
+    [last().lineHeight, last().fontFamily, last().color, last().fill, last().borderColor, last().borderWidth, last().radius, last().opacity],
+    [1.5, "맑은 고딕", "#aa0000", "#ffee00", "#00aa00", 2, 8, 0.5],
+  );
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "opacity" }, value: "5" });
+  assert.equal(last().opacity, 1, "범위 밖은 다듬음");
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "fill" }, value: "url(x);" });
+  assert.ok(!("fill" in last()), "안전하지 않은 색은 지워짐");
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "lineHeight" }, value: "" });
+  assert.ok(!("lineHeight" in last()), "빈 값 = 기본으로");
+  presentEdit.actions["pe-clear"]({ dataset: { prop: "borderColor" } });
+  assert.ok(!("borderColor" in last()));
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "x" }, value: "abc" });
+  assert.ok(Number.isFinite(last().x), "숫자가 아닌 위치 입력은 무시");
+  presentEdit.actions["pe-el-prop"]({ dataset: { prop: "x" }, value: "95" });
+  assert.equal(last().x, 100 - last().w, "슬라이드 밖으로 나가지 않게 보정");
+  html = presentEdit.render({});
+  assert.equal(bad(html), null);
+  assert.ok(html.includes("텍스트 속성") && html.includes("pe-prop-grid"), "오른쪽 패널: 위치·크기·회전");
+
+  // 배치(슬라이드 기준 정렬)
+  presentEdit.actions["pe-align-el"]({ dataset: { how: "center-h" } });
+  assert.equal(last().x, (100 - last().w) / 2);
+  presentEdit.actions["pe-align-el"]({ dataset: { how: "right" } });
+  assert.equal(last().x, 100 - last().w);
+  presentEdit.actions["pe-align-el"]({ dataset: { how: "left" } });
+  presentEdit.actions["pe-align-el"]({ dataset: { how: "top" } });
+  assert.deepEqual([last().x, last().y], [0, 0]);
+  presentEdit.actions["pe-align-el"]({ dataset: { how: "bottom" } });
+  assert.equal(last().y, 100 - last().h);
+  presentEdit.actions["pe-align-el"]({ dataset: { how: "center-v" } });
+  assert.equal(last().y, (100 - last().h) / 2);
+
+  // 도형 종류별 기본값: 선·화살표는 가로로 긴 상자에 stroke, 둥근 사각형은 radius
+  presentEdit.actions["pe-add-shape"]({ dataset: { shape: "arrow" } });
+  assert.deepEqual([last().shapeType, last().w, last().h, last().fill], ["arrow", 30, 4, null]);
+  assert.ok(last().stroke && last().strokeWidth > 0);
+  presentEdit.actions["pe-add-shape"]({ dataset: { shape: "roundRect" } });
+  assert.deepEqual([last().shapeType, last().radius], ["roundRect", 16]);
+  presentEdit.actions["pe-add-shape"]({ dataset: { shape: "bogus" } });
+  assert.equal(last().shapeType, "rect");
+  presentEdit.actions["pe-add-shape"]();
+  assert.equal(last().shapeType, "rect");
+  html = presentEdit.render({});
+  assert.ok(html.includes("도형 속성") && html.includes('data-prop="shapeType"') && html.includes('value="triangle"'));
+  assert.equal(bad(html), null);
+
+  // 쌓임 순서(맨 앞/앞/뒤/맨 뒤): z 가 1..n 으로 정리됨
+  const target = last().id;
+  presentEdit.actions["pe-z"]({ dataset: { how: "back" } });
+  assert.equal(els().find(e => e.id === target).z, 1);
+  presentEdit.actions["pe-z"]({ dataset: { how: "forward" } });
+  assert.equal(els().find(e => e.id === target).z, 2);
+  presentEdit.actions["pe-z"]({ dataset: { how: "front" } });
+  assert.equal(els().find(e => e.id === target).z, els().length);
+  assert.deepEqual(els().map(e => e.z).sort((a, b) => a - b), els().map((_, i) => i + 1));
+
+  // 차트 삽입: 분석 슬라이드의 s.chart 를 골라 넣음
+  const choices = chartChoices(allDeckSlides());
+  assert.ok(choices.length > 0, "넣을 수 있는 분석 차트가 있음");
+  html = presentEdit.render({});
+  assert.ok(html.includes('data-menu="chart"'));
+  presentEdit.actions["pe-menu"]({ dataset: { menu: "chart" } });
+  html = presentEdit.render({});
+  assert.ok(html.includes('data-act="pe-add-chart"') && html.includes(`data-slide="${choices[0].slideId}"`), "열린 차트 메뉴에 차트 목록");
+  assert.equal(bad(html), null);
+  presentEdit.actions["pe-add-chart"]({ dataset: { slide: choices[choices.length - 1].slideId } });
+  assert.equal(last().kind, "chart");
+  assert.equal(last().chart.kind, choices[choices.length - 1].chart.kind);
+  assert.ok(presentEdit.render({}).includes("s-el-chart"));
+  assert.ok(!presentEdit.render({}).includes('data-act="pe-add-chart"'), "삽입하면 메뉴가 닫힘");
+
+  // 표: 글자 크기(cqw 1.35 = 13pt)와 pt 입력
+  presentEdit.actions["pe-add-table"]();
+  assert.equal(last().fontSize, 1.35);
+  html = presentEdit.render({});
+  assert.ok(html.includes("표 속성") && html.includes('value="13"') && html.includes('data-change="pe-font-pt"'));
+  presentEdit.actions["pe-font-pt"]({ value: "20" });
+  assert.equal(last().fontSize, ptToCqw(20));
+
+  // 복사·잘라내기·붙여넣기·복제
+  const before = els().length;
+  const src = last();
+  presentEdit.actions["pe-el-copy"]();
+  presentEdit.actions["pe-el-paste"]();
+  assert.equal(els().length, before + 1);
+  const pasted = last();
+  assert.notEqual(pasted.id, src.id);
+  assert.deepEqual([pasted.x, pasted.y], [Math.min(100 - src.w, src.x + 3), Math.min(100 - src.h, src.y + 3)]);
+  pasted.rows[0][0] = "바뀜";
+  assert.notEqual(src.rows[0][0], "바뀜", "표 칸을 공유하지 않음");
+  presentEdit.actions["pe-el-paste"](); // 연속 붙여넣기는 계단식
+  assert.ok(last().x >= pasted.x && last().y >= pasted.y);
+  presentEdit.actions["pe-el-duplicate"]();
+  assert.equal(els().length, before + 3);
+  presentEdit.actions["pe-el-cut"]();
+  assert.equal(els().length, before + 2);
+  presentEdit.actions["pe-el-paste"]();
+  assert.equal(els().length, before + 3);
+
+  // 요소 선택 변경 + 속성 패널: 선택이 없으면 슬라이드 속성으로
+  presentEdit.actions["pe-el-select"]({ dataset: { id: src.id } });
+  assert.ok(presentEdit.render({}).includes("표 속성"));
+  presentEdit.actions["pe-select"]({ dataset: { id: slide.id } });
+  assert.ok(presentEdit.render({}).includes("슬라이드 속성"));
+});
+
+test("슬라이드 편집: 슬라이드 복제(요소 id 재발급)·끌어놓기 순서 변경·이전 저장본(새 필드 없음) 호환", async () => {
+  const f = "2026_진로탐색_사전사후.xlsx";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  const autoSlide = allDeckSlides().find(s => s.type === "chart") || allDeckSlides()[2];
+  presentEdit.actions["pe-select"]({ dataset: { id: autoSlide.id } });
+  const total = allDeckSlides().length;
+
+  // 자동 슬라이드 복제 → 자유배치로 바꾼 것과 같은 요소를 가진 새 사용자 슬라이드, 원본 바로 뒤에 위치
+  presentEdit.actions["pe-slide-bg"]({ value: "#eeeeee" });
+  presentEdit.actions["pe-dup-slide"]();
+  const order = allDeckSlides().map(s => s.id);
+  assert.equal(order.length, total + 1);
+  const copyId = order[order.indexOf(autoSlide.id) + 1];
+  assert.notEqual(copyId, autoSlide.id);
+  const copy = state.deckOverrides.customSlides[copyId];
+  assert.ok(copy && copy.type === "custom" && copy.title.endsWith("(복사)"));
+  const copyEntry = state.deckOverrides.bySlide[copyId];
+  assert.equal(copyEntry.mode, "custom");
+  assert.ok(copyEntry.elements.length > 0);
+  assert.equal(copyEntry.bg, "#eeeeee", "배경색도 복사");
+  assert.equal(state.deckOverrides.bySlide[autoSlide.id].mode, "auto", "원본 자동 슬라이드는 그대로");
+  assert.equal(allDeckSlides().find(s => s.id === copyId).bg, "#eeeeee");
+  assert.ok(presentEdit.render({}).includes(copyId), "복제본이 선택돼 편집 화면에 보임");
+
+  // 자유배치 슬라이드 복제: 요소 id 는 모두 새로, 나머지 속성은 그대로
+  presentEdit.actions["pe-add-text"]();
+  presentEdit.actions["pe-add-shape"]({ dataset: { shape: "ellipse" } });
+  presentEdit.actions["pe-dup-slide"]();
+  const order2 = allDeckSlides().map(s => s.id);
+  const copy2Id = order2[order2.indexOf(copyId) + 1];
+  const a = state.deckOverrides.bySlide[copyId].elements, b = state.deckOverrides.bySlide[copy2Id].elements;
+  assert.equal(b.length, a.length);
+  const ids = new Set([...a, ...b].map(e => e.id));
+  assert.equal(ids.size, a.length + b.length, "복제된 요소 id 가 겹치지 않음");
+  assert.deepEqual(b.map(({ id, ...rest }) => rest), a.map(({ id, ...rest }) => rest));
+
+  // 끌어놓기 순서 변경(같은 동작을 하는 pe-reorder): 마지막 슬라이드를 맨 앞으로
+  const ids0 = allDeckSlides().map(s => s.id);
+  const lastId = ids0[ids0.length - 1];
+  presentEdit.actions["pe-reorder"]({ dataset: { from: lastId, to: ids0[0], after: "0" } });
+  assert.equal(allDeckSlides()[0].id, lastId);
+  presentEdit.actions["pe-reorder"]({ dataset: { from: lastId, to: ids0[0], after: "1" } });
+  assert.deepEqual(allDeckSlides().slice(0, 2).map(s => s.id), [ids0[0], lastId]);
+  const nowOrder = allDeckSlides().map(s => s.id);
+  presentEdit.actions["pe-reorder"]({ dataset: { from: lastId, to: lastId, after: "1" } });
+  assert.deepEqual(allDeckSlides().map(s => s.id), nowOrder, "제자리에 놓으면 변화 없음");
+  const html = presentEdit.render({});
+  assert.ok(html.includes('draggable="true"') && html.includes('data-act="pe-dup-slide"') && html.includes('data-act="pe-add-slide"'));
+  assert.equal(bad(html), null);
+
+  // 새 필드가 없는 예전 저장본 요소도 그대로 렌더(도구 모음·패널에 undefined/NaN 없음)
+  presentEdit.actions["pe-select"]({ dataset: { id: copyId } });
+  state.deckOverrides.bySlide[copyId] = { ...state.deckOverrides.bySlide[copyId], elements: [
+    { id: "old1", kind: "text", x: 5, y: 5, w: 40, h: 10, rot: 0, z: 1, markup: "예전 텍스트", fontSize: 1.8, align: "left", weight: null, color: null },
+    { id: "old2", kind: "shape", x: 5, y: 30, w: 20, h: 20, rot: 0, z: 2, shapeType: "ellipse", fill: "#3B5A7A", stroke: null, strokeWidth: 0 },
+    { id: "old3", kind: "table", x: 5, y: 60, w: 60, h: 30, rot: 0, z: 3, headerRow: true, rows: [["a", "b"], ["c", "d"]] },
+    { id: "old4", kind: "richtext", x: 50, y: 5, w: 40, h: 30, rot: 0, z: 4, fontSize: 1.4, align: "left", blocks: [{ type: "bullet", text: "x" }] },
+    { id: "old5", kind: "image", x: 50, y: 40, w: 20, h: 20, rot: 0, z: 5, src: "data:image/png;base64,AAAA", fit: "cover", radius: 0, opacity: 1 },
+  ] };
+  for (const id of ["old1", "old2", "old3", "old4", "old5"]) {
+    presentEdit.actions["pe-el-select"]({ dataset: { id } });
+    assert.equal(bad(presentEdit.render({})), null, id);
+  }
+});
+
 test("작업 내역 화면: 저장소가 없는 환경에서도 안내 표시", () => {
   const html = historyView.render({ sub: "" });
   assert.ok(html.includes("작업 내역"));
@@ -224,6 +521,17 @@ test("로컬 설정과 업데이트 내역 화면 렌더링", () => {
   const settings = settingsView.render({ sub: "" });
   assert.ok(settings.includes("로컬 설정") && settings.includes("Ctrl") && settings.includes("F5"));
   assert.equal(bad(settings), null);
+  // 두 열 구조와 카드 순서: 왼쪽 = 기본 정보 → 자동 저장과 보관 → 화면 → 단축키 / 오른쪽 = 100점 환산 기준 → 앱 파일 새로고침
+  assert.equal(settings.split('class="settings-col"').length - 1, 2, "열 래퍼 2개");
+  assert.ok(settings.includes('class="settings-cols"') && !settings.includes("settings-grid"));
+  const at = t => { const i = settings.indexOf(`<h2>${t}</h2>`); assert.ok(i >= 0, `${t} 카드`); return i; };
+  const col2 = settings.lastIndexOf('class="settings-col"');
+  const [org, save, look, keys, basis, refreshCard] = ["보고서 기본 정보", "자동 저장과 보관", "화면", "단축키", "100점 환산 기준", "앱 파일 새로고침"].map(at);
+  assert.ok(org < save && save < look && look < keys && keys < col2, "왼쪽 열 순서");
+  assert.ok(col2 < basis && basis < refreshCard, "오른쪽 열 순서");
+  assert.ok(settings.includes("'앱 파일 새로고침' 카드 참고") && !settings.includes("아래 '앱 파일 새로고침'"));
+  // 입력 예시는 '예: …' 형식으로 통일
+  assert.ok(settings.includes('placeholder="예: 부천여성청소년재단 청소년팀"') && settings.includes('placeholder="예: 홍길동"'));
   const updates = updatesView.render({ sub: "" });
   assert.ok(updates.includes("업데이트 내역") && updates.includes("v5.3.3") && updates.includes("v5.0.0") && updates.includes("v4.3.1") && updates.includes("v2.0.0"));
   assert.equal(bad(updates), null);

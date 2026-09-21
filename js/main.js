@@ -9,6 +9,7 @@ import { installTooltips } from "./ui/tooltip.js";
 import { installFormatToolbar } from "./ui/format-toolbar.js";
 import { markupToHtml, htmlToMarkup } from "./ui/inline-edit.js";
 import { installScrollHints } from "./ui/scrollhint.js";
+import { createPressGuard } from "./ui/press-guard.js";
 import { parseDeckKey } from "./present/edit/keys.js";
 import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redoChange, canUndo, canRedo } from "./ui/history/manager.js";
 import * as load from "./ui/views/load.js";
@@ -24,7 +25,7 @@ import * as updates from "./ui/views/updates.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 
-export const APP_VERSION = "5.26.0";
+export const APP_VERSION = "5.28.0";
 const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates };
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
@@ -131,6 +132,12 @@ document.addEventListener("contextmenu", e => {
   if (e.target.closest("input, textarea, select, [contenteditable], [data-edit]")) return;
   e.preventDefault();
 });
+// 글자를 고치던 칸에서 다른 곳을 누르면 mousedown 에서 포커스가 빠지며 focusout 이 터지는데, 그때 바로 다시 그리면 누른 요소가
+// 사라져 클릭이 전달되지 않음(첫 클릭은 저장만 되고 한 번 더 눌러야 함) → 누르고 있는 동안에는 저장만 하고 다시 그리기는 손 뗀 뒤로 미룸.
+// 미룬 뒤 이미 다른 편집 칸에 포커스가 가 있으면(문장·문구 사이를 바로 옮겨 다니는 경우) 그 칸을 살리려고 다시 그리지 않음(그 칸의 focusout 에서 그려짐)
+const pressGuard = createPressGuard(() => { if (!document.activeElement?.closest?.("[data-edit]")) refresh(); });
+document.addEventListener("pointerdown", () => pressGuard.press(), true);
+for (const t of ["pointerup", "pointercancel", "dragend"]) document.addEventListener(t, () => pressGuard.release(), true);
 // 보고서 문장 직접 편집: 포커스 중에도 굵게·기울임 등 실제 서식으로 보임(WYSIWYG) → 포커스 해제 시 표식 문자열로 저장
 document.addEventListener("focusin", e => {
   const el = e.target.closest("[data-edit]");
@@ -174,7 +181,7 @@ document.addEventListener("focusout", e => {
     }
     else state.hidden = [...new Set([...state.hidden, key])];
   }
-  refresh();
+  pressGuard.request();
   afterAction();
 });
 /** 문장 편집 중 Ctrl+B/I/U·Ctrl+Shift+X: 선택 영역에 실제 서식 적용(워드·한글과 같은 단축키) */

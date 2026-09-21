@@ -11,6 +11,7 @@ import { finalizeBlocks } from "../report/model.js";
 import { buildDeck } from "../present/deck.js";
 import { DEFAULT_THRESHOLDS, cleanScoreBasis } from "../narrative/vocab.js";
 import { koDate } from "../core/util.js";
+import { safeCssColor } from "./present-edit-model.js";
 import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, DEFAULT_FONT_PRESET, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING, cleanFontName } from "../report/hwpx/fonts.js";
 
 const LS_KEY = "survey-v5-settings";
@@ -203,10 +204,22 @@ export function allDeckSlides() {
   const order = Array.isArray(state.deckOrder) && state.deckOrder.length ? state.deckOrder : [...auto.map(s => s.id), ...Object.keys(custom)];
   const seen = new Set();
   const out = [];
-  for (const id of order) { seen.add(id); const s = byId.get(id); if (s) out.push(s); }
+  for (const id of order) { seen.add(id); const s = byId.get(id); if (s) out.push(withSlideOverrides(s)); }
   // deckOrder 에 없는 새 자동 슬라이드(데이터가 바뀌어 새로 생긴 지표 등)는 뒤에 이어붙임
-  for (const s of auto) if (!seen.has(s.id)) out.push(s);
+  for (const s of auto) if (!seen.has(s.id)) out.push(withSlideOverrides(s));
   return out;
+}
+
+/** 슬라이드 단위 사용자 설정(배경색 bg·발표자 노트 notes — state.deckOverrides.bySlide[id])을 슬라이드 객체에 얹어
+ *  화면·발표 노트 패널·내보내기(HTML·PPTX)가 모두 slide.bg / slide.notes 하나만 보게 함. 자동 생성 슬라이드는
+ *  캐시(deckCache)를 공유하므로 원본을 고치지 않고 얕은 사본을 만듦. 노트는 사용자가 고친 값이 자동 노트보다 우선(빈 배열도 우선) */
+function withSlideOverrides(s) {
+  const e = state.deckOverrides.bySlide?.[s.id];
+  if (!e) return s;
+  const bg = safeCssColor(e.bg);
+  const notes = Array.isArray(e.notes) ? e.notes.filter(n => typeof n === "string") : null;
+  if (!bg && !notes) return s;
+  return { ...s, ...(bg ? { bg } : {}), ...(notes ? { notes } : {}) };
 }
 
 /** 위 목록에서 숨긴 슬라이드만 뺀 것 — 발표·인쇄·내보내기(present.js·export-html.js·앞으로의

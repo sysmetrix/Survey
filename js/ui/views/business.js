@@ -10,6 +10,7 @@ import { f1, f2 } from "../../narrative/vocab.js";
 import { esc, option, levelBadge, toast, download, readFileText, readFileBytes, busy, nextFrame } from "../util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
+import { PROGRAM_FIELD_EXAMPLES } from "../examples.js";
 
 const MAX_PLAN_DOC_MB = 20;
 
@@ -162,7 +163,7 @@ export function render() {
     </div>
     <p class="small muted">입력하면 보고서에 ‘사업 개요’와 ‘논리모형’ 표, 목표별 달성 평가가 추가됩니다. 몰라도 보고서 작성에는 문제없습니다.</p>
     <div class="grid3">
-      ${FIELDS.map(([k, l]) => `<label class="field">${l}<input class="in" value="${esc(lm[k] || "")}" data-change="lm" data-field="${k}"></label>`).join("")}
+      ${FIELDS.map(([k, l]) => `<label class="field">${l}<input class="in" value="${esc(lm[k] || "")}" placeholder="${PROGRAM_FIELD_EXAMPLES[k] || ""}" data-change="lm" data-field="${k}"></label>`).join("")}
     </div>
     <div class="grid2">
       <label class="field">추진배경<textarea class="in" rows="2" data-change="lm" data-field="background">${esc(lm.background)}</textarea></label>

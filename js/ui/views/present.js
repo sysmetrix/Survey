@@ -83,7 +83,8 @@ export function slideHtml(s, i, total, theme, { editable = false, selectedElId =
   }
   const edge = s.type === "cover" || s.type === "end";
   const foot = `<footer class="s-foot"><span>${edge ? "" : esc(s.source || "")}</span><span>${esc(org)}${edge ? "" : `${org ? " · " : ""}${i + 1} / ${total}`}</span></footer>`;
-  return `<article class="slide t-${s.type} ${theme}" aria-roledescription="슬라이드" aria-label="${i + 1} / ${total}. ${esc(displayTitle(s))}">${inner}${foot}</article>`;
+  const bgStyle = s.bg ? ` style="background:${esc(s.bg)}"` : ""; // 사용자가 정한 배경색(store.js 가 bySlide[id].bg 를 slide.bg 로 얹음)
+  return `<article class="slide t-${s.type} ${theme}"${bgStyle} aria-roledescription="슬라이드" aria-label="${i + 1} / ${total}. ${esc(displayTitle(s))}">${inner}${foot}</article>`;
 }
 
 const btn = (act, ic, label, extra = "") => `<button class="p-btn" data-act="${act}" aria-label="${esc(label)}" title="${esc(label)}" ${extra}>${icon(ic, 20)}</button>`;
@@ -116,7 +117,7 @@ function notesHtml(s, idx, slides) {
   return `<aside class="p-notes" aria-label="발표자 노트">
     <div class="p-notes-head"><b>발표자 노트</b><span class="p-clock">${icon("clock", 15)}<span id="pClock">${clock()}</span></span></div>
     <p class="p-notes-title">${idx + 1}. ${esc(displayTitle(s))}</p>
-    ${s.notes.length ? `<ul class="p-notes-list">${s.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : `<p class="muted small">메모가 없습니다.</p>`}
+    ${(s.notes || []).length ? `<ul class="p-notes-list">${s.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : `<p class="muted small">메모가 없습니다.</p>`}
     <div class="p-notes-next"><span>다음</span><p>${next ? esc(displayTitle(next)) : "마지막 슬라이드입니다"}</p></div>
   </aside>`;
 }

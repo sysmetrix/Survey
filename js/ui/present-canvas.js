@@ -1,9 +1,11 @@
-// 자유배치 캔버스 인터랙션: 요소 선택·이동·크기조절·회전 — 이 저장소에 드래그·리사이즈 전례가 없어 새로 작성.
-// 포인터무브마다 상태를 갱신·재렌더하면 느리므로, 드래그 중에는 DOM 스타일만 직접 바꾸고(라이브 미리보기)
-// pointerup 에서 한 번만 상태에 커밋해 되돌리기 한 단계로 남긴다(format-toolbar.js 의 위치 계산과 같은 원칙:
-// 렌더 주기 밖에서 style 을 직접 조작).
-const MIN_PCT = 2;
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+// 자유배치 캔버스 인터랙션: 요소 선택·이동·크기조절·회전 + 키보드(방향키 이동·복사/붙여넣기·Tab 순환 등)
+// 이 저장소에 드래그·리사이즈 전례가 없어 새로 작성. 포인터무브마다 상태를 갱신·재렌더하면 느리므로, 드래그 중에는
+// DOM 스타일만 직접 바꾸고(라이브 미리보기) pointerup 에서 한 번만 상태에 커밋해 되돌리기 한 단계로 남긴다
+// (format-toolbar.js 의 위치 계산과 같은 원칙: 렌더 주기 밖에서 style 을 직접 조작).
+// 계산 자체(스냅·크기조절·회전)는 present-edit-model.js 의 순수 함수 — 여기서는 DOM 연결만 한다.
+import { clamp, snapMove, resizeBox, rotationFromPoint, cycleId } from "./present-edit-model.js";
+
+export { snapMove };
 
 // 헤드리스·일부 입력 장치 조합에서 setPointerCapture 가 InvalidStateError 를 던지는 경우가 있어(포인터가
 // "활성" 상태가 아니라고 판단될 때) — 실패해도 드래그 자체는 계속 동작해야 하므로 무시하고 넘어감
@@ -15,21 +17,6 @@ function applyLiveStyle(elDiv, next) {
   elDiv.style.width = `${next.w}%`;
   elDiv.style.height = `${next.h}%`;
   elDiv.style.transform = `rotate(${next.rot || 0}deg)`;
-}
-
-// 이동(리사이즈·회전 제외)할 때만 슬라이드 가운데·가장자리에 살짝 달라붙게 — 손대중으로 가운데를 맞추기
-// 어렵다는 문제를 덜기 위함(다른 요소끼리의 스냅은 범위 밖으로 남겨 둠).
-const SNAP_TOL = 1.2; // % 단위
-function snapMove(next, w, h) {
-  const guides = { v: null, h: null }; // 스냅된 기준선(0~100, %) — 있으면 안내선을 그림
-  const cx = next.x + w / 2, cy = next.y + h / 2;
-  if (Math.abs(cx - 50) < SNAP_TOL) { next.x = 50 - w / 2; guides.v = 50; }
-  else if (Math.abs(next.x) < SNAP_TOL) { next.x = 0; guides.v = 0; }
-  else if (Math.abs(next.x + w - 100) < SNAP_TOL) { next.x = 100 - w; guides.v = 100; }
-  if (Math.abs(cy - 50) < SNAP_TOL) { next.y = 50 - h / 2; guides.h = 50; }
-  else if (Math.abs(next.y) < SNAP_TOL) { next.y = 0; guides.h = 0; }
-  else if (Math.abs(next.y + h - 100) < SNAP_TOL) { next.y = 100 - h; guides.h = 100; }
-  return guides;
 }
 
 function ensureGuides(slide) {
@@ -54,10 +41,10 @@ function hideGuides(slide) { slide.querySelector(":scope > .s-guides")?.remove()
 
 /**
  * @param {HTMLElement} root 편집 화면의 캔버스 컨테이너(.pe-stage 등) — 이 안의 .s-el 만 반응
- * @param {{getElements: () => any[], onChange: (id:string, patch:object) => void, onSelect: (id:string|null) => void}} hooks
+ * @param {{getElements: () => any[], onChange: (id:string, patch:object) => void, onSelect: (id:string|null) => void, getSelected?: () => string|null}} hooks
  * @returns {() => void} 해제 함수
  */
-export function installCanvasInteractions(root, { getElements, onChange, onSelect }) {
+export function installCanvasInteractions(root, { getElements, onChange, onSelect, getSelected }) {
   let drag = null;
 
   const down = e => {
@@ -71,7 +58,7 @@ export function installCanvasInteractions(root, { getElements, onChange, onSelec
     const editableTarget = e.target.closest("[contenteditable]");
     // 이미 편집 중인 텍스트 안에서 커서를 옮기는 클릭은 드래그로 가로채지 않음. 아직 포커스 전이면
     // "클릭(=편집 진입)"과 "드래그(=이동)"를 구분해야 하므로, 일정 거리 넘게 움직였을 때만 드래그로 확정한다.
-    if (!handle && editableTarget && document.activeElement === editableTarget) { onSelect?.(id); return; }
+    if (!handle && editableTarget && document.activeElement === editableTarget) { if (getSelected?.() !== id) onSelect?.(id); return; }
     const slide = elDiv.closest(".slide");
     const cur = slide && getElements().find(x => x.id === id);
     if (!cur) { onSelect?.(id); return; }
@@ -93,21 +80,21 @@ export function installCanvasInteractions(root, { getElements, onChange, onSelec
     const dxPct = (e.clientX - drag.startX) / drag.rect.width * 100;
     const dyPct = (e.clientY - drag.startY) / drag.rect.height * 100;
     const s = drag.start;
-    const next = { ...s };
+    let next = { ...s };
     if (drag.mode === "move") {
       next.x = clamp(s.x + dxPct, 0, Math.max(0, 100 - s.w));
       next.y = clamp(s.y + dyPct, 0, Math.max(0, 100 - s.h));
-      const guides = snapMove(next, s.w, s.h);
+      const others = getElements().filter(x => x.id !== drag.id);
+      const guides = snapMove(next, s.w, s.h, others);
+      next.x = clamp(next.x, 0, Math.max(0, 100 - s.w));
+      next.y = clamp(next.y, 0, Math.max(0, 100 - s.h));
       showGuides(drag.slide, guides);
     } else if (drag.mode === "rotate") {
       const cx = drag.rect.left + (s.x + s.w / 2) / 100 * drag.rect.width;
       const cy = drag.rect.top + (s.y + s.h / 2) / 100 * drag.rect.height;
-      next.rot = Math.round(Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI + 90);
+      next.rot = rotationFromPoint(cx, cy, e.clientX, e.clientY, { snap: e.shiftKey }); // Shift = 15° 단위
     } else {
-      if (drag.mode.includes("e")) next.w = clamp(s.w + dxPct, MIN_PCT, 100 - s.x);
-      if (drag.mode.includes("s")) next.h = clamp(s.h + dyPct, MIN_PCT, 100 - s.y);
-      if (drag.mode.includes("w")) { const w = clamp(s.w - dxPct, MIN_PCT, s.x + s.w); next.x = s.x + s.w - w; next.w = w; }
-      if (drag.mode.includes("n")) { const h = clamp(s.h - dyPct, MIN_PCT, s.y + s.h); next.y = s.y + s.h - h; next.h = h; }
+      next = resizeBox(s, drag.mode, dxPct, dyPct, { keepAspect: e.shiftKey }); // Shift = 가로세로비 유지
     }
     applyLiveStyle(drag.elDiv, next);
     drag.pending = next;
@@ -118,8 +105,10 @@ export function installCanvasInteractions(root, { getElements, onChange, onSelec
     const { id, pending, moved, slide } = drag;
     hideGuides(slide);
     drag = null;
-    // 이동·크기조절이 있었으면 onChange 가 알아서 다시 그려주므로 선택 알림을 따로 부를 필요 없음(중복 렌더 방지)
-    if (moved && pending) onChange(id, pending); else onSelect?.(id);
+    // 이동·크기조절이 있었으면 onChange 가 알아서 다시 그려주므로 선택 알림을 따로 부를 필요 없음(중복 렌더 방지).
+    // 이미 선택된 요소를 그냥 다시 누른 것이면 다시 그릴 필요가 없음 — 오히려 다시 그리면 방금 들어간 글자 편집 상태가 끊김
+    if (moved && pending) onChange(id, pending);
+    else if (getSelected?.() !== id) onSelect?.(id);
   };
 
   root.addEventListener("pointerdown", down);
@@ -132,21 +121,61 @@ export function installCanvasInteractions(root, { getElements, onChange, onSelec
   };
 }
 
-/** 선택된 요소를 방향키로 미세 이동(Shift=5%, 기본 0.5%), Delete 로 제거 */
-export function installKeyboardNudge(root, { getSelected, getElements, onChange, onDelete }) {
-  const onKey = e => {
-    const id = getSelected();
-    if (!id) return;
-    if (e.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
-    const cur = getElements().find(x => x.id === id);
-    if (!cur) return;
-    const step = e.shiftKey ? 5 : 0.5;
-    if (e.key === "ArrowLeft") { onChange(id, { x: clamp(cur.x - step, 0, 100 - cur.w) }); e.preventDefault(); }
-    else if (e.key === "ArrowRight") { onChange(id, { x: clamp(cur.x + step, 0, 100 - cur.w) }); e.preventDefault(); }
-    else if (e.key === "ArrowUp") { onChange(id, { y: clamp(cur.y - step, 0, 100 - cur.h) }); e.preventDefault(); }
-    else if (e.key === "ArrowDown") { onChange(id, { y: clamp(cur.y + step, 0, 100 - cur.h) }); e.preventDefault(); }
-    else if (e.key === "Delete" || e.key === "Backspace") { onDelete(id); e.preventDefault(); }
-  };
-  root.addEventListener("keydown", onKey);
-  return () => root.removeEventListener("keydown", onKey);
+const TYPING = "input, textarea, select, [contenteditable='true'], [contenteditable='']";
+const hasTextSelection = () => typeof window !== "undefined" && !!window.getSelection?.()?.toString();
+
+/**
+ * 편집 화면 키보드 단축키(이벤트 → 훅 호출). 입력칸·글자 편집 중에는 아무것도 가로채지 않음(Esc 로 편집만 끝냄).
+ *  방향키 이동(Shift=5%, 기본 0.5%) · Delete/Backspace 삭제 · Esc 선택 해제 · Tab/Shift+Tab 요소 순환 ·
+ *  Enter/F2 글자 편집 시작 · Ctrl+C/X/V/D 복사·잘라내기·붙여넣기·복제
+ * @returns {boolean} 처리했으면 true
+ */
+export function handleEditorKey(e, root, hooks) {
+  const t = e.target;
+  const typing = t?.closest?.(TYPING);
+  if (typing) {
+    if (e.key === "Escape" && t.closest?.("[contenteditable]")) { t.blur?.(); return true; } // 글자 편집만 끝냄(저장은 focusout 이 처리)
+    return false;
+  }
+  const inStage = !!(t && (t === root || root?.contains?.(t)));
+  const onBody = !t || t === document.body || t === document.documentElement;
+  const id = hooks.getSelected();
+  const els = hooks.getElements();
+  const cur = id ? els.find(x => x.id === id) : null;
+  const mod = e.ctrlKey || e.metaKey;
+
+  if (mod && !e.altKey) {
+    if (hasTextSelection()) return false;
+    const act = { KeyC: "onCopy", KeyX: "onCut", KeyD: "onDuplicate" }[e.code];
+    if (act) { if (!cur || !hooks[act]) return false; hooks[act](id); e.preventDefault(); return true; }
+    if (e.code === "KeyV" && !e.shiftKey) { if (!hooks.onPaste) return false; hooks.onPaste(); e.preventDefault(); return true; }
+    return false;
+  }
+  if (e.altKey) return false;
+
+  if (e.key === "Escape") { if (!id) return false; hooks.onSelect?.(null); e.preventDefault(); return true; }
+  if (e.key === "Tab") {
+    if (!inStage) return false; // 다른 곳의 Tab 은 브라우저 기본(도구 모음 이동)
+    const next = cycleId(els, id, e.shiftKey ? -1 : 1);
+    if (!next) return false;
+    hooks.onSelect?.(next); e.preventDefault(); return true;
+  }
+  if (!cur || !(inStage || onBody)) return false;
+  const step = e.shiftKey ? 5 : 0.5;
+  if (e.key === "ArrowLeft") hooks.onChange(id, { x: clamp(cur.x - step, 0, 100 - cur.w) });
+  else if (e.key === "ArrowRight") hooks.onChange(id, { x: clamp(cur.x + step, 0, 100 - cur.w) });
+  else if (e.key === "ArrowUp") hooks.onChange(id, { y: clamp(cur.y - step, 0, 100 - cur.h) });
+  else if (e.key === "ArrowDown") hooks.onChange(id, { y: clamp(cur.y + step, 0, 100 - cur.h) });
+  else if (e.key === "Delete" || e.key === "Backspace") hooks.onDelete(id);
+  else if ((e.key === "Enter" || e.key === "F2") && hooks.onEdit) hooks.onEdit(id);
+  else return false;
+  e.preventDefault();
+  return true;
+}
+
+/** 편집 화면 키보드 연결. 재렌더로 포커스가 body 로 떨어져도 계속 동작하도록 document 에 한 번 연결(해제 함수 반환) */
+export function installKeyboardNudge(root, hooks) {
+  const onKey = e => { handleEditorKey(e, root, hooks); };
+  document.addEventListener("keydown", onKey);
+  return () => document.removeEventListener("keydown", onKey);
 }
