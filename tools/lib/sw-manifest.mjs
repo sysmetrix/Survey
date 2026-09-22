@@ -20,7 +20,8 @@ export async function collectAssets() {
     "vendor/fonts/pretendard-gov/pretendard-gov-dynamic-subset.css",
     ...await walk("css", p => p.endsWith(".css")),
     ...await walk("js", p => p.endsWith(".js")),
-    ...await walk("icons", p => /\.(png|svg)$/.test(p)),
+    // og-image.png 는 공유 미리보기(카카오톡 등) 전용이라 앱 화면에서는 쓰지 않는다 — 설치 때 내려받지 않도록 뺀다
+    ...await walk("icons", p => /\.(png|svg)$/.test(p) && !p.endsWith("og-image.png")),
     ...await walk("samples", p => /\.(xlsx|csv)$/.test(p)),
   ];
   return [...new Set(list)].sort();

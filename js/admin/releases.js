@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.37.1", date: "2026-09-22", title: "카카오톡 등에 주소를 올리면 미리보기 카드가 뜨도록 함",
+    groups: {
+      "공유": [
+        "카카오톡·슬랙 등에 사이트 주소를 붙여 넣으면 제목·설명과 함께 썸네일 그림이 보이도록 공유 정보(Open Graph)를 넣음 — 지금까지는 주소만 덩그러니 보였음",
+        "공유용 카드 그림(1200×630)을 아이콘과 같은 도안으로 새로 만듦(icons/og-image.png)",
+      ],
+    },
+  },
+  {
     version: "5.37.0", date: "2026-09-22", title: "HWPX 내어쓰기를 글머리 다음 첫 글자에 정확히 맞춤(글꼴별 실측)",
     groups: {
       "보고서(HWPX)": [
