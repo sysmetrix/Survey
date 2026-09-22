@@ -24,7 +24,9 @@ for (let i = 0; ; i++) {
 const exe = browserPath();
 if (!exe) throw new Error("헤드리스로 띄울 Edge/Chrome을 찾지 못했습니다 — E2E_BROWSER_PATH(또는 CHROME_PATH) 환경변수로 실행파일 경로를 지정하세요");
 const profile = await mkdtemp(join(tmpdir(), "e2e-"));
-const browser = spawn(exe, ["--headless=new", "--disable-gpu", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, "--no-first-run", "--window-size=1400,1000", "about:blank"], { stdio: "ignore" });
+// --no-sandbox·--disable-dev-shm-usage: CI(ubuntu-latest) 컨테이너에서 크롬 샌드박스가 커널 권한 부족으로
+// 조용히 실패해 CDP 연결 자체가 안 되던 문제(로컬 Windows 에서는 필요 없지만 켜 둬도 해가 없음)
+const browser = spawn(exe, ["--headless=new", "--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, "--no-first-run", "--window-size=1400,1000", "about:blank"], { stdio: "ignore" });
 // 브라우저 프로세스 트리 전체 종료(Windows 는 child.kill() 이 렌더러 등 자식 프로세스를 안 죽여 좀비로 남을 수 있음 — rasterize-cdp.mjs 와 같은 방식)
 const killBrowserTree = () => new Promise(res => (process.platform === "win32"
   ? execFile("taskkill", ["/PID", String(browser.pid), "/T", "/F"], () => res())
