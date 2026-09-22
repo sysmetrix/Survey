@@ -38,7 +38,7 @@ function storageCard() {
       <div><span class="small muted">사용 중</span><b>${st ? `${fmtBytes(st.usage)} / ${fmtBytes(st.quota)}` : "-"}</b>${st ? `<div class="meter" role="meter" aria-valuenow="${pct.toFixed(1)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct.toFixed(1)}%"></i></div>` : ""}</div>
       <div><span class="small muted">보관 상태</span><b>${cache.persisted ? `<span class="badge ok">영구 보관</span>` : `<span class="badge warn">공간 부족 시 삭제될 수 있음</span>`}</b>${cache.persisted ? "" : `<button class="btn sm ghost" data-act="hist-persist">영구 보관 요청</button>`}</div>
       <div><span class="small muted">자동 저장</span><label class="check"><input type="checkbox" ${prefs.autosave ? "checked" : ""} data-change="hist-autosave"> 변경 후 2~3초 뒤 자동 저장</label></div>
-      <div><span class="small muted">자동 저장 보관</span><div class="row gap"><select class="in" data-change="hist-max">${[10, 30, 100].map(v => option(v, `최근 ${v}개`, prefs.maxAuto === v)).join("")}</select><select class="in" data-change="hist-age">${[30, 90, 365].map(v => option(v, `${v}일`, prefs.maxAgeDays === v)).join("")}</select></div></div>
+      <div><span class="small muted">자동 저장 보관</span><div class="row gap"><select class="in" data-change="hist-max" aria-label="자동 저장 최대 개수">${[10, 30, 100].map(v => option(v, `최근 ${v}개`, prefs.maxAuto === v)).join("")}</select><select class="in" data-change="hist-age" aria-label="자동 저장 보관 기간">${[30, 90, 365].map(v => option(v, `${v}일`, prefs.maxAgeDays === v)).join("")}</select></div></div>
     </div>
     <div class="row gap wrap end">
       <button class="btn sm" data-act="hist-export">${icon("download", 15)}백업 파일 받기</button>
@@ -81,7 +81,7 @@ function timelineHtml(project) {
 
 export function render() {
   if (!cache.available) {
-    return `<section class="card empty-state"><h2>작업 내역을 사용할 수 없습니다</h2><p class="muted">이 브라우저 설정(개인정보 보호 모드 등)에서는 저장소를 쓸 수 없습니다. 보고서 화면의 ‘프로젝트 파일 저장’을 이용하세요.</p>${cache.error ? `<p class="small bad-text">${esc(cache.error)}</p>` : ""}</section>`;
+    return `<section class="card empty-state"><h1>작업 내역을 사용할 수 없습니다</h1><p class="muted">이 브라우저 설정(개인정보 보호 모드 등)에서는 저장소를 쓸 수 없습니다. 보고서 화면의 ‘프로젝트 파일 저장’을 이용하세요.</p>${cache.error ? `<p class="small bad-text">${esc(cache.error)}</p>` : ""}</section>`;
   }
   const currentPid = state.codebook ? projectIdOf(state.codebook) : null;
   if (!view.selected) view.selected = currentPid || cache.projects[0]?.id || null;
@@ -91,7 +91,7 @@ export function render() {
 
   return `
   <div class="page-head">
-      <div><h2>작업·발표 보관함</h2><p class="small muted">원자료와 최신 분석 상태가 이 브라우저에 암호화 보관됩니다. 작업을 이어가거나 발표를 바로 시작할 수 있습니다. <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기 · <kbd>Ctrl</kbd>+<kbd>Y</kbd> 다시 실행</p></div>
+      <div><h1>작업·발표 보관함</h1><p class="small muted">원자료와 최신 분석 상태가 이 브라우저에 암호화 보관됩니다. 작업을 이어가거나 발표를 바로 시작할 수 있습니다. <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기 · <kbd>Ctrl</kbd>+<kbd>Y</kbd> 다시 실행</p></div>
     <div class="row gap wrap">
       <button class="btn" data-act="undo" ${canUndo() ? "" : "disabled"}>${icon("undo", 16)}되돌리기</button>
       <button class="btn" data-act="redo" ${canRedo() ? "" : "disabled"}>${icon("redo", 16)}다시 실행</button>

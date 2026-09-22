@@ -98,21 +98,23 @@ function kpiTable(r) {
     const m = METRICS[k.metric] || METRICS.manual;
     const judgeCls = res?.judgment === "달성" ? "ok" : res?.judgment === "대체로 달성" ? "info" : res?.judgment === "미달성" ? "bad" : "muted";
     const val = v => (Number.isFinite(v) ? (["mean", "prepostDiff", "effectSize", "score100", "postScore100", "prepostDiff100"].includes(k.metric) ? f2(v) : Number.isInteger(v) ? String(v) : f1(v)) : "-");
+    // 행마다 붙는 이름표: 이름을 아직 안 정한 새 행은 "N번째 지표"로 구분(빈 이름이면 화면 낭독기로 어느 행인지 알 수 없음)
+    const rowTag = esc(k.name || `${i + 1}번째 지표`);
     return `<tr>
-      <td><input class="in xs" value="${esc(k.id)}" data-change="kpi" data-i="${i}" data-field="id" aria-label="지표 ID"></td>
-      <td><input class="in" value="${esc(k.name)}" placeholder="예: 진로 관심 향상도" data-change="kpi" data-i="${i}" data-field="name" aria-label="지표명"></td>
-      <td><select class="in" data-change="kpi" data-i="${i}" data-field="stage">${KPI_STAGES.map(s => option(s, s, k.stage === s)).join("")}</select></td>
-      <td><select class="in" data-change="kpi" data-i="${i}" data-field="goalId">${option("", "-", !k.goalId)}${goals.map((g, gi) => option(g.id, `목표${gi + 1}`, k.goalId === g.id)).join("")}</select></td>
-      <td><select class="in" data-change="kpi" data-i="${i}" data-field="metric">${Object.entries(METRICS).map(([key, mm]) => option(key, mm.label, k.metric === key)).join("")}</select></td>
-      <td>${m.kind === "manual" || k.metric === "responseCount" ? `<span class="muted small">-</span>` : `<input class="in" list="targetList" value="${esc(k.targetRef)}" placeholder="전체 / 영역 / 문항" data-change="kpi" data-i="${i}" data-field="targetRef">`}</td>
-      <td><input class="in num" type="number" step="any" value="${k.target ?? ""}" data-change="kpi" data-i="${i}" data-field="target" aria-label="목표"></td>
-      <td>${m.kind === "manual" ? `<input class="in num" type="number" step="any" value="${k.actual ?? ""}" data-change="kpi" data-i="${i}" data-field="actual" aria-label="실적">` : `<span class="calc">${val(res?.actualValue)}</span>`}</td>
-      ${adeqOn ? `<td><input class="in num" type="number" step="any" value="${k.prevActual ?? ""}" placeholder="선택" data-change="kpi" data-i="${i}" data-field="prevActual" aria-label="전년 실적">${res?.targetCaution ? `<div class="small warn-text" title="${esc(res.targetCaution)}">${icon("alert", 12)} 목표 검토</div>` : ""}</td>` : ""}
-      <td><input class="in xs" value="${esc(k.unit || "")}" placeholder="${esc(m.unit)}" data-change="kpi" data-i="${i}" data-field="unit" aria-label="단위"></td>
-      <td><select class="in" data-change="kpi" data-i="${i}" data-field="direction">${option("up", "상향", k.direction !== "down")}${option("down", "하향", k.direction === "down")}</select></td>
+      <td><input class="in xs" value="${esc(k.id)}" data-change="kpi" data-i="${i}" data-field="id" aria-label="'${rowTag}' ID"></td>
+      <td><input class="in" value="${esc(k.name)}" placeholder="예: 진로 관심 향상도" data-change="kpi" data-i="${i}" data-field="name" aria-label="'${rowTag}' 지표명"></td>
+      <td><select class="in" data-change="kpi" data-i="${i}" data-field="stage" aria-label="'${rowTag}' 단계">${KPI_STAGES.map(s => option(s, s, k.stage === s)).join("")}</select></td>
+      <td><select class="in" data-change="kpi" data-i="${i}" data-field="goalId" aria-label="'${rowTag}' 연계목표">${option("", "-", !k.goalId)}${goals.map((g, gi) => option(g.id, `목표${gi + 1}`, k.goalId === g.id)).join("")}</select></td>
+      <td><select class="in" data-change="kpi" data-i="${i}" data-field="metric" aria-label="'${rowTag}' 측정 방법">${Object.entries(METRICS).map(([key, mm]) => option(key, mm.label, k.metric === key)).join("")}</select></td>
+      <td>${m.kind === "manual" || k.metric === "responseCount" ? `<span class="muted small">-</span>` : `<input class="in" list="targetList" value="${esc(k.targetRef)}" placeholder="전체 / 영역 / 문항" data-change="kpi" data-i="${i}" data-field="targetRef" aria-label="'${rowTag}' 대상">`}</td>
+      <td><input class="in num" type="number" step="any" value="${k.target ?? ""}" data-change="kpi" data-i="${i}" data-field="target" aria-label="'${rowTag}' 목표"></td>
+      <td>${m.kind === "manual" ? `<input class="in num" type="number" step="any" value="${k.actual ?? ""}" data-change="kpi" data-i="${i}" data-field="actual" aria-label="'${rowTag}' 실적">` : `<span class="calc">${val(res?.actualValue)}</span>`}</td>
+      ${adeqOn ? `<td><input class="in num" type="number" step="any" value="${k.prevActual ?? ""}" placeholder="선택" data-change="kpi" data-i="${i}" data-field="prevActual" aria-label="'${rowTag}' 전년 실적">${res?.targetCaution ? `<div class="small warn-text" title="${esc(res.targetCaution)}">${icon("alert", 12)} 목표 검토</div>` : ""}</td>` : ""}
+      <td><input class="in xs" value="${esc(k.unit || "")}" placeholder="${esc(m.unit)}" data-change="kpi" data-i="${i}" data-field="unit" aria-label="'${rowTag}' 단위"></td>
+      <td><select class="in" data-change="kpi" data-i="${i}" data-field="direction" aria-label="'${rowTag}' 방향">${option("up", "상향", k.direction !== "down")}${option("down", "하향", k.direction === "down")}</select></td>
       <td class="nowrap c"><b>${res && Number.isFinite(res.rate) ? f1(res.rate) + "%" : "-"}</b></td>
       <td class="c"><span class="badge ${judgeCls}" title="${esc(res?.error || res?.facts || "")}">${esc(res?.judgment || "-")}</span></td>
-      <td class="nowrap"><button class="btn sm ghost" data-act="kpi-del" data-i="${i}" title="삭제" aria-label="지표 삭제">✕</button></td>
+      <td class="nowrap"><button class="btn sm ghost" data-act="kpi-del" data-i="${i}" title="삭제" aria-label="'${rowTag}' 삭제">✕</button></td>
     </tr>`;
   }).join("");
   const adeqPreview = adeqOn && isAdminPreview("kpiTargetAdequacy");
@@ -130,13 +132,13 @@ export function render() {
 
   return `
   <div class="page-head">
-    <div><h2>성과지표 <span class="badge muted">선택</span></h2><p class="small muted">목표값을 정하면 달성률·판정이 자동 계산되어 보고서에 ‘성과지표 달성 현황’ 장이 추가됩니다. 지표가 없어도 분석·보고서는 그대로 만들어집니다.</p></div>
+    <div><h1>성과지표 <span class="badge muted">선택</span></h1><p class="small muted">목표값을 정하면 달성률·판정이 자동 계산되어 보고서에 ‘성과지표 달성 현황’ 장이 추가됩니다. 지표가 없어도 분석·보고서는 그대로 만들어집니다.</p></div>
     <div class="row gap wrap"><button class="btn" data-act="goto" data-to="dash">건너뛰고 분석 결과 보기${icon("right", 16)}</button></div>
   </div>
 
   <section class="card">
     <div class="row between wrap">
-      <h3 class="flush">빠른 추가</h3>
+      <h2 class="flush">빠른 추가</h2>
       <div class="row gap">${state.businessFound?.kpi ? `<span class="badge ok">엑셀 성과지표 시트 반영됨</span>` : ""}<button class="btn sm" data-act="kpi-add">+ 빈 지표 추가</button></div>
     </div>
     <div class="quick-kpis">${quick.map(qk => `<button class="chip-btn" data-act="kpi-quick" data-id="${qk.id}" ${used.has(qk.kpi.metric + "|" + qk.kpi.name) ? "disabled" : ""}>+ ${esc(qk.label)}</button>`).join("")}</div>
@@ -153,7 +155,7 @@ export function render() {
 
   <section class="card">
     <div class="row between wrap">
-      <h3 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}${state.businessFound?.doc ? ` <span class="badge ok">문서에서 초안 반영 · 확인 필요</span>` : ""}</h3>
+      <h2 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}${state.businessFound?.doc ? ` <span class="badge ok">문서에서 초안 반영 · 확인 필요</span>` : ""}</h2>
       <div class="rt-io-group" role="group" aria-label="사업정보·성과지표 저장·불러오기">
         <button class="rt-btn" data-act="save-preset" title="사업정보·지표 파일로 저장">${icon("download", 16)}사업정보·지표 파일로 저장</button>
         <div class="rt-sep" aria-hidden="true"></div>

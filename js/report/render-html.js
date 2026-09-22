@@ -60,14 +60,19 @@ export function titleBlockHtml(text) {
 
 /**
  * @param {object[]} blocks  finalizeBlocks 결과
- * @param {{editable?:boolean, figureHtml?:(b)=>string, theme?:'light'|'dark'}} opts  theme: 화면 표시용 차트 테마(보고서·HWPX는 항상 light)
+ * @param {{editable?:boolean, figureHtml?:(b)=>string, theme?:'light'|'dark', headingBase?:number}} opts
+ *   theme: 화면 표시용 차트 테마(보고서·HWPX는 항상 light)
+ *   headingBase: 제목(title) 블록의 h 단계(기본 1=h1, 장 h2, 절 h3) — 이 함수 출력이 그 자체로 페이지의
+ *   주된 내용일 때만 1을 쓴다. 이미 그 위에 페이지 자체의 h1(예: dash.js "분석 결과")이 있는 자리에 끼워
+ *   넣을 때는 2를 넘겨, 화면 낭독기의 제목 탐색에서 h1 이 페이지마다 하나만 있고 순서대로 내려가게 한다.
  */
-export function blocksToHtml(blocks, { editable = false, figureHtml = null, theme = "light" } = {}) {
+export function blocksToHtml(blocks, { editable = false, figureHtml = null, theme = "light", headingBase = 1 } = {}) {
   let chIdx = 0; // 장(레벨1 제목) 순번 — 보고서 화면 도구모음의 "장 이동"이 같은 순번의 id로 이동
+  const hTag = level => `h${Math.min(6, headingBase + level)}`; // level 0=제목, 1=장, 2=절
   return blocks.map(b => {
     switch (b.type) {
-      case "title": return `<h1 class="r-title">${esc(b.text)}</h1>${b.subtitle ? `<p class="r-sub">${esc(b.subtitle)}</p>` : ""}`;
-      case "heading": return b.level === 1 ? `<h2 class="r-h1" id="r-ch-${chIdx++}">${esc(b.display)}</h2>` : `<h3 class="r-h2">${esc(b.display)}</h3>`;
+      case "title": { const t = hTag(0); return `<${t} class="r-title">${esc(b.text)}</${t}>${b.subtitle ? `<p class="r-sub">${esc(b.subtitle)}</p>` : ""}`; }
+      case "heading": { const t = hTag(b.level === 1 ? 1 : 2); return b.level === 1 ? `<${t} class="r-h1" id="r-ch-${chIdx++}">${esc(b.display)}</${t}>` : `<${t} class="r-h2">${esc(b.display)}</${t}>`; }
       case "bullets": return b.items.map(it => `<p class="r-b r-b${it.level}${it.edited ? " edited" : ""}"><span class="r-sym">${SYM[it.level]}</span>${editableText(it, editable)}</p>`).join("");
       case "box": return `<div class="r-box">${b.lines.map(l => `<p class="r-boxline${l.edited ? " edited" : ""}">${editableText(l, editable)}</p>`).join("")}</div>`;
       case "paragraph": return `<p class="r-p${b.style === "note" ? " r-note" : ""}">${editableText(b, editable)}</p>`;

@@ -161,6 +161,7 @@ export function render() {
     </div>
   </div>
   <div class="report-layout">
+    <div class="paper edit" id="reportPaper" style="${esc(paperStyle())}">${state.settings.headerBlock ? titleBlockHtml(title) : ""}${blocksToHtml(blocks, { editable: true })}</div>
     <aside class="card side no-print">
       <h2>보고서 설정</h2>
       <div class="grid-2in">
@@ -188,7 +189,6 @@ export function render() {
         <p class="small muted">프로젝트 파일에는 문항 설정·사업정보·성과지표·문장 수정·문서 서식이 저장되어 다음에 같은 설문을 올리면 그대로 적용됩니다.</p>
       </div>` : ""}
     </aside>
-    <div class="paper edit" id="reportPaper" style="${esc(paperStyle())}">${state.settings.headerBlock ? titleBlockHtml(title) : ""}${blocksToHtml(blocks, { editable: true })}</div>
   </div>`;
 }
 

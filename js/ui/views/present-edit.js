@@ -441,7 +441,7 @@ function slidePanelHtml(slide, custom) {
 export function render() {
   const all = allDeckSlides();
   if (!all.length) {
-    return `<section class="card empty-state"><h2>편집할 슬라이드가 없습니다</h2><div class="row gap"><button class="btn" data-act="goto" data-to="present" data-sub="1">발표 모드로</button></div></section>`;
+    return `<section class="card empty-state"><h1>편집할 슬라이드가 없습니다</h1><div class="row gap"><button class="btn" data-act="goto" data-to="present" data-sub="1">발표 모드로</button></div></section>`;
   }
   const slide = currentSlide();
   const idx = all.findIndex(s => s.id === slide.id);
@@ -450,7 +450,7 @@ export function render() {
   const canRevertAuto = custom && slide.type !== "custom";
   if (!custom || (selectedElId && !findEl(slide.id, selectedElId))) selectedElId = null;
   const el = selectedElId ? findEl(slide.id, selectedElId) : null;
-  return `<div class="page-head pe-head"><div><button class="btn ghost sm pe-back" data-act="back">${icon("left", 15)}${esc(viewLabel(prevView()))} 화면으로</button><h2>슬라이드 편집</h2></div>
+  return `<div class="page-head pe-head"><div><button class="btn ghost sm pe-back" data-act="back">${icon("left", 15)}${esc(viewLabel(prevView()))} 화면으로</button><h1>슬라이드 편집</h1></div>
     <button class="btn primary" data-act="goto" data-to="present" data-sub="${idx + 1}">${icon("play", 16)}발표로 미리 보기</button>
   </div>
   <div class="pe-tools">${insertBarHtml(slide, custom, canRevertAuto, M.chartChoices(all))}${formatBarHtml(custom, el)}</div>

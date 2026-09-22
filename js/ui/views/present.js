@@ -144,7 +144,7 @@ export function render({ sub }) {
   const slides = visibleSlides();
   const total = slides.length;
   if (!total) {
-    return `<section class="card empty-state"><h2>발표할 슬라이드가 없습니다</h2><p class="muted">모든 슬라이드를 숨겼습니다.</p><div class="row gap"><button class="btn primary" data-act="p-unhide-all">숨긴 슬라이드 모두 보이기</button><button class="btn" data-act="goto" data-to="dash">분석 결과로</button></div></section>`;
+    return `<section class="card empty-state"><h1>발표할 슬라이드가 없습니다</h1><p class="muted">모든 슬라이드를 숨겼습니다.</p><div class="row gap"><button class="btn primary" data-act="p-unhide-all">숨긴 슬라이드 모두 보이기</button><button class="btn" data-act="goto" data-to="dash">분석 결과로</button></div></section>`;
   }
   const idx = Math.min(total, Math.max(1, parseInt(sub, 10) || 1)) - 1;
   const theme = stageTheme();

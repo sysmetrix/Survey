@@ -181,15 +181,15 @@ export function render() {
 
   return `
   <section class="card">
-    <div class="row between wrap">
-      <div><h2>데이터 설정</h2><p class="muted">자동 판별 결과를 확인하고 필요한 부분만 고치세요. 변경 사항은 분석·보고서에 바로 반영됩니다.</p></div>
+    <div class="page-head">
+      <div><h1>데이터 설정</h1><p class="muted">자동 판별 결과를 확인하고 필요한 부분만 고치세요. 변경 사항은 분석·보고서에 바로 반영됩니다.</p></div>
       <div class="row gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button><button class="btn ghost" data-act="goto" data-to="dash">건너뛰고 분석 결과 보기</button></div>
     </div>
     <div class="facts">
       <div><span>파일</span><b>${esc(state.dataset.fileName)}</b></div>
       <div><span>시트</span><b>${cb.sheets.map(s => `${esc(s.name)}(${SHEET_ROLE[s.role] || s.role})`).join(", ")}</b></div>
       <div><span>분석 응답자</span><b>${sv.n}명</b></div>
-      <div><span>조사 설계</span><select class="in" data-change="design">${Object.entries(DESIGN_LABELS).map(([k, v]) => option(k, v, cb.design === k)).join("")}</select></div>
+      <div><span>조사 설계</span><select class="in" data-change="design" aria-label="조사 설계">${Object.entries(DESIGN_LABELS).map(([k, v]) => option(k, v, cb.design === k)).join("")}</select></div>
     </div>
     ${r.codebookWarnings.length || unmappedWarn ? `<ul class="warnings">${unmappedWarn}${r.codebookWarnings.map(w => `<li>${levelBadge(w.level)} ${esc(w.msg)}</li>`).join("")}</ul>` : ""}
   </section>

@@ -21,7 +21,7 @@ import { getSession, installIdleWatch } from "./auth/session.js";
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 import { loadFeatureFlags } from "./admin/flags-client.js";
 
-export const APP_VERSION = "5.39.2";
+export const APP_VERSION = "5.40.0";
 // 첫 화면(load)만 곧바로 받아오고, 나머지 화면은 실제로 들어갈 때 받아옴 — 무거운 보고서·발표 편집기 코드가
 // 서비스워커 캐시도 없는 첫 접속에서부터 앱 시작을 늦추지 않도록(모션·기능은 그대로, 첫 로딩만 가벼워짐)
 const VIEW_LOADERS = {
