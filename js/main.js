@@ -295,7 +295,8 @@ window.addEventListener("unhandledrejection", e => {
   toast(`처리 중 오류: ${msg}`, "bad", 6000);
 });
 
-if (!window.XLSX || !window.Papa || !window.JSZip) toast("일부 라이브러리를 불러오지 못했습니다. 새로고침하세요.", "bad", 8000);
+// XLSX(SheetJS)는 .xlsx 파일을 실제로 열 때만 따로 받아오므로 여기서는 확인하지 않음(js/io/xlsx-loader.js)
+if (!window.Papa || !window.JSZip) toast("일부 라이브러리를 불러오지 못했습니다. 새로고침하세요.", "bad", 8000);
 document.getElementById("ver").textContent = `v${APP_VERSION}`;
 document.getElementById("presentBtn").innerHTML = `${icon("play", 15)}<span>발표</span>`;
 document.getElementById("installBtn").innerHTML = `${icon("install", 16)}<span>앱 설치</span>`;

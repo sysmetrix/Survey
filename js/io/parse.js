@@ -82,6 +82,9 @@ export function parseWorkbook(bytes, fileName, XLSX) {
   return { fileName, source: detectSource(sheets), sheets };
 }
 
+/** 확장자만으로 SheetJS(XLSX)가 필요한 파일인지 (미리 받아올지 결정하는 쪽에서 씀) */
+export const isWorkbookExt = fileName => ["xlsx", "xls", "xlsm"].includes(fileName.split(".").pop().toLowerCase());
+
 /** 확장자에 따라 파싱 */
 export function parseFile(bytes, fileName, { XLSX, Papa }) {
   const ext = fileName.split(".").pop().toLowerCase();

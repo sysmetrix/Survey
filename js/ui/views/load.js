@@ -1,7 +1,8 @@
 // ① 불러오기 화면 — 분할 무대(왼쪽 키네틱 헤드라인·진행 순서 / 오른쪽 끌어놓기 영역) + 샘플 6타일 + 최근 작업 한 줄
 import { state, loadDataset, applyProject } from "../store.js";
-import { parseFile } from "../../io/parse.js";
+import { parseFile, isWorkbookExt } from "../../io/parse.js";
 import { makeTemplate } from "../../io/template-xlsx.js";
+import { loadXlsx } from "../xlsx-loader.js";
 import { parseProject } from "../../io/project.js";
 import { toast, busy, download, readFileBytes, readFileText, nextFrame, esc } from "../util.js";
 import { go } from "../router.js";
@@ -149,7 +150,8 @@ async function openBytes(bytes, fileName) {
   busy(true, "파일을 읽는 중…");
   await nextFrame();
   try {
-    const ds = parseFile(bytes, fileName, { XLSX: window.XLSX, Papa: window.Papa });
+    const XLSX = isWorkbookExt(fileName) ? await loadXlsx() : undefined;
+    const ds = parseFile(bytes, fileName, { XLSX, Papa: window.Papa });
     if (!ds.sheets.length || !ds.sheets.some(s => s.rows.length)) throw new Error("응답 데이터가 없습니다");
     const note = loadDataset(ds, state.pendingProject || null);
     state.pendingProject = null;
@@ -192,9 +194,14 @@ export const actions = {
   "open-project": async el => { const { selectProject } = await import("./history.js"); selectProject(el.dataset.id); go("history"); },
   "resume-project": async el => openStoredProject(el.dataset.id, "dash"),
   "present-project": async el => openStoredProject(el.dataset.id, "present"),
-  template: el => {
+  template: async el => {
     const kind = el.dataset.kind;
-    download(makeTemplate(kind, window.XLSX), kind === "prepost" ? "설문입력템플릿_사전사후.xlsx" : "설문입력템플릿_만족도.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    busy(true, "템플릿을 준비하는 중…");
+    try {
+      const XLSX = await loadXlsx();
+      download(makeTemplate(kind, XLSX), kind === "prepost" ? "설문입력템플릿_사전사후.xlsx" : "설문입력템플릿_만족도.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    } catch (e) { toast(`템플릿을 만들지 못했습니다: ${e.message}`, "bad", 6000); }
+    finally { busy(false); }
   },
 };
 
