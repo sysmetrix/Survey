@@ -37,7 +37,18 @@ export function metricFromText(s) {
 }
 
 export function newKpi(i = 1) {
-  return { id: `K${i}`, name: "", stage: "단기성과", goalId: "", metric: "manual", targetRef: "", target: null, actual: null, direction: "up", unit: "", note: "" };
+  return { id: `K${i}`, name: "", stage: "단기성과", goalId: "", metric: "manual", targetRef: "", target: null, actual: null, prevActual: null, direction: "up", unit: "", note: "" };
+}
+
+/** 전년 실적 대비 목표가 지나치게 낮게(하향 지표는 지나치게 느슨하게) 잡혔는지 점검. 전년 실적을 입력하지 않으면 null */
+export function targetAdequacy(target, prevActual, direction = "up", { minGrowthPct = 1 } = {}) {
+  if (!Number.isFinite(target) || !Number.isFinite(prevActual)) return null;
+  if (direction === "down") {
+    return target > prevActual ? `목표(${target})가 전년 실적(${prevActual})보다 완화되어 있어 재검토가 필요합니다` : null;
+  }
+  if (target <= prevActual) return `목표(${target})가 전년 실적(${prevActual}) 이하로 설정되어 있어 재검토가 필요합니다`;
+  const growthPct = (target - prevActual) / Math.abs(prevActual || 1) * 100;
+  return growthPct < minGrowthPct ? `목표가 전년 실적 대비 ${growthPct.toFixed(1)}%만 상향되어 있어 목표 설정이 소극적인지 검토가 필요합니다` : null;
 }
 
 /**
@@ -126,7 +137,8 @@ export function evaluateKpis(kpis, analysis, codebook, thresholds = DEFAULT_THRE
     const unit = k.unit || METRICS[k.metric]?.unit || "";
     if (a.error) return { ...k, unit, targetValue: target, actualValue: NaN, rate: NaN, judgment: "측정 불가", error: a.error };
     const rate = achievementRate(a.value, target, k.direction);
-    return { ...k, unit, targetValue: target, actualValue: a.value, n: a.n, p: a.p, facts: a.facts, rate, judgment: Number.isFinite(target) ? judgeWord(rate, thresholds) : "목표 미설정", error: Number.isFinite(target) ? null : "목표값 미입력" };
+    const targetCaution = targetAdequacy(target, k.prevActual === null || k.prevActual === "" ? NaN : Number(k.prevActual), k.direction);
+    return { ...k, unit, targetValue: target, actualValue: a.value, n: a.n, p: a.p, facts: a.facts, rate, targetCaution, judgment: Number.isFinite(target) ? judgeWord(rate, thresholds) : "목표 미설정", error: Number.isFinite(target) ? null : "목표값 미입력" };
   });
   const measured = results.filter(r => Number.isFinite(r.rate));
   const achieved = measured.filter(r => r.judgment === "달성").length;

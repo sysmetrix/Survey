@@ -106,8 +106,8 @@ export function diffEditable(older, newer) {
     const o = ka.get(id);
     if (!o) add("성과지표", `추가: ${q(short(k.name || id))}`);
     else if (!same(o, k)) {
-      const f = ["name", "target", "actual", "metric", "targetRef", "direction", "unit", "stage", "goalId"].filter(x => !same(o[x], k[x]));
-      add("성과지표", `${q(short(k.name || id))}: ${f.map(x => ({ name: "이름", target: `목표 ${o.target ?? "-"}→${k.target ?? "-"}`, actual: `실적 ${o.actual ?? "-"}→${k.actual ?? "-"}`, metric: "측정 방법", targetRef: "대상", direction: "방향", unit: "단위", stage: "단계", goalId: "연계 목표" }[x])).join(", ")}`);
+      const f = ["name", "target", "actual", "prevActual", "metric", "targetRef", "direction", "unit", "stage", "goalId"].filter(x => !same(o[x], k[x]));
+      add("성과지표", `${q(short(k.name || id))}: ${f.map(x => ({ name: "이름", target: `목표 ${o.target ?? "-"}→${k.target ?? "-"}`, actual: `실적 ${o.actual ?? "-"}→${k.actual ?? "-"}`, prevActual: `전년 실적 ${o.prevActual ?? "-"}→${k.prevActual ?? "-"}`, metric: "측정 방법", targetRef: "대상", direction: "방향", unit: "단위", stage: "단계", goalId: "연계 목표" }[x])).join(", ")}`);
     }
   }
   for (const [id, k] of ka) if (!kb.has(id)) add("성과지표", `삭제: ${q(short(k.name || id))}`);

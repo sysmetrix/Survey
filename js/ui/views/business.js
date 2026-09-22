@@ -11,6 +11,7 @@ import { f1, f2 } from "../../narrative/vocab.js";
 import { esc, option, levelBadge, toast, download, readFileText, readFileBytes, busy, nextFrame } from "../util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
+import { isFeatureOn } from "../../admin/flags-client.js";
 import { PROGRAM_FIELD_EXAMPLES, LOGIC_STAGE_EXAMPLES, BACKGROUND_EXAMPLE, PURPOSE_EXAMPLE, GOALS_EXAMPLE } from "../examples.js";
 
 const MAX_PLAN_DOC_MB = 20;
@@ -91,6 +92,7 @@ function quickKpis(r) {
 function kpiTable(r) {
   const results = new Map((r.evaluation?.results || []).map(x => [x.id, x]));
   const goals = state.logicModel.goals || [];
+  const adeqOn = isFeatureOn("kpiTargetAdequacy"); // 관리자 전용 미리보기 — 전년 실적 입력·목표 적정성 경고
   const rows = state.kpis.map((k, i) => {
     const res = results.get(k.id);
     const m = METRICS[k.metric] || METRICS.manual;
@@ -105,6 +107,7 @@ function kpiTable(r) {
       <td>${m.kind === "manual" || k.metric === "responseCount" ? `<span class="muted small">-</span>` : `<input class="in" list="targetList" value="${esc(k.targetRef)}" placeholder="전체 / 영역 / 문항" data-change="kpi" data-i="${i}" data-field="targetRef">`}</td>
       <td><input class="in num" type="number" step="any" value="${k.target ?? ""}" data-change="kpi" data-i="${i}" data-field="target" aria-label="목표"></td>
       <td>${m.kind === "manual" ? `<input class="in num" type="number" step="any" value="${k.actual ?? ""}" data-change="kpi" data-i="${i}" data-field="actual" aria-label="실적">` : `<span class="calc">${val(res?.actualValue)}</span>`}</td>
+      ${adeqOn ? `<td><input class="in num" type="number" step="any" value="${k.prevActual ?? ""}" placeholder="선택" data-change="kpi" data-i="${i}" data-field="prevActual" aria-label="전년 실적">${res?.targetCaution ? `<div class="small warn-text" title="${esc(res.targetCaution)}">${icon("alert", 12)} 목표 검토</div>` : ""}</td>` : ""}
       <td><input class="in xs" value="${esc(k.unit || "")}" placeholder="${esc(m.unit)}" data-change="kpi" data-i="${i}" data-field="unit" aria-label="단위"></td>
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="direction">${option("up", "상향", k.direction !== "down")}${option("down", "하향", k.direction === "down")}</select></td>
       <td class="nowrap c"><b>${res && Number.isFinite(res.rate) ? f1(res.rate) + "%" : "-"}</b></td>
@@ -113,7 +116,7 @@ function kpiTable(r) {
     </tr>`;
   }).join("");
   return `<div class="tblwrap"><table class="tbl kpi">
-      <thead><tr><th>ID</th><th>지표명</th><th>단계</th><th>연계목표</th><th>측정 방법</th><th>대상</th><th>목표</th><th>실적</th><th>단위</th><th>방향</th><th>달성률</th><th>판정</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>지표명</th><th>단계</th><th>연계목표</th><th>측정 방법</th><th>대상</th><th>목표</th><th>실적</th>${adeqOn ? "<th>전년 실적</th>" : ""}<th>단위</th><th>방향</th><th>달성률</th><th>판정</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
 }
 
@@ -205,7 +208,7 @@ export const actions = {
   kpi: el => {
     const k = state.kpis[+el.dataset.i], f = el.dataset.field;
     if (!k) return;
-    if (f === "target" || f === "actual") k[f] = el.value === "" ? null : Number(el.value);
+    if (f === "target" || f === "actual" || f === "prevActual") k[f] = el.value === "" ? null : Number(el.value);
     else k[f] = el.value;
     if (f === "metric" && !k.unit) k.unit = METRICS[k.metric]?.unit || "";
     invalidate(); refresh();
@@ -303,12 +306,12 @@ function formatPlanDocConfirm(preview) {
   return lines.join("\n");
 }
 
-const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "direction", "unit", "note"];
+const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "prevActual", "direction", "unit", "note"];
 function pickKpi(k) {
   const o = {};
   for (const f of KPI_FIELDS) {
     if (k[f] === undefined) continue;
-    o[f] = ["target", "actual"].includes(f) ? (k[f] === null || k[f] === "" ? null : Number(k[f])) : String(k[f]).slice(0, 200);
+    o[f] = ["target", "actual", "prevActual"].includes(f) ? (k[f] === null || k[f] === "" ? null : Number(k[f])) : String(k[f]).slice(0, 200);
   }
   if (o.metric && !METRICS[o.metric]) o.metric = "manual";
   return o;

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { buildCodebook } from "../../js/model/codebook.js";
 import { buildSurvey } from "../../js/model/survey.js";
 import { analyzeSurvey } from "../../js/analysis/run.js";
-import { achievementRate, evaluateKpis, metricFromText, resolveTarget } from "../../js/evaluation/kpi.js";
+import { achievementRate, evaluateKpis, metricFromText, resolveTarget, targetAdequacy } from "../../js/evaluation/kpi.js";
 import { lintEvaluation } from "../../js/evaluation/linkage.js";
 import { parseBusinessSheet, parseKpiSheet } from "../../js/evaluation/business-sheet.js";
 
@@ -17,6 +17,20 @@ test("달성률: 상향·하향·경계", () => {
   assert.equal(metricFromText("긍정응답률(Top2)"), "top2");
   assert.equal(metricFromText("사전사후 변화량"), "prepostDiff");
   assert.equal(metricFromText("직접입력"), "manual");
+});
+
+test("KPI 목표 적정성(전년 실적 대비)", () => {
+  assert.equal(targetAdequacy(null, 80), null, "전년 실적 없으면 점검 안 함");
+  assert.equal(targetAdequacy(80, null), null, "목표 없으면 점검 안 함");
+  assert.match(targetAdequacy(80, 85, "up"), /전년 실적.*이하/, "상향 지표인데 전년보다 목표가 낮음");
+  assert.match(targetAdequacy(80.5, 80, "up"), /소극적/, "상향폭이 1% 미만이면 소극적 목표로 안내");
+  assert.equal(targetAdequacy(90, 80, "up"), null, "충분히 상향된 목표는 통과");
+  assert.match(targetAdequacy(90, 80, "down"), /완화/, "하향 지표인데 전년보다 목표가 느슨함");
+  assert.equal(targetAdequacy(70, 80, "down"), null, "하향 지표가 전년보다 낮으면 통과");
+
+  const kpis = [{ id: "K1", name: "만족도", metric: "manual", target: 80, actual: 82, prevActual: 79.5, direction: "up" }];
+  const ev = evaluateKpis(kpis, { meta: {}, items: [], nps: [], prepost: null }, { domains: [], columns: [] });
+  assert.match(ev.results[0].targetCaution, /소극적/);
 });
 
 test("KPI 평가·판정·종합", () => {
