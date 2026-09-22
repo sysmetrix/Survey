@@ -172,14 +172,20 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width:
 .switch input:checked + .track .thumb { transform: translateX(18px); background: var(--on-brand); }
 .switch input:focus-visible + .track { outline: 2px solid var(--brand); outline-offset: 2px; }
 .switch input:disabled + .track { opacity: .5; cursor: not-allowed; }
-/* 관리자 기능 플래그 목록 — 켜고 끄는 설정 화면에서 흔히 쓰는 좌: 설명 · 우: 스위치 줄 배치 */
-.flag-list { display: flex; flex-direction: column; }
-.flag-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.flag-row:last-child { border-bottom: 0; }
-.flag-main { flex: 1; min-width: 0; }
-.flag-desc { margin: 4px 0 2px; }
-.flag-where { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; color: var(--brand-text); }
+/* 관리자 기능 플래그 목록 — 카드형 2열 배치(넓은 화면), 좁은 화면은 1열로 접힘 */
+.flag-list { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 720px) { .flag-list { grid-template-columns: 1fr 1fr; } }
+.flag-row { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.flag-desc { margin: 0; }
+.flag-where { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--brand-text); }
 .flag-where .ico { flex-shrink: 0; }
+.flag-example { margin-top: 4px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px dashed var(--border-strong); }
+.flag-example-label { font-size: 11px; font-weight: 800; letter-spacing: .03em; color: var(--text-3); text-transform: uppercase; margin-bottom: 6px; }
+/* 성과지표 표 — 전년·목표·실적 추이 막대(관리자 기능 플래그: kpiTrendChart) */
+.kpi-trend { display: flex; flex-direction: column; gap: 2px; min-width: 130px; }
+.kpi-trend-row { display: grid; grid-template-columns: 28px 1fr 34px; align-items: center; gap: 4px; }
+.kpi-trend-bar { display: block; height: 7px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.kpi-trend-bar span { display: block; height: 100%; border-radius: 3px; }
 .chapter-list { display: flex; flex-direction: column; gap: 1px; margin: 6px 0 4px; }
 .edited-list { display: flex; flex-direction: column; gap: 5px; margin: 8px 0 10px; }
 .edited-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-2); font: inherit; font-size: 13px; line-height: 1.4; cursor: pointer; }
@@ -708,15 +714,16 @@ svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
 .update-banner[hidden], body.presenting .update-banner { display: none; }
 /* 화면 가이드 제안 띠는 업데이트 띠와 같은 모양을 재사용하지만, 상단에 뜨면 발표 모드·보고서 도구줄 같은
    막 들어간 화면의 핵심 버튼을 가린다 — 아래쪽으로 옮겨 겹치지 않게 한다(가이드 진행 중 막대인 .tutorial-bar
-   와 같은 자리). 둘 다 가운데·바닥 고정인 .toast 는 보통 이 배너와 거의 동시에 뜨는데(파일을 불러오면 "N개
-   시트 인식" 토스트 → 곧이어 첫 방문 안내), 토스트 문구가 길면(예: 시트 인식 안내) 좁은 화면에서 3~4줄로
-   불어나 최대 약 150px까지 높아진다 — js/ui/tutorial.js 의 showOfferWhenClear() 로 토스트가 뜬 동안은
-   기다렸다가 띄우지만, 반대로 이 띠가 이미 뜬 뒤 토스트가 새로 뜨는 경우까지는 막지 못하므로, 그 최악
-   높이를 여유 있게 덮는 고정 간격을 둔다(정확히 맞추는 대신 넉넉하게 — 토스트 문구 길이는 내용에 따라
-   바뀌어 픽셀 단위로 맞추기 어렵다). */
-.update-banner.guide-offer { top: auto; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 168px); animation-name: guide-offer-in; }
+   와 같은 자리). 가운데(바닥 중앙)에 두면 첫 화면 오른쪽의 큰 파일 올리기 드롭존과 겹쳐, 왼쪽으로 붙여
+   드롭존을 가리지 않게 한다. 바닥 중앙인 .toast 는 보통 이 배너와 거의 동시에 뜨는데(파일을 불러오면
+   "N개 시트 인식" 토스트 → 곧이어 첫 방문 안내), 토스트 문구가 길면(예: 시트 인식 안내) 좁은 화면에서
+   3~4줄로 불어나 최대 약 150px까지 높아진다 — js/ui/tutorial.js 의 showOfferWhenClear() 로 토스트가 뜬
+   동안은 기다렸다가 띄우지만, 반대로 이 띠가 이미 뜬 뒤 토스트가 새로 뜨는 경우까지는 막지 못하므로, 그
+   최악 높이를 여유 있게 덮는 고정 간격을 둔다(정확히 맞추는 대신 넉넉하게 — 토스트 문구 길이는 내용에
+   따라 바뀌어 픽셀 단위로 맞추기 어렵다). */
+.update-banner.guide-offer { top: auto; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 168px); left: max(16px, env(safe-area-inset-left)); transform: none; animation-name: guide-offer-in; }
 @media (min-width: 640px) { .update-banner.guide-offer { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 84px); } } /* 넓은 화면은 토스트가 한 줄로 끝나 간격이 덜 필요함 */
-@keyframes guide-offer-in { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes guide-offer-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes update-in { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .update-body { display: flex; align-items: center; gap: 12px; padding: 11px 12px 11px 16px; }
 .update-ico { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--on-brand) 18%, transparent); }
