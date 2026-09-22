@@ -210,9 +210,10 @@ function showOffer() {
   el.hidden = false;
   const bar = el.querySelector(".update-bar i");
   bar.style.transition = "none";
-  bar.style.transform = "scaleX(0)";
-  // 다음 프레임에 transition 을 걸어야 0 → 1 로 실제로 움직임(같은 프레임이면 건너뜀)
-  requestAnimationFrame(() => { bar.style.transition = `transform ${OFFER_MS}ms linear`; bar.style.transform = "scaleX(1)"; });
+  bar.style.transform = "scaleX(1)";
+  bar.offsetWidth; // 강제 리플로우: transition 을 끈 채로 먼저 그려야 이후 transition 이 실제로 움직임(requestAnimationFrame 만으로는 브라우저가 두 변경을 한 프레임에 묶어 건너뛸 때가 있음)
+  bar.style.transition = `transform ${OFFER_MS}ms linear`;
+  bar.style.transform = "scaleX(0)"; // 다 차 있던 막대가 시간이 줄어드는 만큼 비어감(남은 시간을 눈으로 따라가기 쉽도록)
   const timerEl = el.querySelector(".guide-offer-timer");
   const until = Date.now() + OFFER_MS;
   const paint = () => { timerEl.textContent = `${Math.max(0, Math.ceil((until - Date.now()) / 1000))}초`; };
