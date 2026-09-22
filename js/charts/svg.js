@@ -343,3 +343,73 @@ export function groupedHbar(categories, series, { width = 720, max = 100, labelW
   const lg = legend(T, series.map((s, j) => [s.name, T.series[j % T.series.length]]), plotX, top + Lay.total + 32, width - plotX);
   return wrapSvg(T, width, lg.bottom + 10, b + lg.svg, title);
 }
+
+/**
+ * 시계열 선 그래프(면적 채움) — 일별 추이(방문·오류 등). 점이 많으면 x축 글자는 겹치지 않게 듬성듬성 표시.
+ * @param {{label:string, value:number}[]} rows  시간 순서대로(과거→최근)
+ * @param {{refValue?:number, refLabel?:string}} o  refValue: 평균 등 기준선(점선)
+ */
+export function trendLine(rows, { width = 720, height = 220, valueFmt = v => v.toFixed(0), unit = "", title = "", refValue = null, refLabel = "", theme = "light" } = {}) {
+  const T = themeOf(theme);
+  const pad = { l: 40, r: 16, t: title ? 36 : 14, b: 30 };
+  const W = width - pad.l - pad.r, H = height - pad.t - pad.b;
+  const vals = rows.map(r => (Number.isFinite(r.value) ? r.value : 0));
+  const dataMax = Math.max(1, ...vals);
+  const step = niceStep(dataMax / 4);
+  const ymax = Math.ceil((dataMax * 1.1) / step) * step;
+  const n = Math.max(1, rows.length - 1);
+  const sx = i => pad.l + (n ? i / n * W : 0);
+  const sy = v => pad.t + H - Math.max(0, Math.min(ymax, v)) / ymax * H;
+  let b = title ? text(0, 14, title, { fs: 14, weight: 700, fill: T.ink }) : "";
+  ticksFor(0, ymax, 4).forEach(v => { const gy = sy(v); b += line(pad.l, gy, pad.l + W, gy, T.grid) + text(pad.l - 8, gy, tickLabel(v), { fs: 10, anchor: "end", fill: T.muted }); });
+  // x축 글자: 8개 안팎으로만(라벨이 많으면 겹침) — 처음·마지막은 항상, 중간은 균등 간격으로 골라냄
+  const labelEvery = Math.max(1, Math.ceil(rows.length / 7));
+  rows.forEach((r, i) => { if (i % labelEvery === 0 || i === rows.length - 1) b += text(sx(i), pad.t + H + 16, r.label, { fs: 10, anchor: "middle", fill: T.muted }); });
+  if (rows.length > 1) {
+    const pts = rows.map((r, i) => [sx(i), sy(r.value)]);
+    const areaD = `M${r1(pts[0][0])} ${r1(pad.t + H)} ` + pts.map(p => `L${r1(p[0])} ${r1(p[1])}`).join(" ") + ` L${r1(pts[pts.length - 1][0])} ${r1(pad.t + H)} Z`;
+    b += `<path d="${areaD}" fill="${T.accentSoft}" opacity=".22"/>`;
+    b += `<path d="M${pts.map(p => `${r1(p[0])} ${r1(p[1])}`).join(" L")}" fill="none" stroke="${T.accent}" stroke-width="2" stroke-linejoin="round"/>`;
+  }
+  if (refValue !== null && Number.isFinite(refValue)) {
+    const ry = sy(refValue);
+    b += line(pad.l, ry, pad.l + W, ry, T.sub, 1, "4,3") + text(pad.l + W, ry - 6, `${refLabel} ${valueFmt(refValue)}${unit}`, { fs: 10, anchor: "end", weight: 600, fill: T.sub });
+  }
+  // 점(마커)은 항상 그리되, 점이 너무 많으면(>40) 툴팁 히트 영역만 남기고 원은 마지막 점만 강조
+  const showDot = rows.length <= 40;
+  rows.forEach((r, i) => {
+    const [px, py] = [sx(i), sy(r.value)];
+    const dot = (showDot || i === rows.length - 1) ? `<circle class="m" cx="${r1(px)}" cy="${r1(py)}" r="${i === rows.length - 1 ? 4 : 2.5}" fill="${T.accent}" stroke="${T.surface}" stroke-width="1.5"/>` : "";
+    b += tip(r.label, `${valueFmt(r.value)}${unit}`, dot, `<rect x="${r1(px - (W / n) / 2)}" y="${pad.t}" width="${r1(Math.max(4, W / n))}" height="${H}" fill="transparent" pointer-events="all"/>`);
+  });
+  b += line(pad.l, pad.t, pad.l, pad.t + H, T.axis);
+  return wrapSvg(T, width, height, b, title);
+}
+
+/**
+ * 세로 막대(간격 규칙적인 범주 — 시간대 등) — 막대 위쪽만 4px 둥글림
+ * @param {{label:string, value:number}[]} data
+ */
+export function vbar(data, { width = 720, height = 160, valueFmt = v => v.toFixed(0), unit = "", title = "", theme = "light", barColor = null } = {}) {
+  const T = themeOf(theme);
+  const pad = { l: 34, r: 8, t: title ? 32 : 10, b: 26 };
+  const W = width - pad.l - pad.r, H = height - pad.t - pad.b;
+  const dataMax = Math.max(1, ...data.map(d => (Number.isFinite(d.value) ? d.value : 0)));
+  const step = niceStep(dataMax / 3);
+  const ymax = Math.ceil((dataMax * 1.15) / step) * step;
+  const n = data.length, gap = Math.min(6, W / n * 0.25), barW = W / n - gap;
+  const sy = v => pad.t + H - Math.max(0, Math.min(ymax, v)) / ymax * H;
+  let b = title ? text(0, 14, title, { fs: 14, weight: 700, fill: T.ink }) : "";
+  ticksFor(0, ymax, 3).forEach(v => { const gy = sy(v); b += line(pad.l, gy, pad.l + W, gy, T.grid) + text(pad.l - 6, gy, tickLabel(v), { fs: 10, anchor: "end", fill: T.muted }); });
+  const peak = Math.max(...data.map(d => d.value || 0));
+  data.forEach((d, i) => {
+    const bx = pad.l + i * (barW + gap) + gap / 2, by = sy(d.value), bh = pad.t + H - by;
+    const isPeak = d.value === peak && peak > 0;
+    const r = Math.min(3, barW / 2, bh);
+    const path = bh > 0 ? `<path class="m" d="M${r1(bx)} ${r1(pad.t + H)}V${r1(by + r)}Q${r1(bx)} ${r1(by)} ${r1(bx + r)} ${r1(by)}H${r1(bx + barW - r)}Q${r1(bx + barW)} ${r1(by)} ${r1(bx + barW)} ${r1(by + r)}V${r1(pad.t + H)}Z" fill="${isPeak ? T.emphasis : (barColor || T.accent)}"/>` : "";
+    b += tip(d.label, `${valueFmt(d.value)}${unit}`, path, `<rect x="${r1(bx - gap / 2)}" y="${pad.t}" width="${r1(barW + gap)}" height="${H}" fill="transparent" pointer-events="all"/>`);
+    if (n <= 24) b += text(bx + barW / 2, pad.t + H + 14, d.label, { fs: n > 12 ? 8.5 : 10, anchor: "middle", fill: T.muted });
+  });
+  b += line(pad.l, pad.t, pad.l, pad.t + H, T.axis) + line(pad.l, pad.t + H, pad.l + W, pad.t + H, T.axis);
+  return wrapSvg(T, width, height, b, title);
+}

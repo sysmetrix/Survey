@@ -18,6 +18,11 @@ test("SVG 차트들이 올바른 XML을 생성", () => {
     C.ipaScatter([{ label: "a", importance: 0.5, performance: 80 }, { label: "b", importance: 0.7, performance: 60 }, { label: "c", importance: 0.3, performance: 70 }], { meanI: 0.5, meanP: 70 }),
     C.npsBar({ detractors: 20, passives: 30, promoters: 50, nps: 30, n: 100 }),
     C.groupedHbar(["내용", "강사"], [{ name: "남", values: [80, 70] }, { name: "여", values: [85, NaN] }]),
+    C.trendLine([{ label: "9/1", value: 12 }, { label: "9/2", value: 0 }, { label: "9/3", value: 18 }], { refValue: 10, refLabel: "평균", unit: "회" }),
+    C.trendLine([{ label: "9/1", value: 5 }]), // 점 1개
+    C.trendLine([]), // 빈 데이터
+    C.vbar(Array.from({ length: 24 }, (_, h) => ({ label: `${h}시`, value: h === 14 ? 30 : h % 5 }))),
+    C.vbar([{ label: "0시", value: 0 }, { label: "1시", value: 0 }]), // 전부 0
   ];
   charts.forEach(c => { wellFormed(c.svg); assert.ok(c.width > 0 && c.height > 0); });
   assert.ok(C.wrap("아주 긴 문항 이름이 들어가서 두 줄로 줄바꿈 되어야 하는 경우", 120, 13).length <= 2);

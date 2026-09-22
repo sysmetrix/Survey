@@ -470,6 +470,8 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 .tblwrap.can-scroll-right, .tabs.can-scroll-right, .stepper.can-scroll-right { box-shadow: inset -16px 0 12px -12px rgba(0,0,0,.28); }
 .tblwrap.can-scroll-left.can-scroll-right, .tabs.can-scroll-left.can-scroll-right, .stepper.can-scroll-left.can-scroll-right { box-shadow: inset 16px 0 12px -12px rgba(0,0,0,.28), inset -16px 0 12px -12px rgba(0,0,0,.28); }
 .tbl { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13.5px; }
+/* 숫자·짧은 값 위주 표(버전 분포 등)는 셀 안에서 어색하게 줄바꿈되는 대신 .tblwrap 이 가로로 스크롤하게 함 */
+.tbl.nowrap-cells td, .tbl.nowrap-cells th { white-space: nowrap; }
 .tbl th, .tbl td { border-bottom: 1px solid var(--border); padding: 7px 9px; vertical-align: top; }
 .tbl tr:last-child > td { border-bottom: 0; }
 .tbl th { background: var(--surface-2); color: var(--text-2); text-align: left; font-size: 12.5px; font-weight: 700; }
@@ -480,9 +482,17 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 .tbl.kpi td:nth-child(5) select { min-width: 170px; } .tbl.kpi td:nth-child(6) input { min-width: 130px; }
 /* ── 관리자 대시보드 요약 카드·차트·접이식 원본 표 ── */
 .stat-tiles { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-.stat-tile { flex: 1 1 150px; background: var(--surface-2); border-radius: var(--radius); padding: 12px 16px; }
+.stat-tile { flex: 1 1 220px; background: var(--surface-2); border-radius: var(--radius); padding: 12px 16px; }
 .stat-tile .n { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .stat-tile .l { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+.stat-tile-sub { margin-top: 4px; }
+/* 직전 기간 대비 증감: 위로 가면 up(좋은 지표는 초록, 오류율처럼 낮을수록 좋은 지표는 kpiTiles()가 반대로 넘김).
+   화살표·수치·단위(kpi-delta-num)는 한 덩어리로 묶어 줄바꿈 안 되게(220px보다 좁은 화면에서 "12.8" "%" 가 따로
+   떨어져 줄바꿈되던 문제) — "· 직전 N일 대비" 설명만 필요하면 다음 줄로 넘어가게 둠 */
+.kpi-delta { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 0 5px; margin-top: 6px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpi-delta-num { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.kpi-delta.up { color: var(--ok); } .kpi-delta.down { color: var(--bad); }
+.kpi-delta .muted { font-weight: 500; }
 .chart-wrap { max-width: 100%; overflow-x: auto; margin-bottom: 6px; }
 .chart-wrap svg { display: block; max-width: 100%; height: auto; }
 details.admin-raw { margin: 18px 0; }
