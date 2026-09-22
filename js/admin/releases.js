@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.37.2", date: "2026-09-22", title: "공유 미리보기 카드를 카톡 화면 크기에 맞게 다듬음",
+    groups: {
+      "공유": [
+        "카톡 카드는 설명을 두 줄까지만 보여주는데 문장이 길어 뒷부분이 잘리던 것을, 두 줄에 들어가는 길이로 줄임",
+        "썸네일 그림이 대화창에서 1/5 크기로 줄어 글자가 읽히지 않던 것을, 제목을 크게 하고 설명줄을 하나로 줄여 또렷하게 고침",
+      ],
+    },
+  },
+  {
     version: "5.37.1", date: "2026-09-22", title: "카카오톡 등에 주소를 올리면 미리보기 카드가 뜨도록 함",
     groups: {
       "공유": [

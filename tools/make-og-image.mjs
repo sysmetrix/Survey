@@ -14,36 +14,32 @@ import { pngAlphaInfo } from "./lib/png-read.mjs";
 const W = 1200, H = 630;
 const OUT = "icons/og-image.png";
 
-// 카카오톡 등은 카드 가장자리를 조금 잘라 보여줄 수 있어, 글자는 안쪽 여백 안에만 둔다
-const PAD = 72;
+// 카톡 대화창에서 이 카드는 폭 250px 남짓으로 줄어 보인다(1200px → 약 1/5).
+// 그래서 글자는 크게, 줄 수는 적게 둔다 — 작게 넣은 설명줄은 대화창에서 아예 읽히지 않는다.
+// 가운데 정렬로 둔 것도 같은 이유: 카드가 정사각형으로 잘려 보이는 목록에서도 도안과 제목이 남는다.
 const FONT = "'Pretendard GOV Variable','Pretendard GOV',Pretendard,'맑은 고딕','Malgun Gothic',sans-serif";
 
 const TITLE = "설문 분석 · 평가 도구";
-const LINES = [
-  "엑셀 설문 → 통계 분석 · 성과지표 평가",
-  "한글(HWPX) 결과보고서 · 발표 슬라이드까지",
-];
-const FOOT = "브라우저에서 바로 · 설치 없이 · 자료는 이 컴퓨터를 벗어나지 않습니다";
+const SUB = "엑셀 설문 → 통계 분석 · HWPX 결과보고서";
 
 const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export function ogSvg() {
-  const { defs, body } = markParts({ variant: "full", id: "og", box: [PAD, 168, 300, 300] });
-  const textX = PAD + 300 + 64;
+  const MARK = 250;
+  const { defs, body } = markParts({ variant: "full", id: "og", box: [(W - MARK) / 2, 72, MARK, MARK] });
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
     `<defs>` +
       `<linearGradient id="og-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3F7FB"/><stop offset=".55" stop-color="#DCE7F2"/><stop offset="1" stop-color="#BBCFE2"/></linearGradient>` +
-      `<radialGradient id="og-glow" cx=".26" cy=".18" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
+      `<radialGradient id="og-glow" cx=".5" cy=".16" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>` +
       defs +
     `</defs>` +
     `<rect width="${W}" height="${H}" fill="url(#og-bg)"/>` +
     `<rect width="${W}" height="${H}" fill="url(#og-glow)"/>` +
-    `<rect x="0" y="${H - 10}" width="${W}" height="10" fill="#3B5A7A"/>` +
+    `<rect x="0" y="${H - 12}" width="${W}" height="12" fill="#3B5A7A"/>` +
     body +
-    `<g font-family="${FONT}" fill="#14283A">` +
-      `<text x="${textX}" y="252" font-size="66" font-weight="800" letter-spacing="-2">${esc(TITLE)}</text>` +
-      LINES.map((t, i) => `<text x="${textX}" y="${330 + i * 54}" font-size="36" font-weight="500" fill="#33506E">${esc(t)}</text>`).join("") +
-      `<text x="${textX}" y="${330 + LINES.length * 54 + 26}" font-size="26" font-weight="400" fill="#5C748C">${esc(FOOT)}</text>` +
+    `<g font-family="${FONT}" text-anchor="middle">` +
+      `<text x="${W / 2}" y="440" font-size="90" font-weight="800" letter-spacing="-3" fill="#14283A">${esc(TITLE)}</text>` +
+      `<text x="${W / 2}" y="516" font-size="42" font-weight="500" fill="#3B5A7A">${esc(SUB)}</text>` +
     `</g></svg>\n`;
 }
 
