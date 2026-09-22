@@ -229,5 +229,13 @@ export function offerFirstRun() {
   ensureUi();
   if (localStorage.getItem(DONE_KEY) || sessionStorage.getItem(`${DONE_KEY}-offered`)) return;
   sessionStorage.setItem(`${DONE_KEY}-offered`, "1");
-  setTimeout(showOffer, 550);
+  setTimeout(showOfferWhenClear, 550);
+}
+
+/** 처음 파일을 불러오면 "N개 시트 인식" 토스트가 이 안내 띠와 같은 자리(가운데·바닥)에 함께 뜬다 —
+    둘 다 fixed 라 서로 밀어내지 않으므로, 토스트가 떠 있는 동안은 기다렸다가 보여준다(최대 4초, 그 뒤엔 포기하고 띄움). */
+function showOfferWhenClear(waited = 0) {
+  const toastShowing = document.getElementById("toast")?.classList.contains("show");
+  if (toastShowing && waited < 4000) { setTimeout(() => showOfferWhenClear(waited + 200), 200); return; }
+  showOffer();
 }
