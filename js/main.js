@@ -19,6 +19,7 @@ import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 import { getSession, installIdleWatch } from "./auth/session.js";
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
+import { loadFeatureFlags } from "./admin/flags-client.js";
 
 export const APP_VERSION = "5.38.0";
 // 첫 화면(load)만 곧바로 받아오고, 나머지 화면은 실제로 들어갈 때 받아옴 — 무거운 보고서·발표 편집기 코드가
@@ -354,6 +355,8 @@ initPwa({
 initHistory({ onUpdate: () => { if (currentId === "history" || currentId === "load") refresh(); else renderChrome(currentId); } }).then(() => resumeAfterUpdate(updateResume));
 initTelemetry({ version: APP_VERSION, getOrg: () => state.settings.orgName });
 installAutoFlush();
+// 관리자 미리보기 기능 플래그 — 실패해도 조용히 넘어가고(기본값 꺼짐), 늦게 도착하면 다시 그려 반영
+loadFeatureFlags().then(() => refresh());
 installIdleWatch(() => { toast("자리를 비운 동안 자동으로 로그아웃되었습니다", "info", 6000); refresh(); });
 render();
 if (currentId !== "login" && currentId !== "admin") offerFirstRun(); // 관리자 화면에서는 일반 이용자용 가이드를 띄우지 않음

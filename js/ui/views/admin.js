@@ -3,11 +3,13 @@ import { esc } from "../util.js";
 import * as stats from "./admin/stats.js";
 import * as content from "./admin/content.js";
 import * as users from "./admin/users.js";
+import * as flags from "./admin/flags.js";
 
 const TABS = [
   { key: "stats", title: "사용 통계", mod: stats },
   { key: "content", title: "공지 관리", mod: content },
   { key: "users", title: "이용자 관리", mod: users },
+  { key: "flags", title: "기능 플래그", mod: flags },
 ];
 const findTab = key => TABS.find(t => t.key === key) || TABS[0];
 let activeKey = TABS[0].key; // render 뒤 곧바로 불리는 mount 가 어느 탭인지 알기 위한 기록(main.js 가 mount() 를 인자 없이 호출)
@@ -22,4 +24,4 @@ export function render({ sub } = {}) {
 
 export function mount() { findTab(activeKey).mod.mount?.(); }
 
-export const actions = { ...stats.actions, ...content.actions, ...users.actions };
+export const actions = { ...stats.actions, ...content.actions, ...users.actions, ...flags.actions };
