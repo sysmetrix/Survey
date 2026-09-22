@@ -10,7 +10,7 @@ import { esc, option, levelBadge, toast, busy, busyDone, nextFrame } from "../ut
 import { refresh, go } from "../router.js";
 import { scoreBasisPanel, scoreBasisActions } from "../score-basis.js";
 import { icon } from "../icons.js";
-import { isFeatureOn } from "../../admin/flags-client.js";
+import { isFeatureOn, isAdminPreview } from "../../admin/flags-client.js";
 
 const SHEET_ROLE = { data: "응답", pre: "사전 응답", post: "사후 응답", codebook: "문항정보", business: "사업정보", kpi: "성과지표", guide: "안내" };
 const IS_NUM = s => /^[-+]?\d+(\.\d+)?$/.test(s);
@@ -229,7 +229,7 @@ export function render() {
 
   <section class="card">
     <div class="row between wrap"><h2>문항(열) 설정</h2>
-      <span class="small muted">역할: 척도 문항=리커트, 응답자 특성=집단 비교 기준, 복수응답=쉼표 구분 선택형 · 영역: 같은 이름끼리 묶어 영역 점수 계산 · 출생연도·활동 시작연도 등 연도 열은 연령대·년차 구간으로 바꿔 특성 비교에 사용합니다('연도 구간' 버튼에서 방식 변경)</span></div>
+      <span class="small muted">역할: 척도 문항=리커트, 응답자 특성=집단 비교 기준, 복수응답=쉼표 구분 선택형 · 영역: 같은 이름끼리 묶어 영역 점수 계산 · 출생연도·활동 시작연도 등 연도 열은 연령대·년차 구간으로 바꿔 특성 비교에 사용합니다('연도 구간' 버튼에서 방식 변경)${isFeatureOn("respondentRepresentativeness") && isAdminPreview("respondentRepresentativeness") ? ' · 응답자 특성 열의 \'모집단 비율\' 버튼은 <span class="badge muted">관리자 미리보기</span> 기능입니다' : ""}</span></div>
     <datalist id="domainList">${cb.domains.map(d => `<option value="${esc(d.name)}">`).join("")}</datalist>
     <div class="tblwrap"><table class="tbl setup">
       <thead><tr><th>#</th><th>원래 열 이름 · 응답 예</th><th>표시 이름</th><th>역할</th><th>척도 범위</th><th>역문항</th><th>영역</th><th>시점</th><th>전반 만족</th><th></th></tr></thead>

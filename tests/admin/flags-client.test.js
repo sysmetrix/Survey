@@ -15,7 +15,7 @@ globalThis.localStorage = memoryStorage();
 globalThis.sessionStorage = memoryStorage();
 
 const { clearSession } = await import("../../js/auth/session.js");
-const { isFeatureOn, _resetForTest, _setForTest } = await import("../../js/admin/flags-client.js");
+const { isFeatureOn, isAdminPreview, _resetForTest, _setForTest } = await import("../../js/admin/flags-client.js");
 
 test.beforeEach(() => { clearSession(); _resetForTest(); });
 
@@ -39,4 +39,22 @@ test("관리자로 로그인된 브라우저는 서버 값이 꺼져 있어도(�
     user: { id: "u1", email: "a@b.com" }, remember: true, role: "admin",
   }));
   assert.equal(isFeatureOn("kpiTargetAdequacy"), true);
+});
+
+test("isAdminPreview: 일반 이용자에게는 항상 false(관리자 미리보기 표시는 관리자에게만 필요)", () => {
+  assert.equal(isAdminPreview("kpiTargetAdequacy"), false);
+  _setForTest({ kpiTargetAdequacy: true });
+  assert.equal(isAdminPreview("kpiTargetAdequacy"), false);
+});
+
+test("isAdminPreview: 관리자는 아직 전체 공개(enabled)가 아닌 기능만 미리보기로 표시", () => {
+  localStorage.setItem("survey-v5-session", JSON.stringify({
+    access_token: "at", refresh_token: "rt", expires_at: Date.now() + 3600000,
+    user: { id: "u1", email: "a@b.com" }, remember: true, role: "admin",
+  }));
+  assert.equal(isAdminPreview("kpiTargetAdequacy"), true, "캐시가 없으면(서버값 모름) 미리보기로 표시");
+  _setForTest({ kpiTargetAdequacy: false });
+  assert.equal(isAdminPreview("kpiTargetAdequacy"), true, "명시적으로 꺼져 있으면 미리보기");
+  _setForTest({ kpiTargetAdequacy: true });
+  assert.equal(isAdminPreview("kpiTargetAdequacy"), false, "이미 전체 공개면 미리보기 표시 불필요");
 });

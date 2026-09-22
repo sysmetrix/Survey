@@ -11,7 +11,7 @@ import { f1, f2 } from "../../narrative/vocab.js";
 import { esc, option, levelBadge, toast, download, readFileText, readFileBytes, busy, nextFrame } from "../util.js";
 import { refresh } from "../router.js";
 import { icon } from "../icons.js";
-import { isFeatureOn } from "../../admin/flags-client.js";
+import { isFeatureOn, isAdminPreview } from "../../admin/flags-client.js";
 import { PROGRAM_FIELD_EXAMPLES, LOGIC_STAGE_EXAMPLES, BACKGROUND_EXAMPLE, PURPOSE_EXAMPLE, GOALS_EXAMPLE } from "../examples.js";
 
 const MAX_PLAN_DOC_MB = 20;
@@ -115,8 +115,9 @@ function kpiTable(r) {
       <td class="nowrap"><button class="btn sm ghost" data-act="kpi-del" data-i="${i}" title="삭제" aria-label="지표 삭제">✕</button></td>
     </tr>`;
   }).join("");
+  const adeqPreview = adeqOn && isAdminPreview("kpiTargetAdequacy");
   return `<div class="tblwrap"><table class="tbl kpi">
-      <thead><tr><th>ID</th><th>지표명</th><th>단계</th><th>연계목표</th><th>측정 방법</th><th>대상</th><th>목표</th><th>실적</th>${adeqOn ? "<th>전년 실적</th>" : ""}<th>단위</th><th>방향</th><th>달성률</th><th>판정</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>지표명</th><th>단계</th><th>연계목표</th><th>측정 방법</th><th>대상</th><th>목표</th><th>실적</th>${adeqOn ? `<th>전년 실적${adeqPreview ? ' <span class="badge muted">관리자 미리보기</span>' : ""}</th>` : ""}<th>단위</th><th>방향</th><th>달성률</th><th>판정</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
 }
 

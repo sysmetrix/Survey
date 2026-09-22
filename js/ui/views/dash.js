@@ -9,7 +9,7 @@ import { esc, option } from "../util.js";
 import { go, refresh } from "../router.js";
 import { icon } from "../icons.js";
 import { resolvedTheme } from "../theme.js";
-import { isFeatureOn } from "../../admin/flags-client.js";
+import { isFeatureOn, isAdminPreview } from "../../admin/flags-client.js";
 import { representativenessCheck, REP_DIFF_CAUTION } from "../../analysis/representativeness.js";
 
 const TYPE_LABEL = { positive: "긍정", negative: "부정", suggestion: "건의", neutral: "기타", none: "없음" };
@@ -41,7 +41,7 @@ function cards(r) {
   const ppTone = all && (all.primary.p >= .05 ? "mid" : all.diff > 0 ? "good" : "bad");
   const npsTone = A.nps[0] && (A.nps[0].nps > 0 ? "good" : A.nps[0].nps < 0 ? "bad" : "mid");
   const smallSampleOn = isFeatureOn("smallSampleWarning"); // 관리자 전용 미리보기 — 화면에서 바로 보이는 소표본 주의
-  const smallSuffix = small => (smallSampleOn && small ? " · ⚠ 소표본 주의" : "");
+  const smallSuffix = small => (smallSampleOn && small ? ` · ⚠ 소표본 주의${isAdminPreview("smallSampleWarning") ? "(관리자 미리보기)" : ""}` : "");
   const c = [
     ["응답자", `${A.meta.n}명`, `${DESIGN_LABELS[A.meta.design]}${smallSuffix(A.meta.n < t.minN)}`, smallSampleOn && A.meta.n < t.minN ? "mid" : ""],
     E && ["성과지표", `${E.summary.achieved}/${E.summary.measured} 달성`, `종합 ${E.summary.grade}`, GRADE_TONE[E.summary.grade] || ""],
@@ -74,7 +74,8 @@ function repHtml(sv, cb) {
   if (!isFeatureOn("respondentRepresentativeness")) return "";
   const rep = representativenessCheck(sv, cb.columns);
   if (!rep.length) return "";
-  return `<h3>응답자 대표성(모집단 비율 대비)</h3>${rep.map(g => `
+  const preview = isAdminPreview("respondentRepresentativeness") ? ' <span class="badge muted">관리자 미리보기</span>' : "";
+  return `<h3>응답자 대표성(모집단 비율 대비)${preview}</h3>${rep.map(g => `
     <p class="small muted">${esc(g.label)} · 응답 ${g.n}명${g.maxDiff > REP_DIFF_CAUTION ? ` · <span class="warn-text">최대 ${f1(g.maxDiff)}%p 차이 — 표본이 모집단과 차이가 있어 해석 시 참고 필요</span>` : ""}</p>
     <table class="tbl mini"><tr><th>구분</th><th class="c">응답자 비율</th><th class="c">모집단 비율</th><th class="c">차이(%p)</th></tr>
       ${g.rows.filter(row => row.popPct !== null).map(row => `<tr><td>${esc(row.category)}</td><td class="c">${f1(row.observedPct)}</td><td class="c">${f1(row.popPct)}</td><td class="c ${Math.abs(row.diffPts) > REP_DIFF_CAUTION ? "warn-text" : ""}">${signed(row.diffPts, 1)}</td></tr>`).join("")}
@@ -118,7 +119,7 @@ export function render({ sub }) {
     <div><h2>분석 결과</h2><p class="small muted">${esc(state.dataset.fileName)} · 계산 ${r.ms}ms · 그래프에 마우스를 올리면 값이 보입니다</p></div>
     <div class="row gap wrap"><button class="btn" data-act="goto" data-to="present" data-sub="1">${icon("play", 16)}발표 모드</button><button class="btn primary" data-act="goto" data-to="report">보고서 편집·내보내기${icon("right", 16)}</button></div>
   </div>
-  ${isFeatureOn("statsTrustBadge") ? `<p class="small muted row gap" style="margin-top:-6px;align-items:center">${icon("shield", 13)} 통계 방법: R 기준값 대비 검증 · 다중비교 Holm/BH 보정 · 효과크기(95% 신뢰구간) 병기 <button class="btn sm ghost" data-act="goto" data-to="dash" data-sub="${esc("[부록] 세부 분석표")}">산식·전체 검정 결과 보기</button></p>` : ""}
+  ${isFeatureOn("statsTrustBadge") ? `<p class="small muted row gap" style="margin-top:-6px;align-items:center">${icon("shield", 13)} 통계 방법: R 기준값 대비 검증 · 다중비교 Holm/BH 보정 · 효과크기(95% 신뢰구간) 병기 <button class="btn sm ghost" data-act="goto" data-to="dash" data-sub="${esc("[부록] 세부 분석표")}">산식·전체 검정 결과 보기</button>${isAdminPreview("statsTrustBadge") ? '<span class="badge muted">관리자 미리보기</span>' : ""}</p>` : ""}
   ${cards(r)}
   <section class="card">
     <nav class="tabs" aria-label="분석 장">${tabs.map(t => `<button class="tab${t.key === cur.key ? " on" : ""}" ${t.key === cur.key ? 'aria-current="page"' : ""} data-act="goto" data-to="dash" data-sub="${esc(t.key)}">${esc(t.title)}</button>`).join("")}</nav>

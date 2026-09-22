@@ -27,6 +27,11 @@ export function isFeatureOn(key) {
   return !!cache?.[key];
 }
 
+/** 지금 보이는 이유가 "전체 공개"가 아니라 "관리자라서"인지 — 화면에 미리보기 표시를 붙일지 판단할 때 사용 */
+export function isAdminPreview(key) {
+  return isAdmin() && !cache?.[key];
+}
+
 /** 테스트 전용: 모듈 캐시를 초기화(각 테스트가 독립된 상태에서 시작하도록) */
 export function _resetForTest() { cache = null; pending = null; }
 /** 테스트 전용: 네트워크 없이 캐시 값을 직접 주입 */
