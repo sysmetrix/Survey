@@ -2,6 +2,14 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.41.1", date: "2026-09-23", title: "화면 가이드 안내 띠를 다시 상단으로(왼쪽 정렬은 유지)",
+    groups: {
+      "화면": [
+        "안내 띠를 바닥 왼쪽에서 상단바 바로 아래 왼쪽으로 옮김 — 왼쪽 정렬(드롭존과 안 겹침)은 그대로 두고, 위치만 다시 위쪽으로 되돌림",
+      ],
+    },
+  },
+  {
     version: "5.41.0", date: "2026-09-23", title: "기능 플래그 2종 추가·카드형 2열 배치, 화면 가이드 안내 띠 위치 수정",
     groups: {
       "화면": [
