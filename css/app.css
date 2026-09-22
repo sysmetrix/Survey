@@ -343,7 +343,7 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 /* 한 줄 푸터 — 개인정보 안내·이전 버전 링크 */
 .ld-foot { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px 8px; flex: none; min-height: 34px; padding: 4px 20px; font-size: 12px; color: var(--text-3); border-top: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 70%, var(--surface)); text-align: center; }
 .ld-foot .ico { vertical-align: -2px; margin-right: 6px; color: var(--brand-text); }
-.ld-foot a { color: var(--text-2); }
+.ld-foot a { color: var(--text-2); display: inline-block; padding: 10px 2px; margin: -10px -2px; }
 .ld-dot { opacity: .6; }
 
 /* ── 넓은 화면: 한 화면 무대 (스크롤 없음) ── */
@@ -379,12 +379,9 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 }
 @media (max-width: 1000px) { .ld-foot { padding-bottom: 8px; } }
 @media (max-width: 699px) {
-  .ld-flow { grid-template-columns: 1fr; gap: 12px; }
-  .ld-flow::before, .ld-flow::after { left: 11px; right: auto; top: 12px; bottom: 12px; width: 2px; height: auto; }
-  .ld-flow::before { background: repeating-linear-gradient(180deg, var(--border-strong) 0 6px, transparent 6px 11px); }
-  .ld-flow::after { transform-origin: top; }
-  .ld-flow li { grid-template-columns: 24px 1fr; column-gap: 12px; }
-  .ld-flow .node { grid-row: span 2; margin: 0; }
+  /* 진행 순서 그림(1~5단계)은 위쪽 단계 표시줄과 내용이 겹치고 세로로 길어(약 230px) 업로드 상자를 화면 밖으로
+     미는 주된 원인이었다 — 폰에서는 숨기고, 같은 정보는 리드 문장("파일을 올리면 …")과 단계 표시줄이 대신한다. */
+  .ld-flow { display: none; }
   .ld-tpl b { flex-basis: 100%; }
 }
 
@@ -574,7 +571,7 @@ h3.flush { margin: 0; }
 .rt-pop.right { left: auto; right: 0; } /* 트리거가 줄 오른쪽 끝에 있을 때 왼쪽으로 열어 가로 스크롤 방지 */
 .rt-fmt-trigger { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .rt-fmt-trigger .glyph { font-weight: 700; }
-.rt-io-group { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }
+.rt-io-group { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }
 .rt-io-group .rt-btn.primary { background: var(--brand); color: var(--on-brand); }
 .rt-io-group .rt-btn.primary:hover { background: var(--brand-hover); color: var(--on-brand); }
 @media (max-width: 760px) {
@@ -591,7 +588,11 @@ h3.flush { margin: 0; }
 .side-toggle.group:hover { background: var(--surface-2); }
 .side-toggle.group:hover b { text-decoration: none; }
 .side-sep { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
-@media (max-width: 960px) { .report-layout { grid-template-columns: 1fr; } .side { position: static; max-height: none; overflow-y: visible; } }
+@media (max-width: 960px) {
+  .report-layout { grid-template-columns: 1fr; }
+  /* 폰·좁은 화면에서는 보러 온 보고서 내용을 먼저 보여주고, 부가 설정(기관명·장 선택·문장 편집 목록)은 아래로 미룬다 */
+  .side { position: static; max-height: none; overflow-y: visible; order: 2; }
+}
 
 /* 보고서 용지(미리보기) — 문서이므로 화면 테마와 무관하게 흰 종이 */
 .paper { --paper-bg: #fff; --paper-ink: #000; --paper-sub: #444; --paper-line: #9A9A9A; --paper-rule: #000; --paper-head: #D9D9D9; --paper-soft: #F2F2F2; color-scheme: light;
@@ -676,6 +677,11 @@ svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
 /* 업데이트 안내 띠 (js/ui/update-banner.js) — 상단바 아래에 떠 있고 #main 을 다시 그려도 유지 */
 .update-banner { position: fixed; z-index: 85; left: 50%; top: calc(var(--topbar-h) + 10px); transform: translateX(-50%); width: min(780px, calc(100% - 24px)); border-radius: 14px; background: var(--brand); color: var(--on-brand); box-shadow: var(--shadow-lg); overflow: hidden; animation: update-in .28s var(--ease-out, ease); }
 .update-banner[hidden], body.presenting .update-banner { display: none; }
+/* 화면 가이드 제안 띠는 업데이트 띠와 같은 모양을 재사용하지만, 상단에 뜨면 발표 모드·보고서 도구줄 같은
+   막 들어간 화면의 핵심 버튼을 가려 첫 인상을 해친다 — 아래쪽으로 옮겨 겹치지 않게 한다(가이드 진행 중 막대인
+   .tutorial-bar 와 같은 자리). 모바일에서 하단 고정 요소(snack)와 겹치지 않도록 위치를 조금 더 올린다. */
+.update-banner.guide-offer { top: auto; bottom: max(18px, env(safe-area-inset-bottom)); animation-name: guide-offer-in; }
+@keyframes guide-offer-in { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes update-in { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .update-body { display: flex; align-items: center; gap: 12px; padding: 11px 12px 11px 16px; }
 .update-ico { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--on-brand) 18%, transparent); }

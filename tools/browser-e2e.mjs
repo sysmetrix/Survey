@@ -2,7 +2,7 @@
 //   → 어두운 화면·툴팁 → 발표 모드(키보드·개요·노트·PDF) → 모바일 폭 → PWA(서비스워커·오프라인)
 // 사전 조건: python -m http.server 8000 (저장소 루트)
 // 사용: node tools/browser-e2e.mjs [샘플파일명]
-import { spawn } from "node:child_process";
+import { spawn, execFile } from "node:child_process";
 import { mkdir, writeFile, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -21,14 +21,20 @@ for (let i = 0; ; i++) {
   await sleep(250);
 }
 
+const exe = browserPath();
+if (!exe) throw new Error("헤드리스로 띄울 Edge/Chrome을 찾지 못했습니다 — E2E_BROWSER_PATH(또는 CHROME_PATH) 환경변수로 실행파일 경로를 지정하세요");
 const profile = await mkdtemp(join(tmpdir(), "e2e-"));
-const browser = spawn(browserPath(), ["--headless=new", "--disable-gpu", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, "--no-first-run", "--window-size=1400,1000", "about:blank"], { stdio: "ignore" });
+const browser = spawn(exe, ["--headless=new", "--disable-gpu", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`, "--no-first-run", "--window-size=1400,1000", "about:blank"], { stdio: "ignore" });
+// 브라우저 프로세스 트리 전체 종료(Windows 는 child.kill() 이 렌더러 등 자식 프로세스를 안 죽여 좀비로 남을 수 있음 — rasterize-cdp.mjs 와 같은 방식)
+const killBrowserTree = () => new Promise(res => (process.platform === "win32"
+  ? execFile("taskkill", ["/PID", String(browser.pid), "/T", "/F"], () => res())
+  : (browser.kill("SIGKILL"), res())));
 let wsUrl;
 for (let i = 0; i < 60; i++) {
   try { const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json(); const pg = list.find(t => t.type === "page"); if (pg) { wsUrl = pg.webSocketDebuggerUrl; break; } } catch { /* 대기 */ }
   await sleep(250);
 }
-if (!wsUrl) { browser.kill(); throw new Error("CDP 연결 실패"); }
+if (!wsUrl) { await killBrowserTree(); throw new Error("CDP 연결 실패"); }
 
 const ws = new WebSocket(wsUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
@@ -65,8 +71,8 @@ const waitFor = async (expr, ms = 20000) => {
   }
   throw new Error(`대기 시간 초과: ${expr}`);
 };
-const shot = async name => {
-  const { data } = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+const shot = async (name, ms = 60000) => {
+  const { data } = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: false }, ms);
   await writeFile(`out/browser/${name}.png`, Buffer.from(data, "base64"));
 };
 const KEYS = { ArrowRight: 39, ArrowLeft: 37, Enter: 13, Escape: 27, Digit4: 52, KeyO: 79, KeyN: 78, KeyT: 84 };
@@ -107,7 +113,7 @@ try {
 
   // 문장 직접 편집 흐름: 요약 첫 문장 수정
   const edited = await evaluate(`(() => { const el = document.querySelector('#reportPaper [data-edit]'); el.focus(); el.textContent = '브라우저에서 고친 요약 문장'; el.blur(); return true; })()`);
-  await waitFor(`document.querySelector('.side').textContent.includes('수정 1건')`, 8000).catch(() => { throw new Error('문장 수정이 저장되지 않음(수정 1건 표시 없음)'); });
+  await waitFor(`!!document.querySelector('[data-act="reset-all"]')`, 8000).catch(() => { throw new Error('문장 수정이 저장되지 않음(수정 모두 되돌리기 버튼 없음)'); });
   await waitFor(`document.querySelector('#reportPaper').textContent.includes('브라우저에서 고친 요약 문장')`);
 
   // 되돌리기(Ctrl+Z)·다시 실행(Ctrl+Y)
@@ -125,8 +131,10 @@ try {
   await ctrlKey("KeyY", "y", 89);
   await waitFor(`document.querySelector('#reportPaper').textContent.includes('브라우저에서 고친 요약 문장')`);
 
-  // 한글 문서 서식: 글꼴 프리셋 → 미리보기 반영
-  await evaluate(`(() => { const s = document.querySelector('[data-field="fontPreset"]'); s.value = 'gov'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  // 한글 문서 서식: 도구모음 팝오버를 연 뒤 글꼴 조합 칩을 눌러 미리보기 반영
+  await evaluate(`document.querySelector('[data-act="format-toggle"]').click()`);
+  await waitFor(`!!document.querySelector('[data-act="doc-preset"][data-id="gov"]')`);
+  await evaluate(`document.querySelector('[data-act="doc-preset"][data-id="gov"]').click()`);
   await waitFor(`(document.getElementById('reportPaper').getAttribute('style') || '').includes('HY헤드라인M')`);
   await sleep(300);
   await shot("5b-report-font");
@@ -143,7 +151,7 @@ try {
 
   // 성과지표(선택): 빠른 추가·사업정보 선택 섹션
   await evaluate(`location.hash = '#/business'`);
-  await waitFor(`!!document.querySelector('.quick-kpis') && !!document.querySelector('.card.optional')`);
+  await waitFor(`!!document.querySelector('.quick-kpis') && !!document.querySelector('.logic')`);
   await shot("3b-business-optional");
   await evaluate(`location.hash = '#/report'`);
   await waitFor(`!!document.querySelector('#reportPaper')`);
@@ -152,10 +160,11 @@ try {
   // 브라우저에서 HWPX 생성 (canvas 래스터화 경로)
   const t0 = Date.now();
   const b64 = await evaluate(`(async () => {
-    const [m, s, t, r] = await Promise.all([import('./js/report/render-hwpx.js'), import('./js/ui/store.js'), import('./js/report/hwpx/template-parts.js'), import('./js/charts/rasterize.js')]);
+    const [m, s, t, r, j] = await Promise.all([import('./js/report/render-hwpx.js'), import('./js/ui/store.js'), import('./js/report/hwpx/template-parts.js'), import('./js/charts/rasterize.js'), import('./js/ui/jszip-loader.js')]);
+    const JSZip = await j.loadJSZip(); // 실제 화면과 같은 지연 로딩 경로(vendor/jszip-*.min.js 동적 삽입) 사용
     const blocks = s.reportBlocks();
-    const bytes = await m.renderHwpx(blocks, { parts: t.TEMPLATE_PARTS, JSZip: window.JSZip, title: blocks[0].text, doc: { fontPreset: 'gov', baseSize: 11, lineSpacing: 160 }, rasterize: (svg, w, h) => r.svgToPng(svg, w, h, 2.5) });
-    const z = await window.JSZip.loadAsync(bytes);
+    const bytes = await m.renderHwpx(blocks, { parts: t.TEMPLATE_PARTS, JSZip, title: blocks[0].text, doc: { fontPreset: 'gov', baseSize: 11, lineSpacing: 160 }, rasterize: (svg, w, h) => r.svgToPng(svg, w, h, 2.5) });
+    const z = await JSZip.loadAsync(bytes);
     const header = await z.file('Contents/header.xml').async('string'), section = await z.file('Contents/section0.xml').async('string');
     if (!header.includes('face="HY헤드라인M"') || !header.includes('face="휴먼명조"')) throw new Error('HWPX 글꼴 설정 누락');
     if (!/<hp:tbl [^>]*pageBreak="TABLE"/.test(section) || /<hp:tbl [\\s\\S]*?<hp:pos treatAsChar="1"/.test(section.replace(/<hp:pic [\\s\\S]*?<\\/hp:pic>/g, ''))) throw new Error('HWPX 표가 여러 쪽 나눔 설정이 아님');
@@ -221,18 +230,29 @@ try {
   await evaluate(`window.dispatchEvent(new Event('beforeprint'))`);
   await waitFor(`!!document.querySelector('.p-print .slide')`);
   const nPrint = await evaluate(`document.querySelectorAll('.p-print .slide').length`);
-  const { data: pdf } = await cdp("Page.printToPDF", { preferCSSPageSize: true, printBackground: true });
+  await sleep(500); // 인쇄용 슬라이드 전체(차트 SVG 포함)가 다 그려질 시간을 줌
+  // 헤드리스 브라우저의 인쇄 파이프라인이 막 발표 모드로 전환한 직후 "Printing is not available"로 일시적으로
+  // 실패할 때가 있음(내부 프린트 프로세스 준비 지연으로 보임) — 몇 차례 짧게 재시도
+  let pdf;
+  for (let attempt = 1; ; attempt++) {
+    try { ({ data: pdf } = await cdp("Page.printToPDF", { preferCSSPageSize: true, printBackground: true }, 120000)); break; }
+    catch (e) {
+      if (attempt >= 4 || !/Printing is not available/.test(e.message)) throw e;
+      await sleep(1000 * attempt);
+    }
+  }
   const pdfBuf = Buffer.from(pdf, "base64");
   await writeFile("out/browser/present-deck.pdf", pdfBuf);
   const pages = (pdfBuf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) || []).length;
   await evaluate(`window.dispatchEvent(new Event('afterprint'))`);
+  await waitFor(`!document.querySelector('.p-print .slide')`); // 인쇄용 전체 슬라이드 DOM(차트 다수)이 실제로 걷힌 뒤에 진행 — 안 그러면 직후 캡처가 CDP 응답 지연으로 넘어감
   if (pages !== nPrint) throw new Error(`발표 PDF 쪽수 ${pages} ≠ 슬라이드 ${nPrint}`);
   results.push(`발표 모드 ${total}장: 키보드 이동·숫자 이동·무대 전환·노트·개요 OK, PDF ${pages}쪽 → out/browser/present-deck.pdf`);
 
   // 모바일 폭(400px)
   await cdp("Emulation.setDeviceMetricsOverride", { width: 400, height: 860, deviceScaleFactor: 2, mobile: true });
   await sleep(500);
-  await shot("8a-mobile-present");
+  await shot("8a-mobile-present", 90000);
   await press("Escape");
   await waitFor(`location.hash === '#/dash'`);
   await evaluate(`location.hash = '#/load'`);
@@ -275,5 +295,5 @@ try {
   process.exitCode = 1;
 } finally {
   if (problems.length) { console.log(`브라우저 경고/오류 ${problems.length}건:`); problems.slice(0, 20).forEach(p => console.log("  " + p)); }
-  ws.close(); browser.kill();
+  ws.close(); await killBrowserTree();
 }

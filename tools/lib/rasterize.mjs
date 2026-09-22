@@ -10,8 +10,19 @@ const CANDIDATES = [
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
   "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  // 리눅스(CI 등): browser-actions/setup-chrome, apt(chromium-browser), playwright install chromium 등으로 설치되는 경로들
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/google-chrome",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/chromium",
+  "/snap/bin/chromium",
 ];
-export const browserPath = () => CANDIDATES.find(p => existsSync(p)) || null;
+// E2E_BROWSER_PATH(또는 CHROME_PATH) 환경변수가 있으면 그 실행파일을 최우선으로 쓴다 — CI에서 설치 경로를 주입할 때 사용
+export const browserPath = () => {
+  const envPath = process.env.E2E_BROWSER_PATH || process.env.CHROME_PATH;
+  if (envPath && existsSync(envPath)) return envPath;
+  return CANDIDATES.find(p => existsSync(p)) || null;
+};
 
 /** @returns {Promise<{png:Uint8Array, wPx:number, hPx:number}>} */
 export async function rasterizeSvg(svg, width, height, scale = 2) {

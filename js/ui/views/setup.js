@@ -141,14 +141,14 @@ export function render() {
     return (`<tr class="${c.role === "ignore" ? "dim" : ""}">
       <td class="small muted">${multiSheet ? esc(cb.sheets[c.sheet].name) + "<br>" : ""}${c.index + 1}</td>
       <td class="hdr" title="${esc(c.header)}">${esc(c.header)}<div class="small muted">${esc(sampleValues(c))}</div></td>
-      <td><input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label"></td>
-      <td><select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role">${Object.entries(ROLES).map(([k, v]) => option(k, v, c.role === k)).join("")}</select>
+      <td><input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label" aria-label="'${esc(c.header)}' 열의 표시 이름"></td>
+      <td><select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role" aria-label="'${esc(c.label)}' 열의 역할">${Object.entries(ROLES).map(([k, v]) => option(k, v, c.role === k)).join("")}</select>
         ${conf < 0.7 && !c.labelAmbiguous ? `<div class="small warn-text" title="${esc(c.detected.reason)}">판별 불확실</div>` : ""}${c.pii ? `<div class="small warn-text">개인정보 추정</div>` : ""}${labelBtn}${yearBtn}</td>
-      <td class="nowrap">${numeric ? `<input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min">~<input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max">` : ""}</td>
-      <td class="c">${c.role === "likert" ? `<input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse">` : ""}</td>
-      <td>${c.role === "likert" ? `<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="(없음)" data-change="col" data-key="${esc(c.key)}" data-field="domain">` : ""}</td>
-      <td>${numeric ? `<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time">${option("", "-", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select>` : ""}</td>
-      <td class="c">${c.role === "likert" && c.time !== "pre" ? `<input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall">` : ""}</td>
+      <td class="nowrap">${numeric ? `<input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min" aria-label="'${esc(c.label)}' 척도 최솟값">~<input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max" aria-label="'${esc(c.label)}' 척도 최댓값">` : ""}</td>
+      <td class="c">${c.role === "likert" ? `<input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse" aria-label="'${esc(c.label)}' 역문항으로 처리">` : ""}</td>
+      <td>${c.role === "likert" ? `<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="(없음)" data-change="col" data-key="${esc(c.key)}" data-field="domain" aria-label="'${esc(c.label)}' 영역">` : ""}</td>
+      <td>${numeric ? `<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time" aria-label="'${esc(c.label)}' 시점">${option("", "-", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select>` : ""}</td>
+      <td class="c">${c.role === "likert" && c.time !== "pre" ? `<input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall" aria-label="'${esc(c.label)}'을(를) 전반 만족 문항으로 표시">` : ""}</td>
       <td class="c">${colEdited(cb, c) ? `<button class="icon-btn sm" data-act="col-reset" data-key="${esc(c.key)}" title="자동 판별 값으로 되돌리기" aria-label="'${esc(c.label)}' 자동 판별 값으로 되돌리기">${icon("undo", 14)}</button>` : ""}</td>
     </tr>`) + (scaled && expanded === c.key ? labelPanel(c, unm) : "") + (yearKind && expanded === c.key ? yearBucketPanel(c) : "");
   }).join("");
