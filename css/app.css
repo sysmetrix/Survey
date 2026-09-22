@@ -655,7 +655,8 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .paper.edit .r-txt[contenteditable]:hover { background: #FFF6CC; cursor: text; }
 .paper.edit .r-txt[contenteditable]:focus { background: #FFF0B3; outline: 2px solid #E8B400; }
 .r-tools { flex: none; visibility: hidden; } .r-b:hover .r-tools, .r-boxline:hover .r-tools, .r-b:focus-within .r-tools { visibility: visible; }
-.r-tool { border: 1px solid #ccc; background: #fff; color: #333; border-radius: 5px; font-size: 11px; cursor: pointer; margin-left: 2px; padding: 1px 6px; }
+/* 세로 19px 는 터치 목표 최소 권장 크기(24px, WCAG 2.5.8)에 살짝 못 미쳐 손가락으로 누르기 빠듯했다 — 패딩만 늘림 */
+.r-tool { border: 1px solid #ccc; background: #fff; color: #333; border-radius: 5px; font-size: 11px; cursor: pointer; margin-left: 2px; padding: 5px 7px; min-height: 24px; }
 .r-tool:hover { border-color: #888; }
 .edited .r-txt { background: #E8F1FD; }
 
