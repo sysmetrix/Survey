@@ -7,7 +7,6 @@ import { toast, busy, download, readFileBytes, readFileText, nextFrame, esc } fr
 import { go } from "../router.js";
 import { icon } from "../icons.js";
 import { cache as historyCache, relTime, resumeProject } from "../history/manager.js";
-import { selectProject } from "./history.js";
 import { glyphMarkup } from "../sample-glyphs.js";
 import { startLoadMotion, ENTRANCE_MS } from "../load-motion.js";
 import { trackEvent } from "../../telemetry/track.js";
@@ -189,7 +188,8 @@ export const actions = {
       await openBytes(new Uint8Array(await res.arrayBuffer()), el.dataset.file);
     } catch (e) { busy(false); toast(`샘플을 불러오지 못했습니다(${e.message}). 웹 주소(https://…)로 접속했는지 확인하세요.`, "bad", 6000); }
   },
-  "open-project": el => { selectProject(el.dataset.id); go("history"); },
+  // history.js(작업 내역 화면)는 이 화면에서 안 쓰면 안 받아오도록 여기서만 필요해질 때 받아옴
+  "open-project": async el => { const { selectProject } = await import("./history.js"); selectProject(el.dataset.id); go("history"); },
   "resume-project": async el => openStoredProject(el.dataset.id, "dash"),
   "present-project": async el => openStoredProject(el.dataset.id, "present"),
   template: el => {
@@ -203,6 +203,7 @@ async function openStoredProject(id, target) {
   try {
     const r = await resumeProject(id);
     if (r.mode === "ready") { go(target, target === "present" ? "1" : ""); return; }
+    const { selectProject } = await import("./history.js");
     selectProject(id);
     if (r.mode === "needPassword") toast("비밀번호로 보관한 원자료입니다. 작업 이력에서 복원해 주세요.", "info", 6000);
     else toast(`‘${r.fileName || "같은 설문"}’ 파일을 다시 연결해 주세요.`, "info", 6000);

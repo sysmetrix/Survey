@@ -1,7 +1,7 @@
 // 앱 진입점: 화면 전환·이벤트 위임 (인라인 핸들러 없음 — CSP script-src 'self')
 import { state } from "./ui/store.js";
 import { STEPS, NO_DATA_VIEWS, parseHash, go, setRenderer, setPrevView, prevView, refresh } from "./ui/router.js";
-import { toast, esc } from "./ui/util.js";
+import { toast, esc, busy } from "./ui/util.js";
 import { icon } from "./ui/icons.js";
 import { cycleTheme, themePref, THEME_LABEL, watchSystemTheme } from "./ui/theme.js";
 import { initPwa, installApp, isUpdateReloading, takeUpdateResume } from "./ui/pwa.js";
@@ -15,24 +15,29 @@ import { createPressGuard } from "./ui/press-guard.js";
 import { parseDeckKey } from "./present/edit/keys.js";
 import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redoChange, canUndo, canRedo, resumeProject, cache as historyCache } from "./ui/history/manager.js";
 import * as load from "./ui/views/load.js";
-import * as setup from "./ui/views/setup.js";
-import * as business from "./ui/views/business.js";
-import * as dash from "./ui/views/dash.js";
-import * as report from "./ui/views/report.js";
-import * as present from "./ui/views/present.js";
-import * as presentEdit from "./ui/views/present-edit.js";
-import * as history from "./ui/views/history.js";
-import * as settings from "./ui/views/settings.js";
-import * as updates from "./ui/views/updates.js";
-import * as login from "./ui/views/login.js";
-import * as admin from "./ui/views/admin.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
 import { getSession, installIdleWatch } from "./auth/session.js";
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 
 export const APP_VERSION = "5.37.2";
-const VIEWS = { load, setup, business, dash, report, present, presentEdit, history, settings, updates, login, admin };
+// 첫 화면(load)만 곧바로 받아오고, 나머지 화면은 실제로 들어갈 때 받아옴 — 무거운 보고서·발표 편집기 코드가
+// 서비스워커 캐시도 없는 첫 접속에서부터 앱 시작을 늦추지 않도록(모션·기능은 그대로, 첫 로딩만 가벼워짐)
+const VIEW_LOADERS = {
+  load: () => Promise.resolve(load),
+  setup: () => import("./ui/views/setup.js"),
+  business: () => import("./ui/views/business.js"),
+  dash: () => import("./ui/views/dash.js"),
+  report: () => import("./ui/views/report.js"),
+  present: () => import("./ui/views/present.js"),
+  presentEdit: () => import("./ui/views/present-edit.js"),
+  history: () => import("./ui/views/history.js"),
+  settings: () => import("./ui/views/settings.js"),
+  updates: () => import("./ui/views/updates.js"),
+  login: () => import("./ui/views/login.js"),
+  admin: () => import("./ui/views/admin.js"),
+};
+const VIEWS = { load }; // 받아온 화면 모듈 캐시(한 번 받으면 다시 안 받음)
 let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
 let adminTaps = 0, adminTapTimer = 0;
@@ -60,6 +65,8 @@ function renderChrome(id) {
   tb.setAttribute("aria-label", tb.title);
 }
 
+let renderToken = 0;
+
 function render({ keepScroll = false } = {}) {
   const { view, sub } = parseHash();
   const allowedView = view === "updates" && !hasReleaseAccess() ? "load" : view;
@@ -70,10 +77,33 @@ function render({ keepScroll = false } = {}) {
     if (!s) id = "login"; // 로그인 안 됐으면 로그인 화면으로
     else if (s.role !== "admin") { id = "load"; toast("관리자만 접근할 수 있습니다", "bad"); }
   } else if (id === "login" && getSession()) id = "load"; // 이미 로그인된 채로 로그인 화면에 다시 오면 첫 화면으로
+
+  const cached = VIEWS[id];
+  if (cached) { renderWith(cached, id, sub, keepScroll); return; } // 이미 받아온 화면: 지금까지와 똑같이 그 자리에서 바로 그림
+
+  // 이번 세션에서 처음 들어가는 화면만 받아옴 — 대부분 눈 깜짝할 새 끝나므로, 조금 걸릴 때만 로딩 표시를 띄움
+  const token = ++renderToken;
+  const slow = setTimeout(() => { if (token === renderToken) busy(true, "화면을 불러오는 중…"); }, 150);
+  VIEW_LOADERS[id]().then(mod => {
+    clearTimeout(slow);
+    if (token !== renderToken) return; // 그 사이 다른 화면으로 또 이동했으면 이 결과는 버림
+    VIEWS[id] = mod;
+    busy(false);
+    renderWith(mod, id, sub, keepScroll);
+  }, e => {
+    clearTimeout(slow);
+    if (token !== renderToken) return;
+    busy(false);
+    console.error(e);
+    toast(`화면을 불러오지 못했습니다: ${e.message}`, "bad", 6000);
+  });
+}
+
+function renderWith(mod, id, sub, keepScroll) {
   const changed = id !== currentId;
   if (changed && currentId && currentId !== id) setPrevView(currentId);
   if (changed) current.unmount?.();
-  current = VIEWS[id]; currentId = id;
+  current = mod; currentId = id;
   document.body.classList.toggle("presenting", id === "present");
   const y = window.scrollY;
   renderChrome(id);
