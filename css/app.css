@@ -695,6 +695,7 @@ svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
 }
 /* 첫 접속 안내(화면 가이드 제안) — 업데이트 띠와 같은 자리·모양, 아이콘에 은은한 펄스를 더해 더 눈에 띄게 함 */
 .guide-offer .update-ico { animation: guide-pulse 2.2s ease-in-out infinite; }
+.guide-offer-timer { flex: none; background: color-mix(in srgb, var(--on-brand) 22%, transparent); color: var(--on-brand); font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 @keyframes guide-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--on-brand) 45%, transparent); } 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--on-brand) 0%, transparent); } }
 .busy { position: fixed; inset: 0; background: color-mix(in srgb, var(--bg) 60%, transparent); backdrop-filter: blur(3px); display: grid; place-items: center; z-index: 80; }
 .busy-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 26px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow-lg); animation: busy-in .16s ease; }
