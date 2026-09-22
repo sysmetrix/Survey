@@ -23,6 +23,14 @@ export function notify(msg, { action = "", onAction = null, sticky = false, ms =
   const text = document.createElement("span");
   text.textContent = msg;
   const parts = [text];
+  // 자동으로 사라지는 알림은 몇 초 뒤에 닫히는지 눈에 보이게 표시
+  let timerEl = null;
+  if (!sticky) {
+    timerEl = document.createElement("span");
+    timerEl.className = "snack-timer";
+    timerEl.setAttribute("aria-hidden", "true");
+    parts.push(timerEl);
+  }
   if (action && onAction) {
     const b = document.createElement("button");
     b.className = "btn sm primary";
@@ -39,7 +47,14 @@ export function notify(msg, { action = "", onAction = null, sticky = false, ms =
   el.replaceChildren(...parts);
   el.hidden = false;
   clearTimeout(notify._t);
-  if (!sticky) notify._t = setTimeout(() => { el.hidden = true; }, ms);
+  clearInterval(notify._i);
+  if (!sticky) {
+    const until = Date.now() + ms;
+    const paint = () => { timerEl.textContent = `${Math.max(0, Math.ceil((until - Date.now()) / 1000))}초`; };
+    paint();
+    notify._i = setInterval(paint, 250);
+    notify._t = setTimeout(() => { el.hidden = true; clearInterval(notify._i); }, ms);
+  }
 }
 
 export function busy(on, msg = "처리 중…") {

@@ -670,6 +670,7 @@ svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
 .toast.show { opacity: 1; transform: translateX(-50%); } .toast.ok { background: var(--brand); } .toast.bad { background: #9b2c1c; }
 .snack { position: fixed; right: 20px; bottom: 20px; z-index: 75; display: flex; align-items: center; gap: 10px; max-width: min(92vw, 480px); padding: 12px 10px 12px 16px; border-radius: 14px; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-lg); font-size: 14px; }
 .snack span { flex: 1; }
+.snack-timer { flex: none !important; background: var(--surface-2); color: var(--text-3); font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* 업데이트 안내 띠 (js/ui/update-banner.js) — 상단바 아래에 떠 있고 #main 을 다시 그려도 유지 */
 .update-banner { position: fixed; z-index: 85; left: 50%; top: calc(var(--topbar-h) + 10px); transform: translateX(-50%); width: min(780px, calc(100% - 24px)); border-radius: 14px; background: var(--brand); color: var(--on-brand); box-shadow: var(--shadow-lg); overflow: hidden; animation: update-in .28s var(--ease-out, ease); }
 .update-banner[hidden], body.presenting .update-banner { display: none; }

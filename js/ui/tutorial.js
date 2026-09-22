@@ -191,12 +191,30 @@ function ensureOfferUi() {
   el.hidden = true;
   el.innerHTML = `<div class="update-body"><span class="update-ico" aria-hidden="true">${icon("sparkle", 20)}</span>
     <div class="update-text"><span class="update-msg">처음이시라면 화면 가이드로 3분 안에 사용법을 둘러보세요</span></div>
-    <div class="update-actions"><button type="button" class="btn sm guide-now">${icon("play", 14)}가이드 보기</button><button type="button" class="icon-btn sm guide-later" aria-label="닫기">${icon("x", 15)}</button></div></div>`;
-  el.querySelector(".guide-now").addEventListener("click", () => { el.hidden = true; startGuide(); });
-  el.querySelector(".guide-later").addEventListener("click", () => { el.hidden = true; });
-  el.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); el.hidden = true; } });
+    <div class="update-actions"><button type="button" class="btn sm guide-now">${icon("play", 14)}가이드 보기</button><button type="button" class="icon-btn sm guide-later" aria-label="닫기">${icon("x", 15)}</button></div></div>
+    <div class="update-bar" aria-hidden="true"><i></i></div>`;
+  const closeOffer = () => { el.hidden = true; clearTimeout(el._closeTimer); };
+  el.querySelector(".guide-now").addEventListener("click", () => { closeOffer(); startGuide(); });
+  el.querySelector(".guide-later").addEventListener("click", closeOffer);
+  el.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); closeOffer(); } });
   const top = document.querySelector(".topbar");
   if (top) top.after(el); else document.body.append(el);
+}
+
+const OFFER_MS = 5000;
+
+/** 안내 띠를 5초간 보여 주고, 진행 막대가 다 차면 자동으로 닫음 */
+function showOffer() {
+  ensureOfferUi();
+  const el = document.getElementById("guideOffer");
+  el.hidden = false;
+  const bar = el.querySelector(".update-bar i");
+  bar.style.transition = "none";
+  bar.style.transform = "scaleX(0)";
+  // 다음 프레임에 transition 을 걸어야 0 → 1 로 실제로 움직임(같은 프레임이면 건너뜀)
+  requestAnimationFrame(() => { bar.style.transition = `transform ${OFFER_MS}ms linear`; bar.style.transform = "scaleX(1)"; });
+  clearTimeout(el._closeTimer);
+  el._closeTimer = setTimeout(() => { el.hidden = true; }, OFFER_MS);
 }
 
 /** 처음 방문이어도 곧바로 가이드를 틀지 않고, 볼지 말지 직접 고르게 안내만 띄움 */
@@ -204,5 +222,5 @@ export function offerFirstRun() {
   ensureUi();
   if (localStorage.getItem(DONE_KEY) || sessionStorage.getItem(`${DONE_KEY}-offered`)) return;
   sessionStorage.setItem(`${DONE_KEY}-offered`, "1");
-  setTimeout(() => { ensureOfferUi(); document.getElementById("guideOffer").hidden = false; }, 550);
+  setTimeout(showOffer, 550);
 }
