@@ -712,18 +712,10 @@ svg:has(.viz-mark.hot) .viz-mark:not(.hot) .m { opacity: .42; }
 /* 업데이트 안내 띠 (js/ui/update-banner.js) — 상단바 아래에 떠 있고 #main 을 다시 그려도 유지 */
 .update-banner { position: fixed; z-index: 85; left: 50%; top: calc(var(--topbar-h) + 10px); transform: translateX(-50%); width: min(780px, calc(100% - 24px)); border-radius: 14px; background: var(--brand); color: var(--on-brand); box-shadow: var(--shadow-lg); overflow: hidden; animation: update-in .28s var(--ease-out, ease); }
 .update-banner[hidden], body.presenting .update-banner { display: none; }
-/* 화면 가이드 제안 띠는 업데이트 띠와 같은 모양을 재사용하지만, 상단에 뜨면 발표 모드·보고서 도구줄 같은
-   막 들어간 화면의 핵심 버튼을 가린다 — 아래쪽으로 옮겨 겹치지 않게 한다(가이드 진행 중 막대인 .tutorial-bar
-   와 같은 자리). 가운데(바닥 중앙)에 두면 첫 화면 오른쪽의 큰 파일 올리기 드롭존과 겹쳐, 왼쪽으로 붙여
-   드롭존을 가리지 않게 한다. 바닥 중앙인 .toast 는 보통 이 배너와 거의 동시에 뜨는데(파일을 불러오면
-   "N개 시트 인식" 토스트 → 곧이어 첫 방문 안내), 토스트 문구가 길면(예: 시트 인식 안내) 좁은 화면에서
-   3~4줄로 불어나 최대 약 150px까지 높아진다 — js/ui/tutorial.js 의 showOfferWhenClear() 로 토스트가 뜬
-   동안은 기다렸다가 띄우지만, 반대로 이 띠가 이미 뜬 뒤 토스트가 새로 뜨는 경우까지는 막지 못하므로, 그
-   최악 높이를 여유 있게 덮는 고정 간격을 둔다(정확히 맞추는 대신 넉넉하게 — 토스트 문구 길이는 내용에
-   따라 바뀌어 픽셀 단위로 맞추기 어렵다). */
-.update-banner.guide-offer { top: auto; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 168px); left: max(16px, env(safe-area-inset-left)); transform: none; animation-name: guide-offer-in; }
-@media (min-width: 640px) { .update-banner.guide-offer { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 84px); } } /* 넓은 화면은 토스트가 한 줄로 끝나 간격이 덜 필요함 */
-@keyframes guide-offer-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+/* 화면 가이드 제안 띠는 업데이트 띠와 같은 모양·자리(상단바 바로 아래)를 재사용하되, 가운데 정렬 대신
+   왼쪽으로 붙여 첫 화면 오른쪽의 큰 파일 올리기 드롭존과 겹치지 않게 한다. */
+.update-banner.guide-offer { left: max(16px, env(safe-area-inset-left)); transform: none; animation-name: guide-offer-in; }
+@keyframes guide-offer-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes update-in { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .update-body { display: flex; align-items: center; gap: 12px; padding: 11px 12px 11px 16px; }
 .update-ico { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--on-brand) 18%, transparent); }
