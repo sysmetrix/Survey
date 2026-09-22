@@ -6,6 +6,8 @@ import { hasLogicModel, hasProgramInfo, LOGIC_STAGES } from "../evaluation/logic
 import { METRICS } from "../evaluation/kpi.js";
 import { alphaLabel } from "../stats/effectsize.js";
 import { koDate } from "../core/util.js";
+import { isFeatureOn } from "../admin/flags-client.js";
+import { representativenessCheck, REP_DIFF_CAUTION } from "../analysis/representativeness.js";
 
 const DEFAULT_LEVEL_LABELS = {
   4: ["전혀 그렇지 않다", "그렇지 않다", "그렇다", "매우 그렇다"],
@@ -38,7 +40,7 @@ function fmtKpi(v, metric, unit) {
 }
 const PCT_LIKE = new Set(["score100", "top2", "postScore100", "improvedRate", "prepostDiff100"]);
 
-export function buildReport({ analysis: A, evaluation: E = null, lint = [], logicModel: LM = null, codebook: CB, settings: S = {} }) {
+export function buildReport({ analysis: A, evaluation: E = null, lint = [], logicModel: LM = null, codebook: CB, settings: S = {}, survey = null }) {
   const t = { ...DEFAULT_THRESHOLDS, ...(S.thresholds || {}) };
   const blocks = [];
   const push = b => blocks.push(b);
@@ -433,6 +435,19 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     crossUse.forEach(c => c.rows.forEach((r, i) => rows.push([i === 0 ? { text: c.label, rowSpan: c.rows.length, bold: true } : null, { text: `${r.label}${r.smallGroupN ? " †" : ""}`, align: "LEFT" }, r.test?.name || "-", r.test ? statNum(r.test) : "-", r.test ? pText(r.test.p).replace(/^p=?/, "") : "-", Number.isFinite(r.pHolm) ? pText(r.pHolm).replace(/^p=?/, "") : "-", Number.isFinite(r.pBH) ? pText(r.pBH).replace(/^p=?/, "") : "-", r.test && Number.isFinite(r.test.effect) ? `${r.test.effectName}=${f2(r.test.effect)}` : "-"].filter(x => x !== null))));
     push({ type: "table", caption: "응답자 특성별 차이 검정 전체 결과", compact: true, columns: [{ weight: 1.2 }, { weight: 2.4, align: "LEFT" }, { weight: 1.1 }, { weight: 0.9 }, { weight: 0.8 }, { weight: 0.9 }, { weight: 0.9 }, { weight: 1 }], rows,
       notes: crossUse.some(c => c.rows.some(r => r.smallGroupN)) ? ["† 집단 인원 10명 미만 포함(신중히 해석)"] : undefined });
+  }
+  if (survey && isFeatureOn("representativenessInReport")) {
+    const rep = representativenessCheck(survey, CB.columns);
+    if (rep.length) {
+      const rows = [["구분", "항목", "응답자 비율(%)", "모집단 비율(%)", "차이(%p)"].map(cellH)];
+      rep.forEach(g => g.rows.filter(row => row.popPct !== null).forEach((row, i) => rows.push([
+        i === 0 ? { text: g.label, rowSpan: g.rows.filter(x => x.popPct !== null).length, bold: true } : null,
+        { text: row.category, align: "LEFT" }, f1(row.observedPct), f1(row.popPct),
+        { text: signed(row.diffPts, 1), bold: Math.abs(row.diffPts) > REP_DIFF_CAUTION },
+      ].filter(x => x !== null))));
+      push({ type: "table", caption: "응답자 대표성(모집단 비율 대비)", compact: true, columns: [{ weight: 1.2 }, { weight: 1.6, align: "LEFT" }, { weight: 1.2 }, { weight: 1.2 }, { weight: 1 }], rows,
+        notes: [`주: 담당자가 데이터 설정에서 입력한 모집단 비율과 실제 응답자 분포를 비교한 값으로, 차이가 ${REP_DIFF_CAUTION}%p를 넘으면 굵게 표시함(표본 대표성 참고용)`] });
+    }
   }
   push({ type: "table", caption: "주요 산식 정의", compact: true, columns: [{ weight: 1.6, align: "LEFT" }, { weight: 4, align: "LEFT" }], rows: [
     [cellH("지표"), cellH("산식·기준")],

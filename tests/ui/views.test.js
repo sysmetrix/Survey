@@ -22,6 +22,7 @@ import { allDeckSlides, applyEditable, applyProject } from "../../js/ui/store.js
 import { captureEditable } from "../../js/history/snapshot.js";
 import { chartChoices } from "../../js/ui/present-edit-model.js";
 import { cqwToPt, ptToCqw } from "../../js/report/pptx/emu.js";
+import { _setForTest as _setFlagsForTest, _resetForTest as _resetFlagsForTest } from "../../js/admin/flags-client.js";
 const require = createRequire(import.meta.url);
 const XLSX = require("../../vendor/xlsx-0.20.3.full.min.js");
 const Papa = require("../../vendor/papaparse-5.4.1.min.js");
@@ -571,6 +572,24 @@ test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   html = business.render();
   assert.ok(html.includes("측정 방법 안내"));
   assert.equal(bad(html), null);
+});
+
+test("성과지표 표 — KPI 목표 적정성·추이 막대(관리자 전용 미리보기 플래그)", async () => {
+  _resetFlagsForTest();
+  const f = "2026_청소년센터_만족도_구글폼.csv";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  business.actions["kpi-quick"]({ dataset: { id: "sat" } });
+  const html0 = business.render();
+  assert.ok(!html0.includes("전년 실적") && !html0.includes("추이"), "기본값(플래그 꺼짐)에서는 두 열 모두 안 보임");
+
+  _setFlagsForTest({ kpiTargetAdequacy: true, kpiTrendChart: true });
+  state.kpis[0].prevActual = state.kpis[0].target - 1; // 목표가 전년보다 아주 조금만 높게(소극적 목표) 설정된 상태 재현
+  invalidate();
+  const html = business.render();
+  assert.ok(html.includes("전년 실적") && html.includes("추이"), "두 플래그가 켜지면 열이 나타남");
+  assert.ok(html.includes("kpi-trend"), "추이 막대 마크업이 있어야 함");
+  assert.equal(bad(html), null);
+  _resetFlagsForTest();
 });
 
 test("성과지표 빠른 추가: 청소년 지표는 업로드된 설문에 그 주제를 실제로 묻는 문항이 있을 때만 추천됨", () => {

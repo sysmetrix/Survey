@@ -169,7 +169,7 @@ export function compute() {
   const kpis = state.kpis.filter(k => k.name);
   const evaluation = kpis.length ? evaluateKpis(kpis, analysis, cb, state.settings.thresholds) : null;
   const lint = kpis.length || state.logicModel.goals.length ? lintEvaluation(state.logicModel, kpis, cb, analysis, state.settings.thresholds) : [];
-  const blocksRaw = buildReport({ analysis, evaluation, lint, logicModel: state.logicModel, codebook: cb, settings: { ...state.settings, excludedCount } });
+  const blocksRaw = buildReport({ analysis, evaluation, lint, logicModel: state.logicModel, codebook: cb, settings: { ...state.settings, excludedCount }, survey });
   state.results = { survey, analysis, evaluation, lint, blocksRaw, straight, excludedCount, codebookWarnings: lintCodebook(cb), ms: Math.round(performance.now() - t0) };
   state.dirty = false;
   return state.results;

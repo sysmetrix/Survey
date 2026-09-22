@@ -89,10 +89,21 @@ function quickKpis(r) {
   ].filter(Boolean);
 }
 
+/** 전년 실적 → 목표 → 실적을 가로 막대 3개로 비교(관리자 전용 미리보기: kpiTrendChart) */
+function trendBars(prev, target, actual) {
+  const vals = [prev, target, actual].filter(Number.isFinite);
+  if (vals.length < 2) return `<span class="muted small">비교할 값 부족</span>`;
+  const max = Math.max(...vals) * 1.15 || 1;
+  const bar = (label, v, color) => (!Number.isFinite(v) ? "" : `<div class="kpi-trend-row"><span class="small muted">${label}</span><span class="kpi-trend-bar"><span style="width:${Math.max(4, v / max * 100)}%;background:${color}"></span></span><span class="small">${f1(v)}</span></div>`);
+  return `<div class="kpi-trend">${bar("전년", prev, "var(--border-strong)")}${bar("목표", target, "var(--info)")}${bar("실적", actual, "var(--brand)")}</div>`;
+}
+
 function kpiTable(r) {
   const results = new Map((r.evaluation?.results || []).map(x => [x.id, x]));
   const goals = state.logicModel.goals || [];
   const adeqOn = isFeatureOn("kpiTargetAdequacy"); // 관리자 전용 미리보기 — 전년 실적 입력·목표 적정성 경고
+  const trendOn = isFeatureOn("kpiTrendChart"); // 관리자 전용 미리보기 — 전년·목표·실적 추이 막대
+  const prevColOn = adeqOn || trendOn; // 두 기능이 '전년 실적' 입력칸을 공유
   const rows = state.kpis.map((k, i) => {
     const res = results.get(k.id);
     const m = METRICS[k.metric] || METRICS.manual;
@@ -109,7 +120,8 @@ function kpiTable(r) {
       <td>${m.kind === "manual" || k.metric === "responseCount" ? `<span class="muted small">-</span>` : `<input class="in" list="targetList" value="${esc(k.targetRef)}" placeholder="전체 / 영역 / 문항" data-change="kpi" data-i="${i}" data-field="targetRef" aria-label="'${rowTag}' 대상">`}</td>
       <td><input class="in num" type="number" step="any" value="${k.target ?? ""}" data-change="kpi" data-i="${i}" data-field="target" aria-label="'${rowTag}' 목표"></td>
       <td>${m.kind === "manual" ? `<input class="in num" type="number" step="any" value="${k.actual ?? ""}" data-change="kpi" data-i="${i}" data-field="actual" aria-label="'${rowTag}' 실적">` : `<span class="calc">${val(res?.actualValue)}</span>`}</td>
-      ${adeqOn ? `<td><input class="in num" type="number" step="any" value="${k.prevActual ?? ""}" placeholder="선택" data-change="kpi" data-i="${i}" data-field="prevActual" aria-label="'${rowTag}' 전년 실적">${res?.targetCaution ? `<div class="small warn-text" title="${esc(res.targetCaution)}">${icon("alert", 12)} 목표 검토</div>` : ""}</td>` : ""}
+      ${prevColOn ? `<td><input class="in num" type="number" step="any" value="${k.prevActual ?? ""}" placeholder="선택" data-change="kpi" data-i="${i}" data-field="prevActual" aria-label="'${rowTag}' 전년 실적">${adeqOn && res?.targetCaution ? `<div class="small warn-text" title="${esc(res.targetCaution)}">${icon("alert", 12)} 목표 검토</div>` : ""}</td>` : ""}
+      ${trendOn ? `<td>${trendBars(Number(k.prevActual), res?.targetValue, res?.actualValue)}</td>` : ""}
       <td><input class="in xs" value="${esc(k.unit || "")}" placeholder="${esc(m.unit)}" data-change="kpi" data-i="${i}" data-field="unit" aria-label="'${rowTag}' 단위"></td>
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="direction" aria-label="'${rowTag}' 방향">${option("up", "상향", k.direction !== "down")}${option("down", "하향", k.direction === "down")}</select></td>
       <td class="nowrap c"><b>${res && Number.isFinite(res.rate) ? f1(res.rate) + "%" : "-"}</b></td>
@@ -117,9 +129,10 @@ function kpiTable(r) {
       <td class="nowrap"><button class="btn sm ghost" data-act="kpi-del" data-i="${i}" title="삭제" aria-label="'${rowTag}' 삭제">✕</button></td>
     </tr>`;
   }).join("");
-  const adeqPreview = adeqOn && isAdminPreview("kpiTargetAdequacy");
+  const prevPreview = (adeqOn && isAdminPreview("kpiTargetAdequacy")) || (trendOn && isAdminPreview("kpiTrendChart"));
+  const trendPreview = trendOn && isAdminPreview("kpiTrendChart");
   return `<div class="tblwrap"><table class="tbl kpi">
-      <thead><tr><th>ID</th><th>지표명</th><th>단계</th><th>연계목표</th><th>측정 방법</th><th>대상</th><th>목표</th><th>실적</th>${adeqOn ? `<th>전년 실적${adeqPreview ? ' <span class="badge muted">관리자 미리보기</span>' : ""}</th>` : ""}<th>단위</th><th>방향</th><th>달성률</th><th>판정</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>지표명</th><th>단계</th><th>연계목표</th><th>측정 방법</th><th>대상</th><th>목표</th><th>실적</th>${prevColOn ? `<th>전년 실적${prevPreview ? ' <span class="badge muted">관리자 미리보기</span>' : ""}</th>` : ""}${trendOn ? `<th>추이${trendPreview ? ' <span class="badge muted">관리자 미리보기</span>' : ""}</th>` : ""}<th>단위</th><th>방향</th><th>달성률</th><th>판정</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
 }
 
