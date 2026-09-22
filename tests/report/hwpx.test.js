@@ -13,6 +13,16 @@ const dec = new TextDecoder();
 const part = (entries, p) => dec.decode(entries.find(e => e.path === p).data);
 const charPrOf = (header, id) => header.match(new RegExp(`<hh:charPr id="${id}"[\\s\\S]*?</hh:charPr>`))[0];
 const runIdFor = (sec, textStart) => sec.match(new RegExp(`<hp:run charPrIDRef="(\\d+)"><hp:t>${textStart}`))[1];
+// 문단 안에 텍스트 run 보다 앞서는(예: 쪽번호) run 이 있을 수 있어, 텍스트 앞의 마지막 paraPrIDRef 를 찾는다
+const paraPrIdFor = (sec, textStart) => {
+  const i = sec.indexOf(`<hp:t>${textStart}`);
+  const before = [...sec.slice(0, i).matchAll(/<hp:p id="0" paraPrIDRef="(\d+)"/g)];
+  return before[before.length - 1][1];
+};
+const paraPrOf = (header, id) => header.match(new RegExp(`<hh:paraPr id="${id}"[\\s\\S]*?</hh:paraPr>`))[0];
+/** 한글이 실제로 띄우는 값(pt) = hp:case 분기 값 ÷ 100 */
+const casePt = (block, key) => +block.match(/<hp:case[^>]*>([\s\S]*?)<\/hp:case>/)[1].match(new RegExp(`<hc:${key} value="(-?\\d+)"`))[1] / 100;
+const round2 = v => Math.round(v * 100) / 100;
 
 test("표는 글자처럼 취급하지 않고 쪽 경계에서 나눔(여러 쪽 지원)·제목 줄 반복", () => {
   const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "t" });
@@ -113,27 +123,30 @@ test("개조식 항목(□○-·)은 단계와 무관하게 모두 설정한 본
   assert.deepEqual(validateHwpx(entries, DOMParser), []);
 });
 
-test("□·○ 내어쓰기는 한글 문단 모양 대화상자 기준 정확히 10pt·20pt이고 baseSize에 비례함(23.8pt로 어긋나던 문제 수정)", () => {
-  // 한글 대화상자는 paraPr의 hp:case(HwpUnitChar) 분기 값을 절반·포인트(값÷100)로 보여준다(이번 세션에 실측 확인).
-  // 문단 안에 텍스트 run보다 앞서는(예: 쪽번호) run이 있을 수 있어 <hp:p>에 바로 이어 붙이지 않고, 텍스트 앞의 마지막 paraPrIDRef를 찾는다.
-  const paraPrIdFor = (sec, textStart) => {
-    const i = sec.indexOf(`<hp:t>${textStart}`);
-    const before = [...sec.slice(0, i).matchAll(/<hp:p id="0" paraPrIDRef="(\d+)"/g)];
-    return before[before.length - 1][1];
-  };
-  const paraPrOf = (header, id) => header.match(new RegExp(`<hh:paraPr id="${id}"[\\s\\S]*?</hh:paraPr>`))[0];
-  const caseMarginPt = (block, key) => +block.match(/<hp:case[^>]*>([\s\S]*?)<\/hp:case>/)[1].match(new RegExp(`<hc:${key} value="(-?\\d+)"`))[1] / 100;
-
-  for (const [baseSize, wantSquare, wantCircle] of [[12, 10, 20], [15, 12.5, 25]]) {
-    const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "t", baseSize });
-    doc.bullet(1, "사업명 확인").bullet(2, "목표1 확인");
+test("개조식 내어쓰기는 글머리 바로 다음 첫 글자에 맞음(글꼴·글자 크기별 실측 폭)", () => {
+  // 한글은 paraPr 의 hp:case(HwpUnitChar) 분기 값을 100 으로 나눈 만큼(pt) 띄우고, 그 값은 우리가 넘긴 원값의 절반이다.
+  // 기대값 = (글머리 폭 + 공백 0.5em) × 글자 크기 — 폭은 metrics.js 의 실측표(한글이 낸 PDF 의 글자 좌표를 직접 잼).
+  for (const [preset, size, em] of [
+    ["gov", 12, { "□": 1.00, "○": 1.00, "-": 0.50, "·": 1.00 }],
+    ["gov", 15, { "□": 1.00, "○": 1.00, "-": 0.50, "·": 1.00 }],
+    ["pretendard", 12, { "□": 0.87, "○": 0.87, "-": 0.57, "·": 0.26 }],
+    ["malgun", 12, { "□": 1.00, "○": 1.00, "-": 0.41, "·": 0.22 }],
+  ]) {
+    const doc = createHwpxDoc({ parts: TEMPLATE_PARTS, title: "t", baseSize: size, fontSettings: { fontPreset: preset } });
+    doc.bullet(1, "1단계").bullet(2, "2단계").bullet(3, "3단계").bullet(4, "4단계");
     const entries = doc.finish();
     const header = part(entries, "Contents/header.xml");
     const sec = part(entries, "Contents/section0.xml");
-    const squareId = paraPrIdFor(sec, "□ 사업명");
-    const circleId = paraPrIdFor(sec, "○ 목표1");
-    assert.equal(caseMarginPt(paraPrOf(header, squareId), "left"), wantSquare, `baseSize=${baseSize} □ 왼쪽 여백`);
-    assert.equal(caseMarginPt(paraPrOf(header, circleId), "left"), wantCircle, `baseSize=${baseSize} ○ 왼쪽 여백`);
+    // 1단계는 왼쪽 여백에 붙고, 아래 단계는 윗단계 글머리 폭만큼 누적해서 들어간다
+    let levelLeft = 0;
+    for (const [lv, sym] of [[1, "□"], [2, "○"], [3, "-"], [4, "·"]]) {
+      const block = paraPrOf(header, paraPrIdFor(sec, `${sym} ${lv}단계`));
+      const hang = round2((em[sym] + 0.5) * size);
+      const label = `${preset} ${size}pt ${sym}`;
+      assert.equal(casePt(block, "intent"), -hang, `${label} 내어쓰기`);
+      assert.equal(casePt(block, "left"), round2(levelLeft), `${label} 왼쪽 여백(글머리가 찍히는 자리)`);
+      levelLeft = round2(levelLeft + hang);
+    }
     assert.deepEqual(validateHwpx(entries, DOMParser), []);
   }
 });
@@ -144,17 +157,11 @@ test("표 안 '·'·요약상자 '□' 줄도 개조식과 같은 방식으로 �
   const entries = doc.finish();
   const header = part(entries, "Contents/header.xml");
   const sec = part(entries, "Contents/section0.xml");
-  const paraPrIdFor = (s, textStart) => {
-    const i = s.indexOf(`<hp:t>${textStart}`);
-    const before = [...s.slice(0, i).matchAll(/<hp:p id="0" paraPrIDRef="(\d+)"/g)];
-    return before[before.length - 1][1];
-  };
-  const paraPrOf = (h, id) => h.match(new RegExp(`<hh:paraPr id="${id}"[\\s\\S]*?</hh:paraPr>`))[0];
-  const caseMarginPt = (block, key) => +block.match(/<hp:case[^>]*>([\s\S]*?)<\/hp:case>/)[1].match(new RegExp(`<hc:${key} value="(-?\\d+)"`))[1] / 100;
-  for (const text of ["□ 요약 확인", "· 표 안 확인"]) {
-    const id = paraPrIdFor(sec, text);
-    const left = caseMarginPt(paraPrOf(header, id), "left");
-    assert.ok(left > 0, `"${text}" 줄에 내어쓰기가 있어야 함(현재 ${left}pt)`);
+  // 기본 글꼴(휴먼명조) 실측: □ 1.00em, · 1.00em, 공백 0.5em → 표 안 글자 크기는 본문−2pt
+  for (const [text, want] of [["□ 요약 확인", (1.0 + 0.5) * 12], ["· 표 안 확인", (1.0 + 0.5) * 10]]) {
+    const block = paraPrOf(header, paraPrIdFor(sec, text));
+    assert.equal(casePt(block, "intent"), -want, `"${text}" 줄 내어쓰기`);
+    assert.equal(casePt(block, "left"), 0, `"${text}" 줄은 칸 왼쪽에서 시작해야 함`);
   }
   assert.deepEqual(validateHwpx(entries, DOMParser), []);
 });

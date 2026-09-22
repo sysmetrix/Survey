@@ -5,6 +5,7 @@
 import { escText } from "./xml.js";
 import { toHwpText } from "./symbols.js";
 import { resolveFonts, applyFontsToHeader, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING } from "./fonts.js";
+import { glyphEm, leadEm } from "./metrics.js";
 import { parseInline, stripInlineMarks } from "../inline-marks.js";
 
 export const HWPUNIT_PER_MM = 7200 / 25.4;
@@ -103,20 +104,13 @@ export const SHADES = {
 };
 
 const BULLET_SYMBOL = { 1: "□", 2: "○", 3: "-", 4: "·" };
-const BULLET_HANG_PT = 10; // 기본 크기(DEFAULT_BASE_SIZE)에서 □·○ 내어쓰기 한 단계 = 10pt(한글 대화상자 기준)
 const BULLET_LEAD_RE = /^[□○·\-]\s/; // 표/박스 안 줄이 개조식 글머리로 시작하는지(무관한 줄은 내어쓰기 안 함)
 
-/**
- * "주: …"·"※ …"·"□ …"·"· …" 처럼 앞에 붙는 표시 뒤에 오는 첫 글자 폭을 재서 내어쓰기 값을 만든다.
- * 둘째 줄부터 표시가 아니라 본문 첫 글자 자리에 맞춰짐. 표시가 없으면 0(내어쓰기 없음).
- */
-function leadIndent(text, size) {
-  const m = /^(\S+\s+)/.exec(String(text ?? ""));
-  if (!m) return 0;
-  let w = 0;
-  for (const ch of m[1]) w += /[ㄱ-ㆎ가-힣■-◿·※]/.test(ch) ? 1 : ch === " " ? 0.5 : 0.55;
-  return Math.round(size * 100 * w);
-}
+// paraPr 의 hp:case(HwpUnitChar) 분기는 우리가 넘긴 원값의 절반으로 쓰이고(margin() 참고),
+// 한글은 그 값을 100 으로 나눈 만큼(pt) 띄운다 — 즉 N pt 를 띄우려면 원값이 N*200 이어야 한다.
+// 또 left 는 "첫 줄이 시작하는 자리", intent 은 "둘째 줄부터 더 들어가는 폭"이다(둘을 더해서
+// 넘기면 문단 전체가 그만큼 오른쪽으로 밀린다). 모두 한글 2024 가 낸 PDF 의 글자 좌표로 확인함.
+const PT = 200;
 
 // ─────────────────────────── 문서 작성기 ───────────────────────────
 /**
@@ -132,6 +126,14 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
   const M = { left: 20, right: 20, top: 10, bottom: 10, header: 10, footer: 10, ...margins };
   if (parts.FONTS && (parts.FONTS.dotum !== FONT_ID.dotum || parts.FONTS.batang !== FONT_ID.batang)) throw new Error("템플릿 글꼴 순서가 예상과 다릅니다(0=돋움, 1=바탕)");
   const fonts = resolveFonts(fontSettings);
+  const glyph = glyphEm(fonts.id); // 이 글꼴의 실측 글자 폭표(metrics.js)
+  /** 글머리 "□ "·"주: " 등 앞표시의 실제 폭만큼 내어쓰기 값(원값)을 만든다 — 둘째 줄이 첫 글자에 맞춰짐 */
+  const leadWidth = (prefix, size) => Math.round(leadEm(prefix, glyph) * size * PT);
+  /** 줄 맨 앞의 "표시 + 공백"을 찾아 그 폭만큼 내어쓰기(표시가 없으면 0) */
+  const leadIndent = (text, size) => {
+    const m = /^(\S+\s+)/.exec(String(text ?? ""));
+    return m ? leadWidth(m[1], size) : 0;
+  };
   const reg = createRegistry(parts.HEADER_XML, { boldFace: !!fonts.boldFace, headingOnly: fonts.headingOnly });
   const pageW = +parts.SEC_PR.match(/<hp:pagePr[^>]*\bwidth="(\d+)"/)[1];
   const bodyWidth = pageW - mm(M.left) - mm(M.right);
@@ -233,18 +235,12 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     bullet(level, text) {
       const lv = Math.min(4, Math.max(1, level));
       const size = B; // 미리보기(HTML)와 동일하게 모든 단계 본문 글자 크기를 그대로 사용(설정한 크기와 일치)
-      // 한글 문단 모양 대화상자는 paraPr의 hp:case(HwpUnitChar) 값을 포인트(값÷100)로 보여주고,
-      // 이 값은 항상 hp:default(우리가 넘기는 원값)의 절반이다(margin() 참고) — 그래서 대화상자에
-      // 정확히 N pt를 띄우려면 원값을 N*200 으로 넣어야 한다(실제 대화상자 캡처로 확인함).
-      // □·○: 내어쓰기 한 단계 = 기본 크기(DEFAULT_BASE_SIZE)에서 BULLET_HANG_PT, 글자 크기(B)에 비례
-      // — 12pt 아닌 다른 크기를 골라도 항상 대화상자 값이 맞도록 상수 대신 크기 비례식을 씀.
-      const symbolW = lv <= 2
-        ? Math.round(BULLET_HANG_PT * 200 * B / DEFAULT_BASE_SIZE)
-        : Math.round(size * 100 * 1.1);
-      const left = lv <= 2
-        ? (lv - 1) * symbolW
-        : Math.round([0, 0, 0, 2400, 3500][lv] * B / DEFAULT_BASE_SIZE);
-      addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "LEFT", left: left + symbolW, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: LS });
+      const symbolW = leadWidth(`${BULLET_SYMBOL[lv]} `, size);   // 글머리+공백의 실제 폭 = 내어쓰기
+      // 1단계는 왼쪽 여백에 붙이고, 아래 단계는 윗단계 글머리 폭만큼 들어간다
+      // — ○ 가 □ 의 본문 첫 글자 아래에 서는 공문서 개조식 방식
+      let left = 0;
+      for (let i = 1; i < lv; i++) left += leadWidth(`${BULLET_SYMBOL[i]} `, size);
+      addPara(`${BULLET_SYMBOL[lv]} ${text}`, { font: "batang", size, bold: false }, { align: "LEFT", left, intent: -symbolW, before: lv === 1 ? 500 : 150, after: 100, line: LS });
       return api;
     },
     paragraph(text, { size = B, align = "JUSTIFY", color = "#000000", bold = false, before = 100, after = 100, font = "batang" } = {}) {
@@ -260,7 +256,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
     note(text, { align = "LEFT", before = 60, after = 60, keepNext = false } = {}) {
       const size = B - 2;
       const w = align === "LEFT" ? leadIndent(text, size) : 0;
-      addPara(text, { font: "batang", size, color: "#404040" }, { align, left: w, intent: -w, before, after, line: 140, keepNext });
+      addPara(text, { font: "batang", size, color: "#404040" }, { align, intent: -w, before, after, line: 140, keepNext });
       return api;
     },
     pageBreak() { pendingPageBreak = true; return api; },
@@ -324,7 +320,7 @@ export function createHwpxDoc({ parts, title = "", creator = "", margins = {}, b
         // 개조식 글머리(□○·-)로 시작하는 줄만 마커 폭만큼 내어쓰기(무관한 왼쪽정렬 표 텍스트는 그대로)
         const cellParas = lines.map(line => {
           const w = al === "LEFT" && BULLET_LEAD_RE.test(line) ? leadIndent(line, fontSize) : 0;
-          return `<hp:p id="0" paraPrIDRef="${pp({ align: al, line: 130, left: w, intent: -w })}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
+          return `<hp:p id="0" paraPrIDRef="${pp({ align: al, line: 130, intent: -w })}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
             runs(line, { font: "sub", size: fontSize, bold: cell.bold ?? isHeader }) + `</hp:p>`;
         }).join("");
         trs[r].push(

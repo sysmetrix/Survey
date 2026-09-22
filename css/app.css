@@ -617,8 +617,10 @@ h3.flush { margin: 0; }
 .r-h1 { font-family: var(--paper-heading, "함초롬돋움"), var(--font); font-size: var(--paper-h1-size, 20px); margin: 28px 0 10px; color: var(--paper-ink); scroll-margin-top: calc(var(--topbar-h) + var(--rtbar-h) + 16px); }
 .paper.view .r-h1:first-child { margin-top: 0; }
 .r-h2 { font-family: var(--paper-heading, "함초롬돋움"), var(--font); font-size: var(--paper-h2-size, 17px); margin: 20px 0 6px; }
-.r-b { margin: 5px 0; display: flex; gap: 6px; line-height: var(--paper-lh, 1.75); }
-.r-b1 { margin-top: 10px; } .r-b2 { padding-left: 14px; } .r-b3 { padding-left: 34px; } .r-b4 { padding-left: 50px; }
+/* 글머리와 본문 사이는 0.5em(한글이 공백에 주는 폭), 단계 들여쓰기는 윗단계 "글머리+공백" 폭의 누적
+   — HWPX 내보내기와 같은 기준(js/report/hwpx/metrics.js, 기본 글꼴에서 □·○ 1em, - 0.5em) */
+.r-b { margin: 5px 0; display: flex; gap: .5em; line-height: var(--paper-lh, 1.75); }
+.r-b1 { margin-top: 10px; } .r-b2 { padding-left: 1.5em; } .r-b3 { padding-left: 3em; } .r-b4 { padding-left: 4em; }
 .r-sym { flex: none; }
 .r-txt { flex: 1; border-radius: 3px; }
 .paper.edit .r-txt[contenteditable]:hover { background: #FFF6CC; cursor: text; }
