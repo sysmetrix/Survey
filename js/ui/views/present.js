@@ -6,6 +6,7 @@ import { slideHtmlCustom } from "../../present/edit/render-custom.js";
 import { maskPII } from "../../core/util.js";
 import { buildPresentHtml, EXPORT_ICONS } from "../../present/export-html.js";
 import { renderPptx } from "../../report/render-pptx.js";
+import { loadJSZip } from "../jszip-loader.js";
 import { svgToPng } from "../../charts/rasterize.js";
 import { esc, busy, download, safeFileName, toast, nextFrame } from "../util.js";
 import { go, refresh, parseHash } from "../router.js";
@@ -246,7 +247,7 @@ export const actions = {
         return svgToPng(svg, w, h, 2);
       };
       const bytes = await renderPptx(slides, state.deckOverrides, {
-        title, creator: state.settings.author || "", settings: state.settings, rasterizeChart, JSZip: window.JSZip,
+        title, creator: state.settings.author || "", settings: state.settings, rasterizeChart, JSZip: await loadJSZip(),
       });
       download(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }), `${safeFileName(title)}_발표자료.pptx`);
       toast("PPTX 파일을 내려받았습니다. PowerPoint에서 계속 고칠 수 있습니다.", "ok", 7000);

@@ -3,6 +3,7 @@ import { state, compute, reportBlocks, invalidate, persistSettings } from "../st
 import { finalizeBlocks, blocksToText, chartSvg } from "../../report/model.js";
 import { blocksToHtml, splitChapters, titleBlockHtml } from "../../report/render-html.js";
 import { renderHwpx } from "../../report/render-hwpx.js";
+import { loadJSZip } from "../jszip-loader.js";
 import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, DEFAULT_FONT_PRESET, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING, resolveFonts, cleanFontName } from "../../report/hwpx/fonts.js";
 import { svgToPng } from "../../charts/rasterize.js";
 import { projectToJson } from "../../io/project.js";
@@ -288,9 +289,9 @@ export const actions = {
     await nextFrame();
     let stats = null;
     try {
-      const { TEMPLATE_PARTS } = await import("../../report/hwpx/template-parts.js");
+      const [{ TEMPLATE_PARTS }, JSZip] = await Promise.all([import("../../report/hwpx/template-parts.js"), loadJSZip()]);
       const bytes = await renderHwpx(blocks, {
-        parts: TEMPLATE_PARTS, JSZip: window.JSZip, title, creator: state.settings.author || state.settings.orgName, doc: docOptions(),
+        parts: TEMPLATE_PARTS, JSZip, title, creator: state.settings.author || state.settings.orgName, doc: docOptions(),
         rasterize: (svg, w, h) => svgToPng(svg, w, h, 2.5),
         onProgress: (i, n) => busy(true, `그래프 변환 ${i}/${n}`),
         onStats: s => { stats = s; },

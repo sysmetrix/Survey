@@ -5,6 +5,7 @@ import { LOGIC_STAGES, KPI_STAGES, normalizeLogicModel, hasLogicModel, hasProgra
 import { METRICS, newKpi } from "../../evaluation/kpi.js";
 import { readBusinessFromHwpx, tagDraftKpis, previewPlanDocDraft } from "../../evaluation/business-doc.js";
 import { readHwpxText } from "../../report/hwpx/read.js";
+import { loadJSZip } from "../jszip-loader.js";
 import { pairsOf } from "../../model/codebook.js";
 import { f1, f2 } from "../../narrative/vocab.js";
 import { esc, option, levelBadge, toast, download, readFileText, readFileBytes, busy, nextFrame } from "../util.js";
@@ -247,7 +248,7 @@ export const actions = {
     let draft;
     try {
       const bytes = await readFileBytes(f);
-      const { paragraphs, tables } = await readHwpxText(bytes, { JSZip: window.JSZip, DOMParser: window.DOMParser });
+      const { paragraphs, tables } = await readHwpxText(bytes, { JSZip: await loadJSZip(), DOMParser: window.DOMParser });
       draft = readBusinessFromHwpx({ paragraphs, tables });
     } catch (e) {
       console.error(e);

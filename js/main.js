@@ -67,6 +67,21 @@ function renderChrome(id) {
 
 let renderToken = 0;
 
+// css/present.css(발표 화면 전용)는 발표·발표 편집 화면에 처음 들어갈 때만 받아옴(그 외 화면에서는 안 씀)
+const PRESENT_CSS_VIEWS = new Set(["present", "presentEdit"]);
+let presentCssLoaded = false;
+function ensurePresentCss() {
+  if (presentCssLoaded) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = `css/present.css?v=${APP_VERSION}`;
+    link.onload = () => { presentCssLoaded = true; resolve(); };
+    link.onerror = () => reject(new Error("발표 화면 스타일을 불러오지 못했습니다"));
+    document.head.appendChild(link);
+  });
+}
+
 function render({ keepScroll = false } = {}) {
   const { view, sub } = parseHash();
   const allowedView = view === "updates" && !hasReleaseAccess() ? "load" : view;
@@ -79,12 +94,13 @@ function render({ keepScroll = false } = {}) {
   } else if (id === "login" && getSession()) id = "load"; // 이미 로그인된 채로 로그인 화면에 다시 오면 첫 화면으로
 
   const cached = VIEWS[id];
-  if (cached) { renderWith(cached, id, sub, keepScroll); return; } // 이미 받아온 화면: 지금까지와 똑같이 그 자리에서 바로 그림
+  const needsCss = PRESENT_CSS_VIEWS.has(id) && !presentCssLoaded;
+  if (cached && !needsCss) { renderWith(cached, id, sub, keepScroll); return; } // 이미 다 받아온 화면: 지금까지와 똑같이 그 자리에서 바로 그림
 
-  // 이번 세션에서 처음 들어가는 화면만 받아옴 — 대부분 눈 깜짝할 새 끝나므로, 조금 걸릴 때만 로딩 표시를 띄움
+  // 이번 세션에서 처음 들어가는 화면(또는 스타일)만 받아옴 — 대부분 눈 깜짝할 새 끝나므로, 조금 걸릴 때만 로딩 표시를 띄움
   const token = ++renderToken;
   const slow = setTimeout(() => { if (token === renderToken) busy(true, "화면을 불러오는 중…"); }, 150);
-  VIEW_LOADERS[id]().then(mod => {
+  Promise.all([cached ? Promise.resolve(cached) : VIEW_LOADERS[id](), needsCss ? ensurePresentCss() : Promise.resolve()]).then(([mod]) => {
     clearTimeout(slow);
     if (token !== renderToken) return; // 그 사이 다른 화면으로 또 이동했으면 이 결과는 버림
     VIEWS[id] = mod;
@@ -295,8 +311,8 @@ window.addEventListener("unhandledrejection", e => {
   toast(`처리 중 오류: ${msg}`, "bad", 6000);
 });
 
-// XLSX(SheetJS)는 .xlsx 파일을 실제로 열 때만 따로 받아오므로 여기서는 확인하지 않음(js/io/xlsx-loader.js)
-if (!window.Papa || !window.JSZip) toast("일부 라이브러리를 불러오지 못했습니다. 새로고침하세요.", "bad", 8000);
+// XLSX(SheetJS)·JSZip 은 실제로 필요할 때만 따로 받아오므로 여기서는 확인하지 않음(js/ui/xlsx-loader.js·jszip-loader.js)
+if (!window.Papa) toast("일부 라이브러리를 불러오지 못했습니다. 새로고침하세요.", "bad", 8000);
 document.getElementById("ver").textContent = `v${APP_VERSION}`;
 document.getElementById("presentBtn").innerHTML = `${icon("play", 15)}<span>발표</span>`;
 document.getElementById("installBtn").innerHTML = `${icon("install", 16)}<span>앱 설치</span>`;
