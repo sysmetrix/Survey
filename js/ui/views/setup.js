@@ -10,10 +10,12 @@ import { esc, option, levelBadge, toast, busy, busyDone, nextFrame } from "../ut
 import { refresh, go } from "../router.js";
 import { scoreBasisPanel, scoreBasisActions } from "../score-basis.js";
 import { icon } from "../icons.js";
+import { isFeatureOn } from "../../admin/flags-client.js";
 
 const SHEET_ROLE = { data: "응답", pre: "사전 응답", post: "사후 응답", codebook: "문항정보", business: "사업정보", kpi: "성과지표", guide: "안내" };
 const IS_NUM = s => /^[-+]?\d+(\.\d+)?$/.test(s);
 let expanded = null; // 보기 점수 패널이 열린 열
+let expandedPop = null; // 모집단 비율 패널이 열린 열(관리자 미리보기 기능)
 
 /** 열의 문자 응답(숫자 아닌 값)과 응답 수 */
 function textResponses(col) {
@@ -39,6 +41,26 @@ function labelPanel(c, unm) {
       <button class="btn sm" data-act="labelmap-apply-all" data-key="${key}">같은 보기를 쓰는 문항에 모두 적용</button>
       <button class="btn sm ghost" data-act="toggle-labels" data-key="${key}">닫기</button>
     </div></div></td></tr>`;
+}
+
+/** 모집단 비율(선택) 패널 — 관리자 전용 미리보기 기능(응답자 대표성 체크) */
+function popPanel(c, sv) {
+  const vals = sv.values(c.key).filter(v => v !== null).map(String);
+  const counts = new Map();
+  vals.forEach(v => counts.set(v, (counts.get(v) || 0) + 1));
+  const n = vals.length;
+  const pop = c.popPct || {};
+  const names = [...new Set([...counts.keys(), ...Object.keys(pop)])];
+  const key = esc(c.key);
+  return `<tr class="labelrow"><td colspan="10"><div class="labelpanel">
+    <div class="row between wrap"><b>‘${esc(c.label)}’ 모집단 비율(선택)</b><span class="small muted">전체 사업 대상자 중 이 항목의 비율을 알고 있으면 입력하세요(예: 대상자 성비). 입력한 항목만 응답자 분포와 비교해 자료 품질 화면에 표시합니다.</span></div>
+    <table class="tbl mini"><tr><th>구분</th><th class="c">응답자 수</th><th class="c">응답자 비율</th><th>모집단 비율(%)</th></tr>${names.map(nm => {
+      const obs = counts.get(nm) || 0;
+      const observedPct = n ? (obs / n * 100).toFixed(1) : "-";
+      return `<tr><td>${esc(nm)}</td><td class="c">${obs}</td><td class="c">${observedPct}</td><td><input class="in num" type="number" min="0" max="100" step="0.1" value="${pop[nm] ?? ""}" placeholder="?" data-change="poppct" data-key="${key}" data-cat="${esc(nm)}"></td></tr>`;
+    }).join("")}</table>
+    <div class="row gap wrap"><button class="btn sm ghost" data-act="toggle-poppanel" data-key="${key}">닫기</button></div>
+  </div></td></tr>`;
 }
 
 function yearBucketPanel(c) {
@@ -138,19 +160,22 @@ export function render() {
     const yearBtn = yearKind
       ? `<div><button class="btn sm ${yScheme !== "raw" ? "" : "ghost"}" data-act="toggle-yearbucket" data-key="${esc(c.key)}">연도 구간${yScheme !== "raw" ? ` <span class="badge info">${esc((ySchemeObj?.name || "").split("(")[0])}</span>` : ` <span class="badge">구간 없음</span>`}</button></div>`
       : "";
+    const popOn = c.role === "demographic" && isFeatureOn("respondentRepresentativeness");
+    const popCount = c.popPct ? Object.keys(c.popPct).length : 0;
+    const popBtn = popOn ? `<div><button class="btn sm ${popCount ? "" : "ghost"}" data-act="toggle-poppanel" data-key="${esc(c.key)}">모집단 비율${popCount ? ` <span class="badge info">${popCount}개</span>` : ""}</button></div>` : "";
     return (`<tr class="${c.role === "ignore" ? "dim" : ""}">
       <td class="small muted">${multiSheet ? esc(cb.sheets[c.sheet].name) + "<br>" : ""}${c.index + 1}</td>
       <td class="hdr" title="${esc(c.header)}">${esc(c.header)}<div class="small muted">${esc(sampleValues(c))}</div></td>
       <td><input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label" aria-label="'${esc(c.header)}' 열의 표시 이름"></td>
       <td><select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role" aria-label="'${esc(c.label)}' 열의 역할">${Object.entries(ROLES).map(([k, v]) => option(k, v, c.role === k)).join("")}</select>
-        ${conf < 0.7 && !c.labelAmbiguous ? `<div class="small warn-text" title="${esc(c.detected.reason)}">판별 불확실</div>` : ""}${c.pii ? `<div class="small warn-text">개인정보 추정</div>` : ""}${labelBtn}${yearBtn}</td>
+        ${conf < 0.7 && !c.labelAmbiguous ? `<div class="small warn-text" title="${esc(c.detected.reason)}">판별 불확실</div>` : ""}${c.pii ? `<div class="small warn-text">개인정보 추정</div>` : ""}${labelBtn}${yearBtn}${popBtn}</td>
       <td class="nowrap">${numeric ? `<input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min" aria-label="'${esc(c.label)}' 척도 최솟값">~<input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max" aria-label="'${esc(c.label)}' 척도 최댓값">` : ""}</td>
       <td class="c">${c.role === "likert" ? `<input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse" aria-label="'${esc(c.label)}' 역문항으로 처리">` : ""}</td>
       <td>${c.role === "likert" ? `<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="(없음)" data-change="col" data-key="${esc(c.key)}" data-field="domain" aria-label="'${esc(c.label)}' 영역">` : ""}</td>
       <td>${numeric ? `<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time" aria-label="'${esc(c.label)}' 시점">${option("", "-", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select>` : ""}</td>
       <td class="c">${c.role === "likert" && c.time !== "pre" ? `<input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall" aria-label="'${esc(c.label)}'을(를) 전반 만족 문항으로 표시">` : ""}</td>
       <td class="c">${colEdited(cb, c) ? `<button class="icon-btn sm" data-act="col-reset" data-key="${esc(c.key)}" title="자동 판별 값으로 되돌리기" aria-label="'${esc(c.label)}' 자동 판별 값으로 되돌리기">${icon("undo", 14)}</button>` : ""}</td>
-    </tr>`) + (scaled && expanded === c.key ? labelPanel(c, unm) : "") + (yearKind && expanded === c.key ? yearBucketPanel(c) : "");
+    </tr>`) + (scaled && expanded === c.key ? labelPanel(c, unm) : "") + (yearKind && expanded === c.key ? yearBucketPanel(c) : "") + (popOn && expandedPop === c.key ? popPanel(c, sv) : "");
   }).join("");
   const unmappedWarn = unmappedCols.length ? `<li>${levelBadge("error")} 점수로 바뀌지 않은 응답이 있는 문항 ${unmappedCols.length}개: ${unmappedCols.slice(0, 4).map(u => `${esc(u.c.label)}(${u.n}건)`).join(", ")}${unmappedCols.length > 4 ? " 등" : ""} — 아래 표의 <b>보기 점수</b>에서 문구별 점수를 지정하세요(지정 전에는 무응답으로 처리).</li>` : "";
 
@@ -220,6 +245,16 @@ export const actions = {
   ...scoreBasisActions,
   "toggle-labels": el => { expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },
   "toggle-yearbucket": el => { expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },
+  "toggle-poppanel": el => { expandedPop = expandedPop === el.dataset.key ? null : el.dataset.key; refresh(); },
+  poppct: el => {
+    const c = colByKey(el.dataset.key); if (!c) return;
+    c.popPct = { ...(c.popPct || {}) };
+    const cat = el.dataset.cat;
+    if (el.value === "") delete c.popPct[cat];
+    else { const v = Number(el.value); if (Number.isFinite(v)) c.popPct[cat] = v; }
+    if (!Object.keys(c.popPct).length) delete c.popPct;
+    refresh();
+  },
   yearscheme: el => { const c = colByKey(el.dataset.key); if (!c) return; c.yearScheme = el.value; invalidate(); refresh(); },
   yearref: el => {
     const c = colByKey(el.dataset.key); if (!c) return;
