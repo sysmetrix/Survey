@@ -8,10 +8,26 @@ import { icon } from "../../icons.js";
 import { _resetForTest as resetFlagsCache } from "../../../admin/flags-client.js";
 
 const LABELS = {
-  smallSampleWarning: { title: "소표본·검정력 주의 문구", desc: "표본 수가 적을 때(사전·사후 n<30, 집단비교 n<10) 해석 주의 문구를 화면·보고서에 표시합니다." },
-  kpiTargetAdequacy: { title: "KPI 목표 적정성 점검", desc: "전년 실적 대비 목표가 지나치게 낮게 잡혔을 때 성과지표 표에 경고를 표시합니다." },
-  respondentRepresentativeness: { title: "응답자 대표성 체크", desc: "모집단 비율을 입력하면 응답자 분포와의 편차를 자료 품질 항목에 표시합니다." },
-  statsTrustBadge: { title: "통계 방법 신뢰 배지", desc: "분석 결과 화면에 검증된 통계 방법(R 기준값·다중비교 보정·효과크기)을 요약해 보여줍니다." },
+  smallSampleWarning: {
+    title: "소표본·검정력 주의 문구",
+    desc: "표본 수가 적을 때(사전·사후 n<30, 집단비교 n<10) 해석 주의 문구를 표시합니다.",
+    where: "④ 분석 결과 화면 — 상단 핵심 지표 카드(‘응답자’·‘사전→사후’)",
+  },
+  kpiTargetAdequacy: {
+    title: "KPI 목표 적정성 점검",
+    desc: "전년 실적 대비 목표가 지나치게 낮게 잡혔을 때 경고를 표시합니다.",
+    where: "③ 성과지표 화면 — 성과지표 표에 ‘전년 실적’ 입력 열 추가",
+  },
+  respondentRepresentativeness: {
+    title: "응답자 대표성 체크",
+    desc: "모집단 비율을 입력하면 응답자 분포와의 편차를 보여줍니다.",
+    where: "② 데이터 설정 화면(모집단 비율 입력) → ④ 분석 결과 화면 ‘자료 품질·상관’ 탭(결과 표시)",
+  },
+  statsTrustBadge: {
+    title: "통계 방법 신뢰 배지",
+    desc: "검증된 통계 방법(R 기준값·다중비교 보정·효과크기)을 요약해 보여줍니다.",
+    where: "④ 분석 결과 화면 — 맨 위 페이지 제목 바로 아래",
+  },
 };
 
 let loading = false, error = "", missingTable = false, rows = null, loaded = false;
@@ -51,15 +67,25 @@ export function render() {
   if (!rows) return `<p class="muted">${loading ? "불러오는 중…" : ""}</p>`;
   return `
     <p class="small muted">꺼진(비공개) 기능은 관리자로 로그인한 이 브라우저에서만 미리 보이고, 일반 이용자 화면에는 나타나지 않습니다. 충분히 확인한 뒤 켜면 모든 이용자에게 순차 공개됩니다.</p>
-    <div class="tblwrap"><table class="tbl">
-      <tr><th>기능</th><th>설명</th><th>공개 상태</th><th>전체 공개</th></tr>
+    <div class="flag-list">
       ${rows.map(r => {
-        const meta = LABELS[r.key] || { title: r.key, desc: "" };
-        return `<tr><td>${esc(meta.title)}</td><td class="small muted">${esc(meta.desc)}</td>
-          <td>${r.enabled ? '<span class="badge ok">전체 공개</span>' : '<span class="badge muted">관리자 전용</span>'}</td>
-          <td class="c"><label class="check" style="justify-content:center"><input type="checkbox" ${r.enabled ? "checked" : ""} data-change="admin-flags-toggle" data-key="${esc(r.key)}" aria-label="'${esc(meta.title)}' 전체 공개 여부"></label></td></tr>`;
+        const meta = LABELS[r.key] || { title: r.key, desc: "", where: "" };
+        return `<div class="flag-row">
+          <div class="flag-main">
+            <div class="row gap" style="align-items:center">
+              <b>${esc(meta.title)}</b>
+              ${r.enabled ? '<span class="badge ok">전체 공개</span>' : '<span class="badge muted">관리자 전용</span>'}
+            </div>
+            <p class="small muted flag-desc">${esc(meta.desc)}</p>
+            ${meta.where ? `<p class="small flag-where">${icon("eye", 13)}${esc(meta.where)}</p>` : ""}
+          </div>
+          <label class="switch" title="전체 공개 여부">
+            <input type="checkbox" ${r.enabled ? "checked" : ""} data-change="admin-flags-toggle" data-key="${esc(r.key)}" aria-label="'${esc(meta.title)}' 전체 공개 여부">
+            <span class="track"><span class="thumb"></span></span>
+          </label>
+        </div>`;
       }).join("")}
-    </table></div>`;
+    </div>`;
 }
 
 export const actions = {

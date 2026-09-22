@@ -163,6 +163,23 @@ textarea.in { resize: vertical; line-height: 1.5; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width: 16px; height: 16px; margin: 3px 0 0; }
 .field { display: flex; flex-direction: column; gap: 5px; font-weight: 600; font-size: 13.5px; color: var(--text-2); margin: 8px 0; }
 .check { display: flex; gap: 8px; align-items: flex-start; margin: 7px 0; cursor: pointer; font-size: 14px; }
+/* 켜고 끄는 스위치(관리자 기능 플래그 등) — 체크박스는 접근성용으로 남기고 시각은 트랙+손잡이로 */
+.switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+.switch input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.switch .track { display: inline-block; width: 40px; height: 22px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--border-strong); transition: background .15s ease, border-color .15s ease; }
+.switch .thumb { display: block; width: 16px; height: 16px; margin: 2px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s ease; }
+.switch input:checked + .track { background: var(--brand); border-color: var(--brand); }
+.switch input:checked + .track .thumb { transform: translateX(18px); background: var(--on-brand); }
+.switch input:focus-visible + .track { outline: 2px solid var(--brand); outline-offset: 2px; }
+.switch input:disabled + .track { opacity: .5; cursor: not-allowed; }
+/* 관리자 기능 플래그 목록 — 켜고 끄는 설정 화면에서 흔히 쓰는 좌: 설명 · 우: 스위치 줄 배치 */
+.flag-list { display: flex; flex-direction: column; }
+.flag-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.flag-row:last-child { border-bottom: 0; }
+.flag-main { flex: 1; min-width: 0; }
+.flag-desc { margin: 4px 0 2px; }
+.flag-where { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; color: var(--brand-text); }
+.flag-where .ico { flex-shrink: 0; }
 .chapter-list { display: flex; flex-direction: column; gap: 1px; margin: 6px 0 4px; }
 .edited-list { display: flex; flex-direction: column; gap: 5px; margin: 8px 0 10px; }
 .edited-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-2); font: inherit; font-size: 13px; line-height: 1.4; cursor: pointer; }
