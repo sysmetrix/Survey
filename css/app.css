@@ -549,6 +549,18 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .logic { display: flex; gap: 8px; align-items: stretch; overflow-x: auto; padding-bottom: 4px; }
 .logic-col { display: flex; flex-direction: column; gap: 4px; min-width: 160px; flex: 1; background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px; }
 .arrow { align-self: center; color: var(--brand-text); font-weight: 800; }
+.link-btn { border: 0; padding: 0; background: none; color: var(--brand-text); font: inherit; cursor: pointer; text-decoration: underline; }
+.reference-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.reference-step { display: flex; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+.reference-step h3, .reference-source h3 { margin: 0 0 5px; font-size: 14px; }
+.reference-step p, .reference-source p { margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.step-number { display: grid; place-items: center; flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--brand); color: var(--on-brand); font-weight: 800; }
+.reference-sources { display: grid; gap: 10px; }
+.reference-source { padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); }
+.reference-source a { color: var(--brand-text); font-size: 12px; font-weight: 700; }
+.checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.checklist label { padding: 12px; border-radius: var(--radius-sm); background: var(--surface-2); font-size: 13px; }
+.checklist input { accent-color: var(--brand); margin-right: 8px; }
 
 /* ── ④ 분석 결과 ── */
 .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 16px; }

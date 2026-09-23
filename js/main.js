@@ -35,6 +35,7 @@ const VIEW_LOADERS = {
   history: () => import("./ui/views/history.js"),
   settings: () => import("./ui/views/settings.js"),
   updates: () => import("./ui/views/updates.js"),
+  references: () => import("./ui/views/references.js"),
   login: () => import("./ui/views/login.js"),
   admin: () => import("./ui/views/admin.js"),
 };

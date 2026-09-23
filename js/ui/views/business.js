@@ -146,7 +146,7 @@ export function render() {
   return `
   <div class="page-head">
     <div><h1>성과지표 <span class="badge muted">선택</span></h1><p class="small muted">목표값을 정하면 달성률·판정이 자동 계산되어 보고서에 ‘성과지표 달성 현황’ 장이 추가됩니다. 지표가 없어도 분석·보고서는 그대로 만들어집니다.</p></div>
-    <div class="row gap wrap"><button class="btn" data-act="goto" data-to="dash">건너뛰고 분석 결과 보기${icon("right", 16)}</button></div>
+    <div class="row gap wrap"><button class="btn ghost" data-act="goto" data-to="references">평가 레퍼런스 보기${icon("right", 16)}</button><button class="btn" data-act="goto" data-to="dash">건너뛰고 분석 결과 보기${icon("right", 16)}</button></div>
   </div>
 
   <section class="card">
@@ -163,6 +163,7 @@ export function render() {
       <div class="metric-guide-head">${icon("help", 15)}측정 방법 안내</div>
       <div class="metric-guide-grid">${Object.values(METRICS).map(mm => `<div class="metric-guide-item"><b>${esc(mm.label)}</b>${mm.formula ? `<span class="muted">${esc(mm.formula)}</span>` : ""}</div>`).join("")}</div>
       <p class="format-help small muted">만족도는 반응(1단계) 지표입니다. 중기성과·영향은 사전·사후 변화, 향상자 비율 등 변화 지표나 행정 실적(직접 입력)을 권장합니다.</p>
+      <p class="format-help small"><button class="link-btn" data-act="goto" data-to="references">왜 이렇게 평가하는지, 근거와 단계별 가이드 보기 →</button></p>
     </div>
   </section>
 
