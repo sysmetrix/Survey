@@ -8,14 +8,18 @@ export function instrumentFromSheet(sheet) {
     const time = String(value(row,"시점")).trim();
     const reverse = String(value(row,"역채점")).trim();
     if(!["","사전","사후","pre","post"].includes(time)) throw new Error("시점은 사전·사후 또는 빈칸이어야 합니다.");
+    if(!String(value(row,"문항명")).trim()) throw new Error("문항명은 비워 둘 수 없습니다.");
     if(!["","예","아니오","true","false","1","0"].includes(reverse)) throw new Error("역채점은 예·아니오로 입력하세요.");
     const min=value(row,"최소값"), max=value(row,"최대값");
     if(min==="" || max==="") throw new Error("모든 문항의 척도 최소·최대값이 필요합니다.");
-    return {id:String(value(row,"문항ID")),label:String(value(row,"문항명")),domain:String(value(row,"영역")),time:time==="사전"?"pre":time==="사후"?"post":time,scale:{min:Number(min),max:Number(max)},reverse:["예","true","1"].includes(reverse)};
+    const scale={min:Number(min),max:Number(max)};
+    if(!Number.isFinite(scale.min)||!Number.isFinite(scale.max)||scale.max<=scale.min) throw new Error("척도 최소·최대값을 확인하세요.");
+    return {id:String(value(row,"문항ID")),label:String(value(row,"문항명")).trim(),domain:String(value(row,"영역")).trim(),time:time==="사전"?"pre":time==="사후"?"post":time,scale,reverse:["예","true","1"].includes(reverse)};
   });
   return parseInstrument(JSON.stringify({app:"survey-instrument",schema:1,metadata:{origin:"user"},items}));
 }
 export function instrumentFromCodebook(cb) {
+  if (!cb || !Array.isArray(cb.columns) || !Array.isArray(cb.domains)) throw new Error("코드북이 필요합니다.");
   return { app: "survey-instrument", schema: 1, metadata: { ...cb.instrument, origin: "user" }, items: cb.columns.filter(c => c.role === "likert").map(c => ({ id: c.itemId || c.pairKey || c.key, label: c.label, time: c.time || "", domain: cb.domains.find(d => d.id === c.domain)?.name || "", scale: c.scale, reverse: !!c.reverse })) };
 }
 export function parseInstrument(text) {

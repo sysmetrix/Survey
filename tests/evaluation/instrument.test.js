@@ -11,6 +11,7 @@ test("XLSX 문항정보 계약: 명시적 척도·시점·역채점만 불러오
   sheet.rows[0][4]="";
   assert.throws(()=>instrumentFromSheet(sheet),/최소/);
   assert.throws(()=>parseInstrument("null"),/지원/);
+  assert.throws(()=>instrumentFromCodebook(null),/코드북/);
 });
 test("문항 세트 저장·검증·미리보기·적용은 원본을 변경하지 않는다", () => {
   const source=cb(), serialized=JSON.stringify(source);
