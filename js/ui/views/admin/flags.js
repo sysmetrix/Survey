@@ -43,6 +43,36 @@ const LABELS = {
     where: "⑤ 보고서 화면 → 한글(HWPX) 다운로드 — [부록] 세부 분석표",
     example: `<p class="small muted" style="margin:0">부록에 <b>‘응답자 대표성(모집단 비율 대비)’</b> 표가 자동으로 추가됩니다(위 응답자 대표성 체크와 같은 내용).</p>`,
   },
+  measurementQuality: {
+    title: "설문 측정 품질 점검",
+    desc: "사전·사후 문항 짝, 척도 범위, 영역별 문항 수, 소표본을 점검합니다.",
+    where: "③ 성과지표 화면 — 설문 측정 품질 점검 카드",
+    example: `<p class="small muted" style="margin:0">사전·사후 문항 일치·척도·문항 수·표본 규모를 분석 전에 확인합니다.</p>`,
+  },
+  surveyVersioning: {
+    title: "설문 문항 버전 관리",
+    desc: "표준 문항 세트의 개정일·버전과 사전·사후 일치 여부를 관리합니다.",
+    where: "② 데이터 설정·③ 성과지표 화면 — 문항 세트 품질 정보",
+    example: "",
+  },
+  ageSurveyTemplates: {
+    title: "연령별 표준 설문 템플릿",
+    desc: "초기 청소년용과 중·후기 청소년용 표준 설문 템플릿을 구분합니다.",
+    where: "② 데이터 설정 화면 — 표준 설문 템플릿",
+    example: "",
+  },
+  competencyProfile: {
+    title: "청소년 핵심역량 프로파일",
+    desc: "역량별 점수와 사전·사후 변화 프로파일을 제공합니다.",
+    where: "④ 분석 결과 화면 — 역량 프로파일",
+    example: "",
+  },
+  standardComparisons: {
+    title: "표준 문항 비교 분석",
+    desc: "동일 문항·척도·대상일 때만 연도·사업·집단 비교를 허용합니다.",
+    where: "④ 분석 결과 화면 — 표준 비교",
+    example: "",
+  },
   statsTrustBadge: {
     title: "통계 방법 신뢰 배지",
     desc: "검증된 통계 방법(R 기준값·다중비교 보정·효과크기)을 요약해 보여줍니다.",
@@ -112,11 +142,17 @@ export function render() {
   if (missingTable) return setupHelp();
   if (error) return `<p class="hint bad" role="alert">${esc(error)}</p><button class="btn sm" data-act="admin-flags-reload">다시 시도</button>`;
   if (!rows) return `<p class="muted">${loading ? "불러오는 중…" : ""}</p>`;
-  const missingKeys = Object.keys(LABELS).filter(k => !rows.some(r => r.key === k));
+  // DB 시드(0006)가 아직 적용되지 않은 환경에서도 관리자가 스위치를 보고 켤 수 있게
+  // 코드에 등록된 플래그를 기본 비공개 행으로 합친다. 켜기는 RPC upsert가 처리한다.
+  const known = Object.keys(LABELS).map(key => ({ key, enabled: false, updated_at: null, _virtual: true }));
+  const byKey = new Map((rows || []).map(r => [r.key, r]));
+  known.forEach(r => { if (!byKey.has(r.key)) byKey.set(r.key, r); });
+  const visibleRows = [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+  const missingKeys = visibleRows.filter(r => r._virtual).map(r => r.key);
   return `
     <p class="small muted">꺼진(비공개) 기능은 관리자로 로그인한 이 브라우저에서만 미리 보이고, 일반 이용자 화면에는 나타나지 않습니다. 충분히 확인한 뒤 켜면 모든 이용자에게 순차 공개됩니다.</p>
     ${missingKeys.length ? missingKeysHelp(missingKeys) : ""}
-    <div class="flag-list">${rows.map(flagCard).join("")}</div>`;
+    <div class="flag-list">${visibleRows.map(flagCard).join("")}</div>`;
 }
 
 export const actions = {
