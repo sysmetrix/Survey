@@ -13,6 +13,7 @@ import { refresh } from "../router.js";
 import { icon } from "../icons.js";
 import { isFeatureOn, isAdminPreview } from "../../admin/flags-client.js";
 import { PROGRAM_FIELD_EXAMPLES, LOGIC_STAGE_EXAMPLES, BACKGROUND_EXAMPLE, PURPOSE_EXAMPLE, GOALS_EXAMPLE } from "../examples.js";
+import { measurementQuality, measurementQualityLabel } from "../../evaluation/measurement-quality.js";
 
 const MAX_PLAN_DOC_MB = 20;
 
@@ -142,6 +143,7 @@ export function render() {
   const hasLm = hasProgramInfo(lm) || hasLogicModel(lm);
   const quick = quickKpis(r);
   const used = new Set(state.kpis.map(k => k.metric + "|" + k.name));
+  const quality = isFeatureOn("measurementQuality") ? measurementQuality(state.codebook, r.analysis) : [];
 
   return `
   <div class="page-head">
@@ -159,6 +161,7 @@ export function render() {
     ${state.kpis.length ? kpiTable(r) : `<div class="empty-inline">${icon("chart", 22)}<div><b>아직 성과지표가 없습니다</b><p class="small muted">위의 ‘빠른 추가’를 누르면 이 설문 데이터로 바로 계산되는 지표가 들어갑니다. 목표값만 사업계획서에 맞게 고치면 됩니다.</p></div></div>`}
     ${r.evaluation ? `<p class="summary">종합: 측정 ${r.evaluation.summary.measured}개 중 <b>${r.evaluation.summary.achieved}개 달성</b>, ${r.evaluation.summary.mostly}개 대체로 달성, ${r.evaluation.summary.notAchieved}개 미달성 → 종합 <b>${esc(r.evaluation.summary.grade)}</b></p>` : ""}
     ${r.lint.length ? `<h3>연계 점검</h3><ul class="warnings">${r.lint.map(w => `<li>${levelBadge(w.level)} ${esc(w.msg)}</li>`).join("")}</ul>` : ""}
+    ${isFeatureOn("measurementQuality") ? `<div class="measurement-quality"><div class="row between wrap"><h3 class="flush">설문 측정 품질 점검</h3>${isAdminPreview("measurementQuality") ? `<span class="badge muted">관리자 미리보기</span>` : `<span class="badge info">표준 측정도구 참고</span>`}</div>${quality.length ? `<ul class="warnings">${quality.map(w => `<li>${levelBadge(w.level)} <b>${measurementQualityLabel[w.level]}</b> ${esc(w.msg)}</li>`).join("")}</ul>` : `<p class="small good-text">현재 설문에서 우선 확인할 측정 품질 경고가 없습니다.</p>`}<p class="small muted">문항 버전, 사전·사후 일치, 척도 범위, 영역별 문항 수와 표본 규모를 점검합니다.</p></div>` : ""}
     <div class="metric-guide">
       <div class="metric-guide-head">${icon("help", 15)}측정 방법 안내</div>
       <div class="metric-guide-grid">${Object.values(METRICS).map(mm => `<div class="metric-guide-item"><b>${esc(mm.label)}</b>${mm.formula ? `<span class="muted">${esc(mm.formula)}</span>` : ""}</div>`).join("")}</div>

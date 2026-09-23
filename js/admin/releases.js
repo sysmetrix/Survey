@@ -2,6 +2,16 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.46.0", date: "2026-09-24", title: "표준 측정도구 기반 설문 품질 점검(관리자 미리보기)",
+    groups: {
+      "성과지표": [
+        "사전·사후 문항 짝, 척도 범위, 영역별 문항 수, 소규모 사전·사후 표본을 점검하는 설문 측정 품질 카드를 추가함",
+        "관리자는 즉시 미리볼 수 있고 일반 사용자는 measurementQuality 기능 플래그가 공개된 뒤 사용할 수 있도록 분리함",
+        "문항 버전 관리·연령별 설문 템플릿·역량 프로파일·표준 비교 기능을 각각 독립 플래그로 준비해 단계적 검증이 가능하도록 함",
+      ],
+    },
+  },
+  {
     version: "5.45.2", date: "2026-09-24", title: "2026년 역량기반 청소년활동 설문측정 도구·벤치마킹 제안 추가",
     groups: {
       "평가 레퍼런스": [

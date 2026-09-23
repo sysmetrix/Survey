@@ -4,3 +4,12 @@ insert into public.feature_flags (key, enabled) values
   ('kpiTrendChart', false),
   ('representativenessInReport', false)
 on conflict (key) do nothing;
+
+-- 청소년활동 표준 측정도구 벤치마킹 기능: 관리자 미리보기로 먼저 검증 후 일반 공개
+insert into public.feature_flags (key, enabled) values
+  ('measurementQuality', false),
+  ('surveyVersioning', false),
+  ('ageSurveyTemplates', false),
+  ('competencyProfile', false),
+  ('standardComparisons', false)
+on conflict (key) do nothing;

@@ -541,6 +541,7 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .flush { margin: 0; }
 .block { display: block; }
 .metric-guide { margin-top: 14px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface-2); }
+.measurement-quality { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
 .metric-guide-head { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text-2); font-size: 13px; margin-bottom: 10px; }
 .metric-guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 14px; }
 .metric-guide-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface); }
