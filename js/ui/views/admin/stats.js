@@ -1,7 +1,8 @@
 // 관리자 — 사용 통계 탭.
 // 순서: 기간 선택 → 핵심 지표(전 기간 대비 증감) → 일별 추이 → 단계별 도달(퍼널, 단계 간 전환율) →
-// 시간대·기관·경로·샘플 인기도·버전 분포 → 원본 표(접이식). "로그가 아니라 무엇을 결정할 수 있는가"가 먼저 보이게.
-// 위젯마다 따로 불러온다(Promise.allSettled) — 하나가 실패(예: 새 뷰 마이그레이션 미적용)해도 나머지는 그대로 보임.
+// 시간대·기관·경로·기기·브라우저·샘플 인기도(2열 그리드, 같은 폭이라 스케일이 맞아 보임) → 버전 분포 →
+// 원본 표(접이식, 코드에 한글 뜻 병기·페이지 단위로만 그림). "로그가 아니라 무엇을 결정할 수 있는가"가 먼저 보이게.
+// 위젯마다 따로 불러온다(Promise.all + loadOne) — 하나가 실패(예: 새 뷰 마이그레이션 미적용)해도 나머지는 그대로 보임.
 import { restRequest, rpcRequest } from "../../../auth/api.js";
 import { getSession } from "../../../auth/session.js";
 import { esc, toast } from "../../util.js";
@@ -20,9 +21,24 @@ const FUNNEL = [
   { view: "present", label: "6 발표" },
 ];
 const PERIODS = [7, 30, 90];
+const DETAIL_PAGE = 50; // "원본 일별 데이터" 한 번에 보여주는 행 수 — 기간을 넓게 고르면 수백 행도 나올 수 있어 처음부터 다 그리지 않음
 const DAY_MS = 86400000;
 const fmtDay = d => d.toISOString().slice(0, 10);
 const parseDay = s => new Date(`${s}T00:00:00Z`);
+
+// 원본 표의 view·event 코드는 개발자에게는 익숙해도 처음 보는 관리자에게는 뜻을 알기 어렵다 —
+// track_events() SQL(allowed_views·allowed_events)에 있는 코드를 전부 담아 코드와 뜻을 나란히 보여준다.
+const VIEW_LABELS = {
+  load: "불러오기", setup: "데이터 설정", business: "성과지표", dash: "분석 결과", report: "보고서",
+  present: "발표 모드", presentEdit: "슬라이드 편집", history: "작업 내역", settings: "로컬 설정",
+  updates: "업데이트 내역", login: "로그인", admin: "관리자",
+};
+const EVENT_LABELS = {
+  view_enter: "화면 진입", export_hwpx: "한글 보고서 내보내기", export_pptx: "발표자료 내보내기",
+  sample_load: "샘플 파일 불러오기", js_error: "오류 발생",
+};
+/** "load (불러오기)" 처럼 코드와 뜻을 함께 — 모르는 코드가 새로 생겨도(마이그레이션 지연 등) 코드 자체는 항상 보이게 */
+const withLabel = (code, map) => (map[code] ? `${esc(code)} (${esc(map[code])})` : esc(code));
 
 // ─────────────────────────── 순수 계산 (테스트 대상) ───────────────────────────
 
@@ -129,6 +145,12 @@ let curRows = null, prevRows = null; // usage_daily_counts, 기간별로 나눔
 let orgRows = null, srcRows = null, hourRows = null, logins = null;
 let sampleRows = null, sampleMissing = false;
 let versionRows = null, versionMissing = false;
+let deviceRows = null, browserRows = null, deviceBrowserMissing = false;
+let detailShown = DETAIL_PAGE; // "원본 일별 데이터" 접이식이 한 번에 그리는 행 수(무한정 길어지지 않도록) — "더 보기"로 늘어남
+let detailOpen = false; // 원본 표를 펼쳤는지 — render()가 매번 <details>를 새로 찍어내므로(다른 조작으로 refresh될 때) 이 상태로 열림을 기억해 두지 않으면 "더 보기"를 눌러도 표가 도로 접힘
+if (typeof document !== "undefined") {
+  document.addEventListener("toggle", e => { if (e.target instanceof Element && e.target.matches(".admin-raw")) detailOpen = e.target.open; }, true);
+}
 
 /** 실패해도 던지지 않고 {ok,v} 또는 {ok:false,e}로 감쌈 — 위젯 하나가 깨져도 Promise.all 전체가 죽지 않게 */
 async function loadOne(fn) { try { return { ok: true, v: await fn() }; } catch (e) { return { ok: false, e }; } }
@@ -139,7 +161,7 @@ async function load() {
   loading = true; error = ""; refresh();
   const { fetchFrom, curStart } = periodWindow(period);
   const tok = { token: s.access_token };
-  const [daily, orgs, srcs, hours, logRows, profileRows, samples, versions] = await Promise.all([
+  const [daily, orgs, srcs, hours, logRows, profileRows, samples, versions, devices, browsers] = await Promise.all([
     loadOne(() => restRequest(`/usage_daily_counts?day=gte.${fetchFrom}&order=day.asc&limit=5000`, tok)),
     loadOne(() => restRequest("/usage_org_counts?limit=10", tok)),
     loadOne(() => restRequest("/usage_src_counts?limit=10", tok)),
@@ -148,6 +170,8 @@ async function load() {
     loadOne(() => restRequest("/profiles?select=id,display_name", tok)),
     loadOne(() => restRequest("/usage_sample_counts?limit=10", tok)),
     loadOne(() => restRequest("/usage_version_counts?limit=10", tok)),
+    loadOne(() => restRequest("/usage_device_counts?limit=10", tok)),
+    loadOne(() => restRequest("/usage_browser_counts?limit=10", tok)),
   ]);
   const val = (r, fallback = []) => (r.ok ? r.v ?? fallback : fallback);
   if (!daily.ok) { error = daily.e?.message || "불러오지 못했습니다"; loading = false; refresh(); return; }
@@ -160,6 +184,10 @@ async function load() {
   sampleMissing = !samples.ok && isMissingTableError(samples.e?.message);
   versionRows = versions.ok ? versions.v || [] : null;
   versionMissing = !versions.ok && isMissingTableError(versions.e?.message);
+  deviceRows = devices.ok ? devices.v || [] : null;
+  browserRows = browsers.ok ? browsers.v || [] : null;
+  deviceBrowserMissing = (!devices.ok && isMissingTableError(devices.e?.message)) || (!browsers.ok && isMissingTableError(browsers.e?.message));
+  detailShown = DETAIL_PAGE;
   loading = false; refresh();
 }
 
@@ -202,39 +230,60 @@ function funnelHtml(totals) {
   return `<div class="chart-wrap">${chart.svg}</div>${drop ? `<p class="small warn-text">${icon("alert", 13)} 가장 많이 이탈하는 구간: ‘${esc(drop.from)}’ → ‘${esc(drop.to)}’(${drop.pct}%만 이어감)</p>` : ""}`;
 }
 
+// 아래 "시간대·기관·경로·기기" 묶음은 전부 2열 그리드에 나란히 들어간다 — 같은 폭(GRID_W)으로 그려야
+// 칸마다 막대 눈금 간격(스케일)이 시각적으로 맞아 보인다(하나는 넓고 하나는 좁으면 눈대중 비교가 어려워짐).
+const GRID_W = 320;
+const gridCell = html => `<div class="chart-grid-cell">${html}</div>`;
+
 function orgHtml(rows) {
   if (!rows.length) return "";
   const data = rows.map(r => ({ label: r.org, value: Number(r.distinct_sessions) || 0 }));
-  const chart = hbar(data, { title: "기관(로컬 설정에 입력한 기관명)별 방문 세션 — 상위 10", unit: "회", theme: resolvedTheme(), width: 640, labelWidth: 200 });
-  return `<div class="chart-wrap">${chart.svg}</div><p class="small muted">직원이 로컬 설정에서 기관·부서명을 입력하지 않으면 "(미상)"으로 묶입니다.</p>`;
+  const chart = hbar(data, { title: "기관별 방문 세션 — 상위 10", unit: "회", theme: resolvedTheme(), width: GRID_W, labelWidth: 110 });
+  return gridCell(`<div class="chart-wrap">${chart.svg}</div><p class="small muted">기관·부서명을 입력하지 않으면 "(미상)"으로 묶입니다.</p>`);
 }
 
 function srcHtml(rows) {
   if (!rows.length) return "";
   const data = rows.map(r => ({ label: r.src, value: Number(r.distinct_sessions) || 0 }));
-  const chart = hbar(data, { title: "접속 경로(배포 링크에 ?src=태그를 붙인 경우)별 방문 — 상위 10", unit: "회", theme: resolvedTheme(), width: 640, labelWidth: 200 });
-  return `<div class="chart-wrap">${chart.svg}</div>`;
+  const chart = hbar(data, { title: "접속 경로(?src= 태그)별 방문 — 상위 10", unit: "회", theme: resolvedTheme(), width: GRID_W, labelWidth: 110 });
+  return gridCell(`<div class="chart-wrap">${chart.svg}</div>`);
 }
 
 function hourHtml(rows) {
   const byHour = Object.fromEntries((rows || []).map(r => [Number(r.hour_kst), Number(r.distinct_sessions) || 0]));
   const data = Array.from({ length: 24 }, (_, h) => ({ label: `${h}`, value: byHour[h] || 0 }));
-  if (!data.some(d => d.value > 0)) return `<p class="small muted">아직 시간대 기록이 없습니다.</p>`;
-  const chart = vbar(data, { title: "시간대별 사용(한국 시간) — 굵게 표시된 막대가 가장 붐비는 시간", unit: "회", theme: resolvedTheme(), width: 640 });
-  return `<div class="chart-wrap">${chart.svg}</div>`;
+  if (!data.some(d => d.value > 0)) return gridCell(`<p class="small muted">아직 시간대 기록이 없습니다.</p>`);
+  const chart = vbar(data, { title: "시간대별 사용(한국 시간) — 굵은 막대가 가장 붐비는 시간", unit: "회", theme: resolvedTheme(), width: GRID_W });
+  return gridCell(`<div class="chart-wrap">${chart.svg}</div>`);
 }
 
-/** 마이그레이션이 아직 안 된 새 뷰(usage_sample_counts·usage_version_counts) 안내 — flags.js 의 setupHelp()와 같은 자리·문구 패턴 */
+function deviceHtml() {
+  if (deviceBrowserMissing) return gridCell(`<b>접속 기기</b>${migrationHint("0008_device_browser.sql")}`);
+  if (!deviceRows?.length) return "";
+  const data = deviceRows.map(r => ({ label: r.device, value: Number(r.distinct_sessions) || 0 }));
+  const chart = hbar(data, { title: "접속 기기별 방문", unit: "회", theme: resolvedTheme(), width: GRID_W, labelWidth: 90 });
+  return gridCell(`<div class="chart-wrap">${chart.svg}</div>`);
+}
+
+function browserHtml() {
+  if (deviceBrowserMissing) return gridCell(`<b>브라우저별 방문</b>${migrationHint("0008_device_browser.sql")}`);
+  if (!browserRows?.length) return "";
+  const data = browserRows.map(r => ({ label: r.browser, value: Number(r.distinct_sessions) || 0 }));
+  const chart = hbar(data, { title: "브라우저별 방문", unit: "회", theme: resolvedTheme(), width: GRID_W, labelWidth: 90 });
+  return gridCell(`<div class="chart-wrap">${chart.svg}</div>`);
+}
+
+/** 마이그레이션이 아직 안 된 새 뷰(usage_sample_counts 등) 안내 — flags.js 의 setupHelp()와 같은 자리·문구 패턴 */
 function migrationHint(migration) {
   return `<p class="small muted">이 항목은 <code>supabase/migrations/${migration}</code>이 아직 적용되지 않아 비어 있습니다 — Supabase 대시보드 SQL Editor에서 실행하거나 <code>supabase db push</code> 후 새로고침하세요.</p>`;
 }
 
 function sampleHtml() {
-  if (sampleMissing) return `<h3>샘플 인기도</h3>${migrationHint("0007_stats_v2.sql")}`;
+  if (sampleMissing) return gridCell(`<b>샘플 인기도</b>${migrationHint("0007_stats_v2.sql")}`);
   if (!sampleRows?.length) return "";
   const data = sampleRows.map(r => ({ label: r.file, value: Number(r.distinct_sessions) || 0 }));
-  const chart = hbar(data, { title: "‘샘플로 체험하기’ 클릭 — 어떤 샘플이 첫인상에 잘 먹히는지", unit: "회", theme: resolvedTheme(), width: 640, labelWidth: 260 });
-  return `<h3>샘플 인기도</h3><div class="chart-wrap">${chart.svg}</div>`;
+  const chart = hbar(data, { title: "‘샘플로 체험하기’ 클릭 순위", unit: "회", theme: resolvedTheme(), width: GRID_W, labelWidth: 150 });
+  return gridCell(`<div class="chart-wrap">${chart.svg}</div>`);
 }
 
 function versionHtml() {
@@ -246,18 +295,23 @@ function versionHtml() {
     const pct = Math.round((sessions / total) * 1000) / 10;
     return `<tr><td>${esc(r.version)}</td><td class="c">${sessions.toLocaleString()}</td><td class="c">${pct}%</td><td>${esc(new Date(r.last_seen).toLocaleString("ko-KR"))}</td></tr>`;
   }).join("");
-  return `<h3>앱 버전 분포 <span class="small muted">— 배포 직후 이전 버전 캐시가 남아 있는지 확인</span></h3>
+  return `<h3>앱 버전 분포 <span class="small muted">— 배포 직후 이전 버전 캐시가 남아 있는지 확인(최근 8개)</span></h3>
     <div class="tblwrap"><table class="tbl nowrap-cells"><tr><th>버전</th><th class="c">방문 세션</th><th class="c">비율</th><th>마지막 접속</th></tr>${rows}</table></div>`;
 }
 
+/** 코드(view·event)만으로는 뜻을 알기 어려워 한글 뜻을 괄호로 병기. 기간을 넓게 고르면 수백 행도 나올 수
+ *  있어 한 번에 DETAIL_PAGE 행만 그리고, "더 보기"를 눌러야 이어서 그림(표가 무한정 길어지지 않게) */
 function detailHtml(rows) {
   const sorted = [...rows].sort((a, b) => (a.day < b.day ? 1 : -1));
-  return `<details class="admin-raw">
-    <summary>원본 일별 데이터 보기(선택한 기간, ${sorted.length}행)</summary>
+  const shown = sorted.slice(0, detailShown);
+  const more = sorted.length - shown.length;
+  return `<details class="admin-raw"${detailOpen ? " open" : ""}>
+    <summary>원본 일별 데이터 보기(선택한 기간, ${sorted.length}행) <span class="small muted">— 날짜별 화면·이벤트 집계 원본. 위 그래프들은 전부 이 표를 요약한 것</span></summary>
     <div class="tblwrap"><table class="tbl">
       <tr><th>날짜</th><th>화면</th><th>이벤트</th><th class="c">횟수</th><th class="c">순 세션</th></tr>
-      ${sorted.length ? sorted.map(r => `<tr><td>${esc(r.day)}</td><td>${esc(r.view)}</td><td>${esc(r.event)}</td><td class="c">${esc(r.count)}</td><td class="c">${esc(r.distinct_sessions)}</td></tr>`).join("") : `<tr><td colspan="5" class="muted">기록 없음</td></tr>`}
+      ${shown.length ? shown.map(r => `<tr><td>${esc(r.day)}</td><td>${withLabel(r.view, VIEW_LABELS)}</td><td>${withLabel(r.event, EVENT_LABELS)}</td><td class="c">${esc(r.count)}</td><td class="c">${esc(r.distinct_sessions)}</td></tr>`).join("") : `<tr><td colspan="5" class="muted">기록 없음</td></tr>`}
     </table></div>
+    ${more > 0 ? `<button class="btn sm" data-act="admin-stats-detail-more">더 보기(${more}행 남음)</button>` : ""}
   </details>`;
 }
 
@@ -278,11 +332,15 @@ export function render() {
     ${trendHtml(curRows, curStart)}
     <h3 style="margin-top:22px">단계별 도달</h3>
     ${funnelHtml(totals)}
-    <h3 style="margin-top:22px">시간대·기관·경로</h3>
-    ${hourHtml(hourRows || [])}
-    ${orgHtml(orgRows || [])}
-    ${srcHtml(srcRows || [])}
-    ${sampleHtml()}
+    <h3 style="margin-top:22px">시간대·기관·경로·기기</h3>
+    <div class="chart-grid-2col">
+      ${hourHtml(hourRows || [])}
+      ${orgHtml(orgRows || [])}
+      ${srcHtml(srcRows || [])}
+      ${deviceHtml()}
+      ${browserHtml()}
+      ${sampleHtml()}
+    </div>
     ${versionHtml()}
     <div class="row gap" style="margin:14px 0">
       <button class="btn sm danger" data-act="admin-stats-cleanup">90일 지난 원본 이벤트 정리</button>
@@ -298,6 +356,7 @@ export function render() {
 export const actions = {
   "admin-stats-reload": () => { loaded = false; curRows = null; load(); },
   "admin-stats-period": el => { period = Number(el.dataset.days) || 30; loaded = false; curRows = null; load(); },
+  "admin-stats-detail-more": () => { detailShown += DETAIL_PAGE; detailOpen = true; refresh(); },
   "admin-stats-cleanup": async () => {
     const s = getSession();
     if (!s) return;

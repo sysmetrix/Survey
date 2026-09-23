@@ -495,6 +495,11 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 .kpi-delta .muted { font-weight: 500; }
 .chart-wrap { max-width: 100%; overflow-x: auto; margin-bottom: 6px; }
 .chart-wrap svg { display: block; max-width: 100%; height: auto; }
+/* 시간대·기관·경로·기기·브라우저·샘플 인기도 — 전부 같은 폭(js/ui/views/admin/stats.js 의 GRID_W)으로
+   그려서 칸마다 눈금 간격(스케일)이 맞아 보이게 함. 좁은 화면은 세로 스택으로 접힘. */
+.chart-grid-2col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; margin-bottom: 6px; }
+.chart-grid-cell { min-width: 0; }
+@media (max-width: 760px) { .chart-grid-2col { grid-template-columns: 1fr; } }
 details.admin-raw { margin: 18px 0; }
 details.admin-raw > summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--text-2); padding: 6px 0; }
 details.admin-raw[open] > summary { margin-bottom: 8px; }

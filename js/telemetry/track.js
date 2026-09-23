@@ -54,6 +54,34 @@ function getSrcTag() {
   return srcTag;
 }
 
+/**
+ * 접속 기기·브라우저 분류 — User-Agent 문자열만 보고 판단(순수 함수 — 테스트 대상).
+ * 알려진 한계: 최신 iPadOS의 Safari는 기본 설정에서 데스크톱 Mac과 완전히 같은 UA를 보내
+ * (애플이 의도적으로 그렇게 통일함) 문자열만으로는 구분할 수 없어 "PC"로 분류된다 —
+ * 구글 애널리틱스 등 다른 도구도 같은 한계를 가진다(오탐이 아니라 UA 자체가 동일함).
+ */
+export function classifyUserAgent(ua) {
+  const s = String(ua || "");
+  let browser = "기타";
+  if (/Edg\//.test(s)) browser = "Edge";
+  else if (/SamsungBrowser\//.test(s)) browser = "삼성 인터넷";
+  else if (/Firefox\//.test(s)) browser = "Firefox";
+  else if (/Chrome\//.test(s)) browser = "Chrome";
+  else if (/Safari\//.test(s) && /Version\//.test(s)) browser = "Safari"; // Chrome·Edge 도 Safari/ 토큰을 남기므로 Version/ 도 함께 있어야 진짜 Safari
+  let device = "PC";
+  if (/iPad|(?:Android|Tablet)(?!.*Mobile)/i.test(s)) device = "태블릿";
+  else if (/Mobi|iPhone|Android/i.test(s)) device = "모바일";
+  return { device, browser };
+}
+
+// 이번 세션 동안 바뀌지 않는 값이라 한 번만 계산해 재사용(org·src 처럼 매 이벤트에 함께 실려 감)
+let deviceBrowser = null;
+function getDeviceBrowser() {
+  if (deviceBrowser) return deviceBrowser;
+  try { deviceBrowser = classifyUserAgent(navigator.userAgent); } catch { deviceBrowser = { device: "", browser: "" }; }
+  return deviceBrowser;
+}
+
 let appVersion = "";
 let getOrg = () => ""; // main.js 가 state.settings.orgName 을 넘겨줌(설정이 바뀌면 다음 이벤트부터 바로 반영되도록 매번 호출)
 let sender = events => rpcRequest("track_events", { events });
@@ -70,7 +98,8 @@ export function initTelemetry({ version = "", send, getOrg: g } = {}) {
 export function trackEvent(view, event, extra) {
   if (!(event in ALLOW)) return; // 등록 안 된 이벤트 이름은 구조적으로 버림
   const org = String(getOrg() || "").trim().slice(0, MAX_STR);
-  queue.push({ anon_id: getAnonId(), view, event, extra: sanitizeExtra(event, extra), app_version: appVersion, org: org || undefined, src: getSrcTag() || undefined });
+  const { device, browser } = getDeviceBrowser();
+  queue.push({ anon_id: getAnonId(), view, event, extra: sanitizeExtra(event, extra), app_version: appVersion, org: org || undefined, src: getSrcTag() || undefined, device: device || undefined, browser: browser || undefined });
   if (queue.length >= MAX_BATCH) flush();
   else scheduleFlush();
 }

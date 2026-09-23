@@ -1,7 +1,46 @@
-// 익명 사용 이벤트 계측: allow-list 정화 · 배치 전송 · 등록 안 된 이벤트 드롭
+// 익명 사용 이벤트 계측: allow-list 정화 · 배치 전송 · 등록 안 된 이벤트 드롭 · 기기·브라우저 분류
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sanitizeExtra, initTelemetry, trackEvent, flush } from "../../js/telemetry/track.js";
+import { sanitizeExtra, initTelemetry, trackEvent, flush, classifyUserAgent } from "../../js/telemetry/track.js";
+
+const UA = {
+  chromeWin: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  edgeWin: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+  safariMac: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+  firefoxWin: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+  chromeAndroidPhone: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+  chromeAndroidTablet: "Mozilla/5.0 (Linux; Android 13; SM-X200) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  safariIphone: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  safariIpadOld: "Mozilla/5.0 (iPad; CPU OS 13_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Mobile/15E148 Safari/604.1",
+  samsungPhone: "Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/23.0 Chrome/115.0.0.0 Mobile Safari/537.36",
+};
+
+test("classifyUserAgent: 데스크톱 3대 브라우저(Chrome·Edge·Firefox)는 PC로, 정확한 이름으로 분류", () => {
+  assert.deepEqual(classifyUserAgent(UA.chromeWin), { device: "PC", browser: "Chrome" });
+  assert.deepEqual(classifyUserAgent(UA.edgeWin), { device: "PC", browser: "Edge" }); // Chrome/ 토큰도 있지만 Edg/ 를 먼저 확인
+  assert.deepEqual(classifyUserAgent(UA.firefoxWin), { device: "PC", browser: "Firefox" });
+});
+
+test("classifyUserAgent: 진짜 Safari(Version/ 토큰 있음)만 Safari로, 나머지는 Safari/ 토큰이 있어도 아님", () => {
+  assert.deepEqual(classifyUserAgent(UA.safariMac), { device: "PC", browser: "Safari" });
+  assert.equal(classifyUserAgent(UA.chromeWin).browser, "Chrome"); // Safari/537.36 토큰이 있어도 Version/ 이 없어 Chrome으로 남음
+});
+
+test("classifyUserAgent: 폰은 모바일, Android 인데 Mobile 토큰이 없으면 태블릿, iPad는 명시돼 있으면 태블릿", () => {
+  assert.deepEqual(classifyUserAgent(UA.chromeAndroidPhone), { device: "모바일", browser: "Chrome" });
+  assert.deepEqual(classifyUserAgent(UA.chromeAndroidTablet), { device: "태블릿", browser: "Chrome" });
+  assert.deepEqual(classifyUserAgent(UA.safariIphone), { device: "모바일", browser: "Safari" });
+  assert.deepEqual(classifyUserAgent(UA.safariIpadOld), { device: "태블릿", browser: "Safari" });
+});
+
+test("classifyUserAgent: 삼성 인터넷은 Chrome/ 토큰을 같이 갖고 있어도 삼성 인터넷으로 분류", () => {
+  assert.deepEqual(classifyUserAgent(UA.samsungPhone), { device: "모바일", browser: "삼성 인터넷" });
+});
+
+test("classifyUserAgent: 빈 값·낯선 UA 는 예외 없이 PC·기타로", () => {
+  assert.deepEqual(classifyUserAgent(""), { device: "PC", browser: "기타" });
+  assert.deepEqual(classifyUserAgent(undefined), { device: "PC", browser: "기타" });
+});
 
 test("sanitizeExtra: 허용된 키는 그대로 남는다", () => {
   assert.deepEqual(sanitizeExtra("sample_load", { file: "a.csv" }), { file: "a.csv" });
