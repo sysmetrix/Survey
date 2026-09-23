@@ -9,6 +9,7 @@ import { lintEvaluation } from "../evaluation/linkage.js";
 import { buildReport } from "../report/build-report.js";
 import { finalizeBlocks } from "../report/model.js";
 import { buildDeck } from "../present/deck.js";
+import { featureVisibilityKey } from "../admin/flags-client.js";
 import { DEFAULT_THRESHOLDS, cleanScoreBasis } from "../narrative/vocab.js";
 import { koDate } from "../core/util.js";
 import { safeCssColor } from "./present-edit-model.js";
@@ -68,6 +69,7 @@ export function loadDataset(dataset, project = null) {
     const r = applySavedCodebook(project.codebook, dataset);
     state.codebook = r.codebook;
     note = `저장된 설정 적용: ${r.matched}/${r.total}개 열 연결`;
+    state.kpis = state.kpis.map(k => typeof k.targetRef === "string" && k.targetRef.startsWith("@item:") ? {...k, targetRef:r.keyMap[k.targetRef.slice(6)] ? `@item:${r.keyMap[k.targetRef.slice(6)]}` : "@item:missing-confirmation-required"} : k);
   } else {
     // 사전·사후 짝이 없는데 '응답' 후보 시트가 여럿이면 일단 첫 시트로 시작 — 데이터 설정 화면에서 고를 수 있음
     state.codebook = buildCodebook(dataset);
@@ -153,8 +155,9 @@ export function applyProject(p) {
 
 /** 분석 파이프라인 (변경 시에만 재계산) */
 export function compute() {
-  if (!state.dataset || !state.codebook) return null;
-  if (!state.dirty && state.results) return state.results;
+    if (!state.dataset || !state.codebook) return null;
+    const visibilityKey = featureVisibilityKey();
+    if (!state.dirty && state.results && state.results.visibilityKey === visibilityKey) return state.results;
   const t0 = performance.now();
   const cb = state.codebook;
   let survey = buildSurvey(state.dataset, cb);
@@ -171,7 +174,8 @@ export function compute() {
   const lint = kpis.length || state.logicModel.goals.length ? lintEvaluation(state.logicModel, kpis, cb, analysis, state.settings.thresholds) : [];
   const blocksRaw = buildReport({ analysis, evaluation, lint, logicModel: state.logicModel, codebook: cb, settings: { ...state.settings, excludedCount }, survey });
   state.results = { survey, analysis, evaluation, lint, blocksRaw, straight, excludedCount, codebookWarnings: lintCodebook(cb), ms: Math.round(performance.now() - t0) };
-  state.dirty = false;
+    state.results.visibilityKey = visibilityKey;
+    state.dirty = false;
   return state.results;
 }
 

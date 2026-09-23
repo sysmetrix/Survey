@@ -14,6 +14,9 @@ import { icon } from "../icons.js";
 import { isFeatureOn, isAdminPreview } from "../../admin/flags-client.js";
 import { PROGRAM_FIELD_EXAMPLES, LOGIC_STAGE_EXAMPLES, BACKGROUND_EXAMPLE, PURPOSE_EXAMPLE, GOALS_EXAMPLE } from "../examples.js";
 import { measurementQuality, measurementQualityLabel } from "../../evaluation/measurement-quality.js";
+import { kpiCards, PURPOSES } from "../kpi-cards.js";
+import { renderMeasurement, measurementActions, clearMeasurementDrafts } from "../measurement-workbench.js";
+export function unmount() { clearMeasurementDrafts(); }
 
 const MAX_PLAN_DOC_MB = 20;
 
@@ -149,7 +152,10 @@ export function render() {
   const lm = state.logicModel, r = compute();
   const goals = lm.goals || [];
   const hasLm = hasProgramInfo(lm) || hasLogicModel(lm);
-  const quick = quickKpis(r);
+  const guided = isFeatureOn("guidedKpiSetup");
+  const selected = state.codebook.evaluationPurposes || [];
+  const purposeOf = q => q.kpi.metric === "manual" ? "output" : METRICS[q.kpi.metric]?.kind === "prepost" ? "change" : "experience";
+  const quick = quickKpis(r).filter(q => !guided || !selected.length || selected.includes(purposeOf(q))).map(q => guided ? { ...q, label: q.kpi.metric === "manual" ? q.label : `${METRICS[q.kpi.metric].label} · 측정 문항 선택 필요` } : q);
   const used = new Set(state.kpis.map(k => k.metric + "|" + k.name));
   const quality = isFeatureOn("measurementQuality") ? measurementQuality(state.codebook, r.analysis) : [];
 
@@ -160,12 +166,14 @@ export function render() {
   </div>
 
   <section class="card kpi-start-guide">
+    ${state.codebook.calculationNotice ? `<p class="hint">${esc(state.codebook.calculationNotice)}</p>` : ""}
     <div class="eyebrow">처음 사용하는 분을 위한 안내</div>
     <h2>성과지표는 3단계로 설정합니다</h2>
+    ${guided ? `<h3>이번 사업에서 무엇을 확인하려 하나요?</h3><div class="row gap wrap">${Object.entries(PURPOSES).map(([id,label]) => `<label><input type="checkbox" data-change="kpi-purpose" data-id="${id}" ${selected.includes(id) ? "checked" : ""}> ${label}</label>`).join("")}</div>${selected.includes("followup") ? '<p class="small muted">후속 실천은 활동 종료 뒤 별도 조사·관찰 기록이 필요합니다. 측정 시점과 실적 근거를 자세히 설정에 기록하세요.</p>' : ""}` : ""}
     <div class="kpi-guide-steps">
       <div><span>1</span><b>평가 목적을 고릅니다</b><p>만족도인지, 참여 전후 변화인지 먼저 정합니다.</p></div>
       <div><span>2</span><b>추천 지표를 추가합니다</b><p>설문에 맞는 버튼을 누르면 자동 계산 지표가 들어갑니다.</p></div>
-      <div><span>3</span><b>목표값만 확인합니다</b><p>사업계획서의 목표에 맞게 숫자와 단위를 검토합니다.</p></div>
+      <div><span>3</span><b>측정 대상과 목표를 확인합니다</b><p>문항·단위·시점을 확인하고 목표를 입력하거나 비워 둡니다.</p></div>
     </div>
     <p class="small muted">단순 만족도 분석만 필요하면 성과지표를 추가하지 않고 바로 분석 결과로 이동해도 됩니다.</p>
   </section>
@@ -177,19 +185,20 @@ export function render() {
     </div>
     <div class="quick-kpis">${quick.map(qk => `<div class="quick-kpi-option"><button class="chip-btn" data-act="kpi-quick" data-id="${qk.id}" ${used.has(qk.kpi.metric + "|" + qk.kpi.name) ? "disabled" : ""}>+ ${esc(qk.label)}</button><span>${esc(quickKpiHelp(qk))}</span></div>`).join("")}</div>
     <datalist id="targetList">${targetOptions().map(t => `<option value="${esc(t)}">`).join("")}</datalist>
-    ${state.kpis.length ? `<p class="small muted kpi-edit-note">자동으로 계산되는 값은 회색으로 표시됩니다. 직접 입력할 값은 목표·실적·단위이며, 나머지 항목은 처음에는 기본값을 유지해도 됩니다.</p>${kpiTable(r)}` : `<div class="empty-inline">${icon("chart", 22)}<div><b>아직 성과지표가 없습니다</b><p class="small muted">위의 ‘빠른 추가’를 누르면 이 설문 데이터로 바로 계산되는 지표가 들어갑니다. 목표값만 사업계획서에 맞게 고치면 됩니다.</p></div></div>`}
-    ${r.evaluation ? `<p class="summary">종합: 측정 ${r.evaluation.summary.measured}개 중 <b>${r.evaluation.summary.achieved}개 달성</b>, ${r.evaluation.summary.mostly}개 대체로 달성, ${r.evaluation.summary.notAchieved}개 미달성 → 종합 <b>${esc(r.evaluation.summary.grade)}</b></p>` : ""}
+    ${state.kpis.length ? guided ? `${kpiCards(state.kpis, r.evaluation?.results || [], [...state.codebook.domains.map(d => ({value:`@domain:${d.id}`,label:`영역: ${d.name}`})), ...state.codebook.columns.filter(c=>["likert","nps"].includes(c.role)).map(c=>({value:`@item:${c.key}`,label:`${c.label} ${c.time ? `(${c.time === "pre" ? "사전" : "사후"})` : ""}`}))])}<details><summary>전체 표로 편집</summary>${kpiTable(r)}</details>` : kpiTable(r) : `<div class="empty-inline">${icon("chart", 22)}<div><b>아직 성과지표가 없습니다</b><p class="small muted">평가할 지표를 추가한 뒤 측정 대상과 목표를 확인하세요. 목표 없이도 실적을 확인할 수 있습니다.</p></div></div>`}
+    ${r.evaluation ? `<p class="summary">설정한 목표의 달성 요약: 판정 가능한 ${r.evaluation.summary.measured}개 중 <b>${r.evaluation.summary.achieved}개 달성</b>, ${r.evaluation.summary.mostly}개 대체로 달성, ${r.evaluation.summary.notAchieved}개 미달성 · 목표 없이 측정 ${r.evaluation.summary.unsetTarget}개</p>` : ""}
     ${r.lint.length ? `<h3>연계 점검</h3><ul class="warnings">${r.lint.map(w => `<li>${levelBadge(w.level)} ${esc(w.msg)}</li>`).join("")}</ul>` : ""}
     ${isFeatureOn("measurementQuality") ? `<div class="measurement-quality"><div class="row between wrap"><h3 class="flush">설문 측정 품질 점검</h3>${isAdminPreview("measurementQuality") ? `<span class="badge muted">관리자 미리보기</span>` : `<span class="badge info">표준 측정도구 참고</span>`}</div>${quality.length ? `<ul class="warnings">${quality.map(w => `<li>${levelBadge(w.level)} <b>${measurementQualityLabel[w.level]}</b> ${esc(w.msg)}</li>`).join("")}</ul>` : `<p class="small good-text">현재 설문에서 우선 확인할 측정 품질 경고가 없습니다.</p>`}<p class="small muted">문항 버전, 사전·사후 일치, 척도 범위, 영역별 문항 수와 표본 규모를 점검합니다.</p></div>` : ""}
     <div class="metric-guide">
       <div class="metric-guide-head">${icon("help", 15)}측정 방법 안내</div>
       <div class="metric-guide-grid">${Object.values(METRICS).map(mm => `<div class="metric-guide-item"><b>${esc(mm.label)}</b>${mm.formula ? `<span class="muted">${esc(mm.formula)}</span>` : ""}</div>`).join("")}</div>
-      <p class="format-help small muted"><b>입력 우선순위:</b> 목표값 → 대상 문항 → 단위. 만족도는 반응(1단계) 지표입니다. 중기성과·영향은 사전·사후 변화, 향상자 비율 등 변화 지표나 행정 실적(직접 입력)을 권장합니다.</p>
+      <p class="format-help small muted"><b>입력 우선순위:</b> 측정할 문항 → 단위·시점 → 목표(선택). 만족도는 참여 경험입니다. 사전·사후라는 측정 방법만으로 중기성과가 되지는 않으며 후속 측정 시점과 실제 측정 내용을 확인해야 합니다.</p>
       <p class="format-help small"><button class="link-btn" data-act="goto" data-to="references">왜 이렇게 평가하는지, 근거와 단계별 가이드 보기 →</button></p>
     </div>
   </section>
 
   <section class="card">
+    ${guided ? '<details><summary>사업정보 · 논리모형 (선택) 펼치기</summary>' : ''}
     <div class="row between wrap">
       <h2 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}${state.businessFound?.doc ? ` <span class="badge ok">문서에서 초안 반영 · 확인 필요</span>` : ""}</h2>
       <div class="rt-io-group" role="group" aria-label="사업정보·성과지표 저장·불러오기">
@@ -221,12 +230,21 @@ export function render() {
       ${LOGIC_STAGES.map((s, i) => `<label class="logic-col"><b>${s.label}</b><span class="muted small">${esc(s.hint)}</span>
         <textarea class="in" rows="5" placeholder="${esc(LOGIC_STAGE_EXAMPLES[s.key] || "")}" data-change="lm-stage" data-stage="${s.key}">${esc((lm[s.key] || []).join("\n"))}</textarea></label>${i < LOGIC_STAGES.length - 1 ? `<span class="arrow">→</span>` : ""}`).join("")}
     </div>
+    ${guided ? '</details>' : ''}
   </section>
 
+  ${renderMeasurement()}
   <div class="row end gap"><button class="btn primary" data-act="goto" data-to="dash">다음: 분석 결과${icon("right", 16)}</button></div>`;
 }
 
 export const actions = {
+  ...measurementActions,
+  "kpi-purpose": el => {
+    if (!isFeatureOn("guidedKpiSetup") || !PURPOSES[el.dataset.id]) return;
+    const values = new Set(state.codebook.evaluationPurposes || []);
+    if (el.checked) values.add(el.dataset.id); else values.delete(el.dataset.id);
+    state.codebook.evaluationPurposes = [...values]; invalidate(); refresh();
+  },
   lm: el => {
     const lm = state.logicModel, f = el.dataset.field;
     if (f === "goals") {
@@ -252,13 +270,13 @@ export const actions = {
     if (f === "metric" && !k.unit) k.unit = METRICS[k.metric]?.unit || "";
     invalidate(); refresh();
   },
-  "kpi-add": () => { state.kpis.push(newKpi(nextKpiNo())); invalidate(); refresh(); },
+  "kpi-add": () => { state.kpis.push({ ...newKpi(nextKpiNo()), ...(isFeatureOn("guidedKpiSetup") ? { target:null,targetRef:"",requireTarget:true } : {}) }); invalidate(); refresh(); },
   "kpi-quick": el => {
     const qk = quickKpis(compute()).find(x => x.id === el.dataset.id);
     if (!qk) return;
-    state.kpis.push({ ...newKpi(nextKpiNo()), ...qk.kpi });
+    state.kpis.push({ ...newKpi(nextKpiNo()), ...qk.kpi, ...(isFeatureOn("guidedKpiSetup") ? { evaluationPurpose: (state.codebook.evaluationPurposes || []).join(","), name: qk.kpi.metric === "manual" ? qk.kpi.name : METRICS[qk.kpi.metric].label, target: null, targetRef: "", requireTarget: qk.kpi.metric !== "manual", stage: qk.kpi.metric === "manual" ? "산출" : "단기성과" } : {}) });
     invalidate();
-    toast(`‘${qk.kpi.name}’ 지표를 추가했습니다${qk.kpi.metric === "manual" ? " — 목표와 실적을 입력하세요" : " — 목표값을 사업계획에 맞게 고치세요"}`, "ok");
+    toast("지표를 추가했습니다 — 측정 대상과 단위를 확인하세요. 목표는 선택 사항입니다.", "ok");
     refresh();
   },
   "kpi-del": el => { state.kpis.splice(+el.dataset.i, 1); invalidate(); refresh(); },
@@ -345,12 +363,12 @@ function formatPlanDocConfirm(preview) {
   return lines.join("\n");
 }
 
-const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "prevActual", "direction", "unit", "note"];
+const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "prevActual", "direction", "unit", "note", "targetBasis", "measurementTime", "requireTarget", "evaluationPurpose"];
 function pickKpi(k) {
   const o = {};
   for (const f of KPI_FIELDS) {
     if (k[f] === undefined) continue;
-    o[f] = ["target", "actual", "prevActual"].includes(f) ? (k[f] === null || k[f] === "" ? null : Number(k[f])) : String(k[f]).slice(0, 200);
+    o[f] = f === "requireTarget" ? k[f] === true : ["target", "actual", "prevActual"].includes(f) ? (k[f] === null || k[f] === "" ? null : Number(k[f])) : String(k[f]).slice(0, 200);
   }
   if (o.metric && !METRICS[o.metric]) o.metric = "manual";
   return o;

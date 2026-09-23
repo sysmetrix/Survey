@@ -196,18 +196,27 @@ export function rawColumn(dataset, col) {
 /** 저장된 코드북을 새 데이터셋에 적용 (헤더 텍스트 기준 재연결) */
 export function applySavedCodebook(saved, dataset) {
   const fresh = buildCodebook(dataset);
-  const byHeader = new Map(saved.columns.map(c => [`${saved.sheets[c.sheet]?.role}|${c.header}`, c]));
+  const byHeader = new Map(), keyMap = {};
+  for (const c of saved.columns) {
+    const ref = `${saved.sheets[c.sheet]?.role}|${c.header}`;
+    byHeader.set(ref, byHeader.has(ref) ? null : c);
+  }
   let matched = 0;
   fresh.columns = fresh.columns.map(c => {
     const s = byHeader.get(`${fresh.sheets[c.sheet]?.role}|${c.header}`);
     if (!s) return c;
     matched++;
     const { key, sheet, index, header, detected, auto } = c;
+    keyMap[s.key] = key;
     return { ...s, key, sheet, index, header, detected, auto };
   });
   fresh.domains = saved.domains || fresh.domains;
+  if (saved.evaluationPurposes) fresh.evaluationPurposes = [...saved.evaluationPurposes];
+  if (saved.instrument) fresh.instrument = structuredClone(saved.instrument);
+  if (saved.improvements) fresh.improvements = structuredClone(saved.improvements);
+  if (saved.calculationNotice) fresh.calculationNotice = saved.calculationNotice;
   fresh.design = saved.design || fresh.design;
-  return { codebook: fresh, matched, total: fresh.columns.length };
+  return { codebook: fresh, matched, total: fresh.columns.length, keyMap };
 }
 
 export const isBlankRow = row => row.every(isBlank);

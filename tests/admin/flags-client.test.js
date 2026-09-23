@@ -18,6 +18,15 @@ const { clearSession } = await import("../../js/auth/session.js");
 const { isFeatureOn, isAdminPreview, _resetForTest, _setForTest } = await import("../../js/admin/flags-client.js");
 
 test.beforeEach(() => { clearSession(); _resetForTest(); });
+test("미완성 기능은 서버 공개값과 무관하게 일반 사용자에게 닫히며 미구현 기능은 관리자도 사용할 수 없다", () => {
+  _setForTest({ guidedKpiSetup: true, ageSurveyTemplates: true });
+  assert.equal(isFeatureOn("guidedKpiSetup"), false);
+  localStorage.setItem("survey-v5-session", JSON.stringify({ access_token:"at",expires_at:Date.now()+3600000,role:"admin",user:{id:"u"} }));
+  assert.equal(isFeatureOn("guidedKpiSetup"), true);
+  assert.equal(isFeatureOn("ageSurveyTemplates"), false);
+  clearSession();
+  assert.equal(isFeatureOn("guidedKpiSetup"), false);
+});
 
 test("서버 값을 못 받아왔으면(캐시 없음) 일반 이용자에게는 꺼짐(안전한 기본값)", () => {
   assert.equal(isFeatureOn("smallSampleWarning"), false);

@@ -5,10 +5,12 @@ import { getSession } from "../../../auth/session.js";
 import { esc, toast } from "../../util.js";
 import { refresh } from "../../router.js";
 import { icon } from "../../icons.js";
+import { featureStatus } from "../../../admin/feature-status.js";
 import { _resetForTest as resetFlagsCache } from "../../../admin/flags-client.js";
 
 // example: 관리자가 실제로 데이터를 올리지 않아도 어떤 모습인지 바로 알 수 있도록 넣는 정적 예시(가짜 숫자, 실제 자료 아님)
 const LABELS = {
+  guidedKpiSetup: { title: "성과지표 간편 설정", desc: "목적 선택·카드 입력·목표 근거를 관리자 검증합니다.", where: "③ 성과지표", example: "" },
   smallSampleWarning: {
     title: "소표본·검정력 주의 문구",
     desc: "표본 수가 적을 때(사전·사후 n<30, 집단비교 n<10) 해석 주의 문구를 표시합니다.",
@@ -114,21 +116,22 @@ function setupHelp() {
 
 function missingKeysHelp(missingKeys) {
   return `<div class="hint" role="status" style="margin-bottom:14px">
-    코드에 새 기능(${missingKeys.map(k => esc(LABELS[k]?.title || k)).join(", ")})이 추가됐지만, 아직 최신 마이그레이션이 적용되지 않아 여기 목록에 없습니다.
-    <code>supabase/migrations/0006_more_feature_flags.sql</code>을 적용한 뒤 새로고침하세요.
+    새 기능(${missingKeys.map(k => esc(LABELS[k]?.title || k)).join(", ")})의 서버 설정이 없어 기본 비공개로 표시합니다. 구현된 기능은 스위치 변경 시 저장됩니다.
   </div>`;
 }
 
 function flagCard(r) {
   const meta = LABELS[r.key] || { title: r.key, desc: "", where: "", example: "" };
+  const planned = featureStatus(r.key) === "planned";
+  const locked = featureStatus(r.key) !== "ready";
   return `<div class="flag-row">
     <div class="row between" style="align-items:flex-start">
       <div class="row gap" style="align-items:center;flex-wrap:wrap">
         <b>${esc(meta.title)}</b>
-        ${r.enabled ? '<span class="badge ok">전체 공개</span>' : '<span class="badge muted">관리자 전용</span>'}
+        ${planned ? '<span class="badge muted">개발 예정 · 아직 사용할 수 없음</span>' : locked ? '<span class="badge muted">관리자 검증 · 공개 조건 미충족</span>' : r.enabled ? '<span class="badge ok">전체 공개</span>' : '<span class="badge muted">관리자 검증</span>'}
       </div>
       <label class="switch" title="전체 공개 여부">
-        <input type="checkbox" ${r.enabled ? "checked" : ""} data-change="admin-flags-toggle" data-key="${esc(r.key)}" aria-label="'${esc(meta.title)}' 전체 공개 여부">
+        <input type="checkbox" ${locked ? "disabled" : r.enabled ? "checked" : ""} data-change="admin-flags-toggle" data-key="${esc(r.key)}" aria-label="'${esc(meta.title)}' 전체 공개 여부">
         <span class="track"><span class="thumb"></span></span>
       </label>
     </div>
@@ -161,6 +164,7 @@ export const actions = {
     const s = getSession();
     if (!s) return;
     const key = el.dataset.key;
+    if (featureStatus(key) !== "ready") { el.checked = false; return; }
     const enabled = el.checked;
     if (enabled && !confirm(`"${LABELS[key]?.title || key}" 기능을 모든 이용자에게 공개할까요?`)) { el.checked = false; return; }
     try {

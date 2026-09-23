@@ -10,7 +10,7 @@ import { browserPath } from "./lib/rasterize.mjs";
 
 const BASE = process.env.E2E_BASE || "http://127.0.0.1:8000/index.html";
 const SAMPLE = process.argv[2] || "2026_진로탐색_사전사후.xlsx";
-const PORT = 9333;
+const PORT = Number(process.env.E2E_CDP_PORT || 9333);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 await mkdir("out/browser", { recursive: true });
 
@@ -288,6 +288,37 @@ try {
   await cdp("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   offlinePhase = false;
   results.push(`PWA: 아이콘 ${pwa.icons}개, 서비스워커 활성=${pwa.active}, 사전 캐시 ${pwa.n}개(${pwa.shell}), 오프라인 새로고침 후 샘플 분석 OK`);
+
+  // 로컬 테스트 프로필에서만 UI 역할을 주입한다. 실제 인증·서버 쓰기는 수행하지 않는다.
+  await evaluate(`(async () => {
+    const session = await import('./js/auth/session.js'); session.clearSession();
+    localStorage.setItem('survey-v5-session',JSON.stringify({access_token:'local-ui-test',expires_at:Date.now()+3600000,role:'admin',user:{id:'local-ui-test'}}));
+    location.hash='#/business';
+  })()`, true);
+  await waitFor(`!!document.querySelector('[data-change="kpi-purpose"]')`);
+  await evaluate(`document.querySelector('[data-change="kpi-purpose"][data-id="change"]').click()`);
+  await evaluate(`document.querySelector('[data-act="kpi-quick"][data-id="diff"]').click()`);
+  await waitFor(`!!document.querySelector('article.card select[data-field="targetRef"]')`);
+  const guided = await evaluate(`(async () => {
+    const {state,compute}=await import('./js/ui/store.js');
+    const before=state.kpis.at(-1);
+    if(before.target!==null || !compute().evaluation.results.at(-1).error) throw Error('목표 기본값/문항 미선택 검증 실패');
+    const select=[...document.querySelectorAll('article.card select[data-field="targetRef"]')].at(-1);
+    select.value=[...select.options].find(o=>o.value.startsWith('@item:')).value;
+    select.dispatchEvent(new Event('change',{bubbles:true}));
+    const result=compute().evaluation.results.at(-1);
+    if(result.judgment!=='목표 미설정' || !Number.isFinite(result.actualValue)) throw Error('명시적 문항 선택 계산 실패');
+    return {value:result.actualValue, judgment:result.judgment};
+  })()`,true);
+  await shot('10-guided-kpi');
+  await evaluate(`document.querySelector('[data-act="improvement-add"]').click()`);
+  await waitFor(`!!document.querySelector('[data-change="improvement-edit"]')`);
+  await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await shot('10b-guided-mobile');
+  await cdp('Emulation.clearDeviceMetricsOverride');
+  await evaluate(`(async()=>{(await import('./js/auth/session.js')).clearSession();(await import('./js/ui/router.js')).refresh();})()`,true);
+  await waitFor(`!document.querySelector('[data-change="kpi-purpose"]') && !document.querySelector('[data-change="improvement-edit"]')`);
+  results.push('간편 KPI: 목적 필터·목표 미설정·명시적 문항 선택·개선 과제·모바일 캡처·로그아웃 후 비공개 OK '+JSON.stringify(guided));
 
   console.log(results.map(r => `OK ${r}`).join("\n"));
 } catch (e) {

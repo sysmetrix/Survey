@@ -7,6 +7,8 @@ import { METRICS } from "../evaluation/kpi.js";
 import { alphaLabel } from "../stats/effectsize.js";
 import { koDate } from "../core/util.js";
 import { isFeatureOn } from "../admin/flags-client.js";
+import { measurementQuality, measurementQualityLabel } from "../evaluation/measurement-quality.js";
+import { measurementResults } from "../evaluation/measurement-results.js";
 import { representativenessCheck, REP_DIFF_CAUTION } from "../analysis/representativeness.js";
 
 const DEFAULT_LEVEL_LABELS = {
@@ -59,7 +61,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   sum.push(B("sum.survey", 1, `□ 조사 개요: ${DESIGN_LABELS[A.meta.design]}, 응답자 ${A.meta.n}명${P && !P.unpaired && A.meta.design === "prepost-sheets" ? `(사전·사후 매칭 ${P.matchedN}명)` : ""}`, true));
   if (kpiOn) {
     const s = E.summary;
-    sum.push(B("sum.kpi", 1, `□ 성과지표: ${s.measured}개 중 **${s.achieved}개 달성**${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}${s.notAchieved ? `, ${s.notAchieved}개 미달성` : ""} (종합 **${s.grade}**)`, true));
+    sum.push(B("sum.kpi", 1, `□ 설정한 목표의 달성 요약: ${s.measured}개 중 **${s.achieved}개 달성**${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}${s.notAchieved ? `, ${s.notAchieved}개 미달성` : ""}${s.unsetTarget ? `, ${s.unsetTarget}개 목표 없이 측정` : ""}`, true));
   }
   if (ALLP) sum.push(B("sum.prepost", 1, `□ 성과 변화: 사전 ${f2(ALLP.mPre)}점 → 사후 ${f2(ALLP.mPost)}점(**${signed(ALLP.diff)}점**), ${sigPhrase(ALLP.primary.p)}`));
   if (overall) sum.push(B("sum.overall", 1, `□ 만족도: ${overall.label} 평균 ${f2(overall.mean)}점(100점 환산 **${f2(overall.score100)}점**)으로 ${levelWord(overall.score100, t)}임`));
@@ -69,6 +71,12 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   const impTheme = A.text.flatMap(tx => tx.themes.filter(th => th.negative >= 2)).sort((a, b) => b.negative - a.negative)[0]?.name;
   if (impTheme) sum.push(B("sum.text", 1, `□ 주요 개선 요구: ${q(impTheme)} 관련 의견`, true));
   push({ type: "box", lines: sum.map(s => ({ key: s.key, text: s.text, frag: s.frag })) });
+  const quality = measurementQuality(CB, A);
+  if (quality.length) {
+    push(H(2, "측정의 한계와 확인 사항"));
+    bullets(quality.map((issue, i) => B(`quality.${i}`, 1, `${measurementQualityLabel[issue.level]}: ${issue.msg}`)));
+  }
+  if (P) bullets([B("measurement.rule", 1, "참여 전후 관찰된 변화이며 대조군 없이 사업의 인과적 효과로 단정할 수 없음. 복수 문항은 동일 척도에서 응답자별 양 시점 공통 응답 문항이 절반 이상인 경우 평균을 계산함(계산 규칙 v2).")]);
 
   // ───── Ⅰ. 사업 개요 ─────
   if (hasProgramInfo(LM) || hasLogicModel(LM)) {
@@ -156,7 +164,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   if (kpiOn) {
     push(H(1, "성과지표 달성 현황"));
     const s = E.summary;
-    const top = [B("kpi.summary", 1, `성과지표 ${s.total}개 중 **${s.achieved}개 달성**${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}${s.notAchieved ? `, ${s.notAchieved}개 미달성` : ""}${s.unmeasured ? `, ${s.unmeasured}개 측정 불가` : ""}으로 종합 평가는 **${s.grade}**임`)];
+    const top = [B("kpi.summary", 1, `성과지표 ${s.total}개 중 **${s.achieved}개 달성**${s.mostly ? `, ${s.mostly}개 대체로 달성` : ""}${s.notAchieved ? `, ${s.notAchieved}개 미달성` : ""}${s.unmeasured ? `, ${s.unmeasured}개 측정 불가` : ""}${s.unsetTarget ? `, ${s.unsetTarget}개 목표 없이 측정` : ""}. 목표 달성은 사업 효과나 사업 전체의 품질 평가와 구분함`)];
     s.byStage.forEach(st => top.push(B(`kpi.stage.${st.stage}`, 2, `${st.stage} 지표 ${st.total}개 중 ${st.achieved}개 달성`)));
     bullets(top);
     const rows = [["성과지표", "단계", "측정 방법", "목표", "실적", "달성률(%)", "판정"].map(cellH)];
@@ -173,7 +181,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       type: "table", caption: "성과지표 달성 현황", columns: [{ weight: 2.6, align: "LEFT" }, { weight: 1.1 }, { weight: 2.3, align: "LEFT" }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1.1 }], rows,
       notes: [
         `주: 달성률 = 실적 ÷ 목표 × 100(하향 지표는 {1 - (실적 - 목표) ÷ |목표|} × 100). 판정: ${t.kpiAchieved}% 이상 달성, ${t.kpiMostly}~${t.kpiAchieved - 1}% 대체로 달성, ${t.kpiMostly}% 미만 미달성`,
-        `종합 평가: (달성 지표 수 + 대체로 달성 지표 수 × 0.5) ÷ 측정 지표 수가 ${t.overallGood}% 이상 우수, ${t.overallFair}% 이상 보통, 그 미만 미흡`,
+        "목표 미설정은 미달성으로 판정하지 않음. 0·음수 목표는 방향에 따른 기준 충족 여부만 판정하고 달성률을 산출하지 않음",
       ],
     });
     const measured = E.results.filter(r => Number.isFinite(r.rate));
@@ -360,7 +368,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   push(H(2, "종합 평가"));
   const ev = [];
   if (kpiOn) {
-    ev.push(B("ev.kpi", 1, `(성과지표) ${E.summary.total}개 지표 중 ${E.summary.achieved}개를 달성하여 종합 평가는 **${E.summary.grade}**임`));
+    ev.push(B("ev.kpi", 1, `(성과지표) 목표가 설정되고 판정 가능한 ${E.summary.measured}개 지표 중 ${E.summary.achieved}개 달성. 사업의 인과적 효과나 전체 품질을 판정한 결과는 아님`));
     const notA = E.results.filter(r => r.judgment === "미달성");
     if (notA.length) ev.push(B("ev.kpi.not", 2, `미달성 지표: ${notA.map(r => `${q(r.name)}(${f1(r.rate)}%)`).join(", ")}`));
     (LM?.goals || []).forEach((g, i) => {
@@ -368,7 +376,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       if (rs.length) ev.push(B(`ev.goal.${g.id}`, 2, `목표${i + 1} ${q(g.text)}: 연계 지표 ${rs.length}개 중 ${rs.filter(r => r.judgment === "달성").length}개 달성`));
     });
   }
-  if (ALLP) ev.push(B("ev.pp", 1, `(성과 변화) 참여 후 성과 점수가 ${signed(ALLP.diff)}점 변화하여 ${ALLP.primary.p < 0.05 && ALLP.diff > 0 ? `사업 참여에 따른 긍정적 변화가 확인됨(${ALLP.primary.effectLabel})` : "통계적으로 유의한 변화는 확인되지 않음"}`));
+  if (ALLP) ev.push(B("ev.pp", 1, `(관찰된 변화) 참여 전후 점수가 ${signed(ALLP.diff)}점 변화함. ${ALLP.primary.p < 0.05 ? "통계적으로 유의한 차이가 관찰됨" : "통계적으로 유의한 차이는 확인되지 않음"}. 대조군이 없는 비교만으로 사업의 인과적 효과를 확정할 수 없음`));
   if (overall || tot) {
     const s100 = overall ? overall.score100 : tot.score100;
     ev.push(B("ev.sat", 1, `(만족도) ${overall ? "전반적 만족도" : "만족도"}는 100점 환산 ${f1(s100)}점으로 ${levelWord(s100, t)}임`));
@@ -390,7 +398,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   if (!imp.length) imp.push(B("imp.none", 1, "전반적으로 양호한 수준으로, 현행 운영 방식을 유지하고 우수 요소를 타 사업에 확산하는 방안 검토"));
   bullets(imp);
 
-  if (kpiOn && E.results.some(r => Number.isFinite(r.targetValue))) {
+  if (S.suggestNextTargets === true && kpiOn && E.results.some(r => Number.isFinite(r.targetValue))) {
     push(H(2, "차년도 목표(안)"));
     const rows = [["성과지표", "당해 목표", "당해 실적", "판정", "차년도 목표(안)"].map(cellH)];
     E.results.forEach(r => {
@@ -459,5 +467,16 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     ["수준 구분(100점 환산)", `${t.level[0]}점 이상 매우 높음, ${t.level[1]}점 이상 높음, ${t.level[2]}점 이상 보통 이상, ${t.level[3]}점 이상 보통, 그 미만 낮음`],
     ["Cronbach α", "0.9 이상 매우 우수, 0.8 이상 양호, 0.7 이상 수용 가능, 0.6 미만 낮음"],
   ] });
+  if (isFeatureOn("competencyProfile")) {
+    const measurement = measurementResults(A, CB);
+    if (measurement.domains.length) push({ type: "table", caption: "측정 영역별 관찰된 변화", columns: Array.from({length:7}, () => ({weight:1})), rows: [
+      ["영역","문항 수","유효 응답자","사전","사후","변화량","효과크기 d"].map(cellH),
+      ...measurement.domains.map(d => [d.name,String(d.nItems),String(d.n),f2(d.pre),f2(d.post),f2(d.diff),f2(d.effect)]),
+    ], notes: [measurement.scoring, measurement.limitation] });
+    if (measurement.improvements.length) {
+      push(H(2, "담당자가 작성한 사업 개선 과제"));
+      bullets(measurement.improvements.map((task,i)=> B(`improvement.${task.id || i}`,1, `근거: ${task.evidence || "미입력"} / 과제: ${task.action || "미입력"} / 담당: ${task.owner || "미정"} / 확인: ${task.reviewDate || "미정"}`)));
+    }
+  }
   return blocks;
 }

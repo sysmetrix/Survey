@@ -6,6 +6,8 @@ import { josa } from "../narrative/josa.js";
 import { DESIGN_LABELS } from "../model/codebook.js";
 import { levelLabels } from "../report/build-report.js";
 import { koDate } from "../core/util.js";
+import { isFeatureOn } from "../admin/flags-client.js";
+import { measurementResults } from "../evaluation/measurement-results.js";
 
 const q = s => `‘${s}’`;
 const short = (s, n = 18) => (String(s).length > n ? String(s).slice(0, n - 1) + "…" : String(s));
@@ -38,7 +40,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
 
   // 2. 한눈에 보기 (핵심 수치 타일)
   const stats = [{ label: "응답자", value: String(n), unit: "명", sub: P?.matching ? `사전·사후 매칭 ${P.matchedN}명` : DESIGN_LABELS[A.meta.design] }];
-  if (E?.results.length) stats.push({ label: "성과지표 달성", value: `${E.summary.achieved}/${E.summary.measured}`, unit: "개", sub: `종합 평가 ${E.summary.grade}`, tone: E.summary.grade === "우수" ? "good" : E.summary.grade === "미흡" ? "critical" : "warning" });
+  if (E?.results.length) stats.push({ label: "성과지표 달성", value: `${E.summary.achieved}/${E.summary.measured}`, unit: "개", sub: "설정한 목표의 달성 요약", tone: "neutral" });
   if (ALLP) stats.push({ label: "참여 전후 변화", value: signed(ALLP.diff), unit: "점", sub: `${f2(ALLP.mPre)} → ${f2(ALLP.mPost)} · ${pText(ALLP.primary.p)}`, tone: ALLP.primary.p < 0.05 && ALLP.diff > 0 ? "good" : "neutral" });
   if (Number.isFinite(sat)) stats.push({ label: overall ? "전반적 만족도" : "만족도", value: f1(sat), unit: "점", sub: `100점 환산 · ${levelWord(sat, t)}` });
   if (A.nps[0]) stats.push({ label: "순추천지수(NPS)", value: signed(A.nps[0].nps, 1), unit: "", sub: `추천 ${f1(A.nps[0].promoters)}% · 비추천 ${f1(A.nps[0].detractors)}%` });
@@ -196,10 +198,10 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
 
   // 11. 종합: 잘된 점 / 개선할 점 / 다음 단계
   const good = [], improve = [], next = [];
-  if (E) E.results.filter(r => r.judgment === "달성").slice(0, 2).forEach(r => good.push(`${r.name} 목표 달성(${f1(r.rate)}%)`));
+  if (E) E.results.filter(r => r.judgment === "달성").slice(0, 2).forEach(r => good.push(`${r.name} 목표 달성${Number.isFinite(r.rate) ? `(${f1(r.rate)}%)` : "(기준 충족)"}`));
   if (ALLP && ALLP.primary.p < 0.05 && ALLP.diff > 0) good.push(`참여 후 성과 점수 ${signed(ALLP.diff)}점 향상(${ALLP.primary.effectLabel})`);
   detail.filter(i => i.score100 >= t.level[1]).slice(0, 2).forEach(i => good.push(`${short(i.label, 20)} ${f2(i.score100)}점`));
-  if (E) E.results.filter(r => r.judgment === "미달성").slice(0, 2).forEach(r => { improve.push(`${r.name} 미달성(${f1(r.rate)}%)`); next.push(`${r.name}: 원인 분석·운영 방식 보완`); });
+  if (E) E.results.filter(r => r.judgment === "미달성").slice(0, 2).forEach(r => { improve.push(`${r.name} 미달성${Number.isFinite(r.rate) ? `(${f1(r.rate)}%)` : "(기준 미충족)"}`); next.push(`${r.name}: 원인 검토·운영 방식 보완`); });
   (A.ipa?.points || []).filter(p => p.quadrant === "집중 개선").slice(0, 2).forEach(p => { improve.push(`${short(p.label, 20)} 만족도 ${f2(p.performance)}점`); next.push(`${short(p.label, 20)} 개선 과제 수립`); });
   texts.forEach(tx => tx.themes.filter(th => th.negative >= 3).slice(0, 1).forEach(th => improve.push(`주관식 ${th.name} 개선 요구 ${th.negative}건`)));
   if (P) P.items.filter(i => !(i.primary.p < 0.05)).slice(0, 1).forEach(i => next.push(`${short(i.label, 18)} 관련 활동 보강`));
@@ -207,7 +209,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   if (good.length || improve.length) {
     add({ id: "wrap",
       type: "columns", section: "종합 평가",
-      title: E ? `종합 평가 ${E.summary.grade}: 성과는 확인됐고, ${improve.length ? "개선 과제가 남아 있습니다" : "현행 운영 유지를 권장합니다"}` : "잘된 점과 개선할 점",
+      title: E ? "설정한 목표의 달성 요약과 검토 과제" : "관찰된 결과와 검토 과제",
       columns: [
         { title: "잘된 점", tone: "good", items: good.slice(0, 4) },
         { title: "개선할 점", tone: "critical", items: improve.slice(0, 4) },
@@ -217,6 +219,16 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
     });
   }
 
+  if (isFeatureOn("competencyProfile")) {
+    const measurement = measurementResults(A, CB);
+    for (let i = 0; i < measurement.domains.length; i += 6) {
+      const domains = measurement.domains.slice(i, i+6);
+      add({ id: `measurement-${i}`, type:"chart", section:"측정 영역", title:"영역별 관찰된 변화", subtitle:measurement.limitation,
+        chart:{kind:"hbar",data:domains.map(d=>({label:d.name,value:d.diff})),opts:{width:560,labelWidth:150,unit:"점"}},
+        notes:[measurement.scoring,...domains.map(d=>`${d.name}: ${d.nItems}문항, n=${d.n}, ${f2(d.pre)} → ${f2(d.post)}, 변화 ${f2(d.diff)}, d=${f2(d.effect)}`)],source:"계산 규칙 v2"});
+    }
+    for (let i = 0; i < measurement.improvements.length; i += 3) add({id:`improvements-${i}`,type:"columns",section:"사업 개선",title:"담당자가 작성한 개선 과제",columns:measurement.improvements.slice(i,i+3).map(task=>({title:task.action || "과제 미입력",tone:"neutral",items:[`근거: ${task.evidence || "미입력"}`,`담당: ${task.owner || "미정"}`,`확인: ${task.reviewDate || "미정"}`]})),notes:["담당자가 해석하고 작성한 내용이며 시스템의 원인 판정이 아님"]});
+  }
   add({ id: "end", type: "end", section: "", title: "감사합니다", subtitle: [S.orgName, title].filter(Boolean).join(" · "), notes: ["질의응답"] });
   return slides;
 }

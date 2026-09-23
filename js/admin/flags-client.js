@@ -3,6 +3,7 @@
 // 값 자체는 민감정보가 아니라 로그인 없이도 읽을 수 있다(supabase/migrations/0005_feature_flags.sql).
 import { restRequest } from "../auth/api.js";
 import { isAdmin } from "../auth/session.js";
+import { featureStatus, FEATURE_DEPENDENCIES } from "./feature-status.js";
 
 let cache = null; // null=아직 못 받아옴 · {} 이상=서버 값(실패해도 빈 객체로 확정해 무한 재시도하지 않음)
 let pending = null;
@@ -23,14 +24,18 @@ export function loadFeatureFlags() {
  * 일반 이용자는 서버에서 전체 공개(enabled=true)로 전환된 것만 보임. 아직 못 받아왔으면 false(안전한 기본값).
  */
 export function isFeatureOn(key) {
+  if (featureStatus(key) === "planned") return false;
   if (isAdmin()) return true;
+  if (featureStatus(key) !== "ready") return false;
+  if ((FEATURE_DEPENDENCIES[key] || []).some(dependency => !isFeatureOn(dependency))) return false;
   return !!cache?.[key];
 }
 
 /** 지금 보이는 이유가 "전체 공개"가 아니라 "관리자라서"인지 — 화면에 미리보기 표시를 붙일지 판단할 때 사용 */
 export function isAdminPreview(key) {
-  return isAdmin() && !cache?.[key];
+  return featureStatus(key) !== "planned" && isAdmin() && (featureStatus(key) !== "ready" || !cache?.[key]);
 }
+export function featureVisibilityKey() { return JSON.stringify([isAdmin(), cache]); }
 
 /** 테스트 전용: 모듈 캐시를 초기화(각 테스트가 독립된 상태에서 시작하도록) */
 export function _resetForTest() { cache = null; pending = null; }

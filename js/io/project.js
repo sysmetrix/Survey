@@ -1,10 +1,10 @@
 // 프로젝트 파일(*.survey.json): 코드북·사업정보·성과지표·보고서 수정사항 (원자료는 선택)
 export const PROJECT_APP = "survey-v5";
-export const PROJECT_SCHEMA = 1;
+export const PROJECT_SCHEMA = 2;
 
 export function projectToJson(state, { includeData = false } = {}) {
   const obj = {
-    app: PROJECT_APP, schema: PROJECT_SCHEMA, savedAt: new Date().toISOString(),
+    app: PROJECT_APP, schema: PROJECT_SCHEMA, calculationVersion: "2", savedAt: new Date().toISOString(),
     settings: {
       orgName: state.settings.orgName, author: state.settings.author, reportTitle: state.settings.reportTitle, date: state.settings.date, thresholds: state.settings.thresholds, scoreBasis: state.settings.scoreBasis,
       fontPreset: state.settings.fontPreset, fontBody: state.settings.fontBody, fontHeading: state.settings.fontHeading, baseSize: state.settings.baseSize, lineSpacing: state.settings.lineSpacing,
@@ -43,5 +43,10 @@ export function parseProject(text) {
   if (obj.present !== undefined && !isObj(obj.present)) throw new Error("프로젝트 파일 형식 오류(present)");
   if (obj.dataset !== undefined && !(isObj(obj.dataset) && Array.isArray(obj.dataset.sheets))) throw new Error("프로젝트 파일 형식 오류(dataset)");
   // 원자료의 날짜 문자열 복원은 불필요 (분석은 문자열/숫자 기반)
+  if (!obj.schema || obj.schema === 1) {
+    obj.schema = 2;
+    obj.calculationNotice = "계산 규칙 v2: 복수 문항 합성·결측 처리·문항 일치 검증 및 0/음수 목표 판정이 변경되어 과거 결과와 다를 수 있습니다.";
+    if (obj.codebook) obj.codebook.calculationNotice = obj.calculationNotice;
+  }
   return obj;
 }

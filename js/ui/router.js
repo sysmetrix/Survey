@@ -9,7 +9,7 @@ export const STEPS = [
 /** 단계 표시줄에 없는 화면 */
 export const EXTRA_VIEWS = ["present", "presentEdit", "history", "settings", "updates", "references", "login", "admin"];
 /** 데이터 없이 열 수 있는 화면 */
-export const NO_DATA_VIEWS = ["load", "history", "settings", "updates", "login", "admin"];
+export const NO_DATA_VIEWS = ["load", "history", "settings", "updates", "references", "login", "admin"];
 
 const EXTRA_LABELS = { present: "발표 모드", presentEdit: "슬라이드 편집", history: "작업 내역", settings: "로컬 설정", updates: "업데이트 내역", references: "평가 레퍼런스", login: "로그인", admin: "관리자" };
 /** 화면 이름 (돌아가기 버튼 등 안내 문구용) */

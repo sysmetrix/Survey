@@ -20,7 +20,7 @@ export function lintEvaluation(logicModel, kpis, codebook, analysis = null, t = 
     if (!k.name) out.push({ level: "error", kpiId: k.id, msg: `${k.id}: 지표명이 없습니다.` });
     if (goals.length && !k.goalId) out.push({ level: "info", kpiId: k.id, msg: `'${nm}': 연계 목표가 지정되지 않았습니다.` });
     if (k.goalId && goals.length && !goals.some(g => g.id === k.goalId)) out.push({ level: "warn", kpiId: k.id, msg: `'${nm}': 연계 목표 ${k.goalId}가 논리모형에 없습니다.` });
-    if (k.target === null || k.target === "" || !Number.isFinite(Number(k.target))) out.push({ level: "error", kpiId: k.id, msg: `'${nm}': 목표값이 없습니다.` });
+    if (k.target != null && k.target !== "" && !Number.isFinite(Number(k.target))) out.push({ level: "error", kpiId: k.id, msg: `'${nm}': 목표값은 유효한 숫자여야 합니다.` });
     const m = METRICS[k.metric];
     if (!m) { out.push({ level: "error", kpiId: k.id, msg: `'${nm}': 알 수 없는 측정 방식입니다.` }); return; }
     if (k.metric === "manual" && (k.actual === null || k.actual === "")) out.push({ level: "warn", kpiId: k.id, msg: `'${nm}': 실적값을 입력해야 합니다.` });

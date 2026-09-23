@@ -7,6 +7,23 @@ import { dLabel, rLabel } from "../stats/effectsize.js";
 import { rawColumn } from "../model/codebook.js";
 import { recodeColumn } from "../model/recode.js";
 import { score100 } from "./items.js";
+import { pairQuality } from "../evaluation/pair-quality.js";
+
+export function compositeComparison(survey, pairs, options = {}) {
+  if (!pairs.length) return null;
+  const columns = pairs.flatMap(p => [p.pre, p.post]).map(key => survey.codebook.columns.find(c => c.key === key));
+  const scale = columns[0]?.scale;
+  if (!scale || columns.some(c => c?.scale?.min !== scale.min || c?.scale?.max !== scale.max)) return null;
+  // 같은 사람이 양 시점에 응답한 동일 문항만 평균한다. 최소 절반 이상 필요.
+  const pre = [], post = [];
+  for (let row = 0; row < survey.n; row++) {
+    const valid = pairs.filter(p => Number.isFinite(p.preValues[row]) && Number.isFinite(p.postValues[row]));
+    const enough = valid.length >= Math.ceil(pairs.length / 2);
+    pre.push(enough ? mean(valid.map(p => p.preValues[row])) : null);
+    post.push(enough ? mean(valid.map(p => p.postValues[row])) : null);
+  }
+  return pairedComparison(pre, post, scale, options);
+}
 
 /**
  * 대응 자료 검정 자동 선택
@@ -61,6 +78,11 @@ export function unpairedComparison(pre, post, { min, max }, { scoreBasis = "exac
 export function prepostAnalysis(survey, { scoreBasis = "exact" } = {}) {
   if (survey.design === "single" || !survey.pairs.length) return null;
   const cb = survey.codebook;
+  const scopeKeys = survey.pairs.flatMap(p=>[p.pre,p.post]);
+  const qualityIssues = pairQuality(cb.columns);
+  if (survey.matching?.dupPre || survey.matching?.dupPost) qualityIssues.push({level:"error",code:"respondent-duplicate",msg:"사전·사후 응답자 식별자가 중복되어 동일인을 확정할 수 없습니다. 중복 자료를 정리한 뒤 다시 분석하세요.",keys:survey.pairs.flatMap(p=>[p.pre,p.post])});
+  const invalidKeys = new Set(qualityIssues.flatMap(w => w.keys));
+  survey = { ...survey, pairs: survey.pairs.filter(p => !invalidKeys.has(p.pre) && !invalidKeys.has(p.post)) };
   const colOf = k => cb.columns.find(c => c.key === k);
   const matchedN = survey.design === "prepost-sheets" ? survey.matching.pairs.length : survey.n;
   const useUnpaired = survey.design === "prepost-sheets" && matchedN < 5;
@@ -79,19 +101,22 @@ export function prepostAnalysis(survey, { scoreBasis = "exact" } = {}) {
   const domains = [];
   const domainIds = [...new Set(survey.pairs.map(p => p.domain).filter(Boolean))];
   const groupDefs = domainIds.map(id => ({ id, name: cb.domains.find(d => d.id === id)?.name || id, pairs: survey.pairs.filter(p => p.domain === id) }));
-  if (survey.pairs.length >= 2) groupDefs.push({ id: "ALL", name: "전체", pairs: survey.pairs });
+  if (survey.pairs.length >= 2 && (!cb.instrument || cb.instrument.allowTotal === true)) groupDefs.push({ id: "ALL", name: "전체", pairs: survey.pairs });
   for (const g of groupDefs) {
     if (useUnpaired || g.pairs.length < 1) continue;
+    if (cb.columns.some(c=>scopeKeys.includes(c.key) && invalidKeys.has(c.key) && (g.id === "ALL" || c.domain === g.id))) continue;
     const scale = colOf(g.pairs[0].post).scale || { min: 0, max: 10 };
-    const avgOf = side => Array.from({ length: survey.n }, (_, i) => {
-      const v = g.pairs.map(p => p[side][i]).filter(x => x !== null);
-      return v.length >= Math.ceil(g.pairs.length / 2) ? mean(v) : null;
-    });
-    const res = pairedComparison(avgOf("preValues"), avgOf("postValues"), scale, { scoreBasis });
+    if (g.pairs.some(p=>colOf(p.post).scale?.min !== scale.min || colOf(p.post).scale?.max !== scale.max)) {
+      qualityIssues.push({level:"error",code:"mixed-composite-scale",msg:`${g.name}: 서로 다른 척도의 합성점수는 계산하지 않습니다.`,keys:[],domainId:g.id});
+      continue;
+    }
+    const res = compositeComparison(survey, g.pairs, { scoreBasis });
     if (res) domains.push({ id: g.id, name: g.name, nItems: g.pairs.length, scale, ...res });
   }
 
-  return {
+  const result = {
+    scopeKeys,
+    qualityIssues,
     design: survey.design, matchedN, unpaired: useUnpaired,
     retrospective: survey.design === "retrospective",
     matching: survey.matching && {
@@ -101,6 +126,8 @@ export function prepostAnalysis(survey, { scoreBasis = "exact" } = {}) {
     items, domains,
     significantItems: items.filter(it => it.primary.p < 0.05 && it.diff > 0).length,
   };
+  Object.defineProperty(result, "composite", { value: keys => useUnpaired ? null : compositeComparison(survey, survey.pairs.filter(p => keys.includes(p.pre) || keys.includes(p.post)), { scoreBasis }) });
+  return result;
 }
 
 export { describe };

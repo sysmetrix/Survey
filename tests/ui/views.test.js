@@ -23,11 +23,36 @@ import { captureEditable } from "../../js/history/snapshot.js";
 import { chartChoices } from "../../js/ui/present-edit-model.js";
 import { cqwToPt, ptToCqw } from "../../js/report/pptx/emu.js";
 import { _setForTest as _setFlagsForTest, _resetForTest as _resetFlagsForTest } from "../../js/admin/flags-client.js";
+import { clearSession } from "../../js/auth/session.js";
 const require = createRequire(import.meta.url);
 const XLSX = require("../../vendor/xlsx-0.20.3.full.min.js");
 const Papa = require("../../vendor/papaparse-5.4.1.min.js");
 
 const bad = html => /undefined|\[object Object\]|NaN(?!\w)/.exec(html.replace(/data-[a-z-]+="[^"]*"/g, ""));
+
+test("간편 지표: 목적 선택·목표 없는 입력·문항 지정·저장 왕복", async () => {
+  const oldStorage = globalThis.localStorage;
+  globalThis.localStorage = { getItem: key => key === "survey-v5-session" ? JSON.stringify({ access_token:"test",expires_at:Date.now()+3600000,role:"admin",user:{id:"test"} }) : null };
+  const file = "2026_청소년센터_만족도_구글폼.csv";
+  loadDataset(parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa }));
+  _setFlagsForTest({ guidedKpiSetup: true, surveyVersioning: true, competencyProfile: true, standardComparisons: true });
+  try {
+    business.actions["kpi-purpose"]({ dataset: { id: "experience" }, checked: true });
+    assert.ok(business.render().includes("측정 문항 선택 필요"));
+    business.actions["kpi-quick"]({ dataset: { id: "sat" } });
+    const k = state.kpis.at(-1), index = state.kpis.length - 1;
+    assert.equal(k.target, null);
+    assert.match(compute().evaluation.results.at(-1).error, /선택/);
+    business.actions.kpi({ dataset: { i: String(index), field: "targetRef" }, value: "전체" });
+    assert.ok(Number.isFinite(compute().evaluation.results.at(-1).actualValue));
+    assert.equal(compute().evaluation.results.at(-1).judgment, "목표 미설정");
+    business.actions.kpi({ dataset: { i: String(index), field: "targetBasis" }, value: "사업계획서" });
+    const restored = parseProject(projectToJson(state));
+    assert.equal(restored.kpis.at(-1).targetBasis, "사업계획서");
+    assert.deepEqual(restored.codebook.evaluationPurposes, ["experience"]);
+    assert.equal(bad(business.render()), null);
+  } finally { _resetFlagsForTest(); clearSession(); globalThis.localStorage = oldStorage; }
+});
 
 for (const file of ["2026_진로탐색_사전사후.xlsx", "2026_청소년센터_만족도_구글폼.csv", "2026_참여위원회_회고식.xlsx"]) {
   test(`화면 렌더: ${file}`, async () => {

@@ -22,7 +22,7 @@ export const METRICS = {
 export function metricFromText(s) {
   const t = String(s ?? "").replace(/\s/g, "").toLowerCase();
   if (!t || /직접|수동|manual|실적/.test(t)) return "manual";
-  if (/응답자수|응답수|참여자수/.test(t)) return "responseCount";
+  if (/응답자수|응답수/.test(t)) return "responseCount";
   if (/nps|순추천/.test(t)) return "nps";
   if (/top2|긍정응답|긍정비율/.test(t)) return "top2";
   if (/향상자|향상비율|개선자/.test(t)) return "improvedRate";
@@ -57,6 +57,14 @@ export function targetAdequacy(target, prevActual, direction = "up", { minGrowth
  */
 export function resolveTarget(ref, codebook) {
   const text = String(ref ?? "").trim();
+  if (text.startsWith("@item:")) {
+    const column = codebook.columns.find(c => c.key === text.slice(6));
+    return { type:"items", ids:column ? [column.key] : [], label:column?.label || text, missing:column ? [] : [text] };
+  }
+  if (text.startsWith("@domain:")) {
+    const domain = codebook.domains.find(d => d.id === text.slice(8));
+    return { type:"domain", ids:domain ? [domain.id] : [], label:domain?.name || text, missing:domain ? [] : [text] };
+  }
   if (!text || /^(전체|모든|all)/i.test(text)) return { type: "all", ids: [], label: "전체 문항", missing: [] };
   const dom = codebook.domains.find(d => normKey(d.name) === normKey(text));
   if (dom) return { type: "domain", ids: [dom.id], label: dom.name, missing: [] };
@@ -67,7 +75,9 @@ export function resolveTarget(ref, codebook) {
     const cand = codebook.columns.filter(c => ["likert", "nps"].includes(c.role));
     let hits = cand.filter(c => normKey(c.label) === k || normKey(c.header) === k || c.pairKey === k);
     if (!hits.length) hits = cand.filter(c => normKey(c.label).includes(k) || c.pairKey?.includes(k));
-    if (hits.length) hits.forEach(c => ids.push(c.key)); else missing.push(nm);
+    const logicalItems = new Set(hits.map(c => c.pairKey || c.key));
+    if (logicalItems.size > 1) missing.push(`${nm} (동일·유사 문항명 여러 개: 문항을 직접 선택하세요)`);
+    else if (hits.length) hits.forEach(c => ids.push(c.key)); else missing.push(nm);
   });
   return { type: "items", ids, label: names.join(", "), missing };
 }
@@ -77,6 +87,7 @@ const unique = a => [...new Set(a)];
 /** KPI 실적 계산 → {value, n, facts} 또는 {error} */
 export function kpiActual(kpi, analysis, codebook) {
   const m = METRICS[kpi.metric] || METRICS.manual;
+  if (kpi.requireTarget && m.kind !== "manual" && kpi.metric !== "responseCount" && !kpi.targetRef) return { error: "측정할 문항·영역을 선택하세요." };
   if (m.kind === "manual") {
     const v = kpi.actual === null || kpi.actual === "" ? NaN : Number(kpi.actual);
     return Number.isFinite(v) ? { value: v, facts: "직접 입력한 실적값" } : { error: "실적값 미입력" };
@@ -104,13 +115,17 @@ export function kpiActual(kpi, analysis, codebook) {
   // 사전·사후
   const pp = analysis.prepost;
   if (!pp) return { error: "사전·사후 자료 없음" };
+  const relevantKeys = new Set(tgt.type === "all" ? (pp.scopeKeys || codebook.columns.map(c => c.key)) : tgt.type === "domain" ? codebook.columns.filter(c => c.domain === tgt.ids[0] && (!pp.scopeKeys || pp.scopeKeys.includes(c.key))).map(c => c.key) : tgt.ids);
+  const blocking = (pp.qualityIssues || []).filter(issue => issue.keys?.some(key => relevantKeys.has(key)));
+  if (blocking.length) return { error: `계산 불가: ${blocking.map(issue => issue.msg).join(" · ")}` };
   let src;
   if (tgt.type === "all") src = pp.domains.find(d => d.id === "ALL") || (pp.items.length === 1 ? pp.items[0] : null);
   else if (tgt.type === "domain") src = pp.domains.find(d => d.id === tgt.ids[0]);
   else {
     const its = pp.items.filter(it => tgt.ids.includes(it.pre) || tgt.ids.includes(it.post));
-    if (its.length === 1) src = its[0];
-    else if (its.length > 1) src = { label: tgt.label, n: Math.min(...its.map(x => x.n)), ...Object.fromEntries(["diff", "diff100", "score100Post", "changePct", "dz", "improvedPct"].map(k => [k, mean(its.map(x => x[k]))])) };
+    const count = new Set(codebook.columns.filter(c=>tgt.ids.includes(c.key)).map(c=>c.pairKey || c.key)).size;
+    if (count > 1) { const composite = pp.composite?.(tgt.ids); if (composite) src = { ...composite, label: `${count}개 문항 합성점수` }; }
+    else if (its.length === 1) src = its[0];
   }
   if (!src) return { error: "대상 사전·사후 문항 없음" };
   const map = { prepostDiff: "diff", prepostDiff100: "diff100", postScore100: "score100Post", changePct: "changePct", effectSize: "dz", improvedRate: "improvedPct" };
@@ -122,6 +137,7 @@ export function kpiActual(kpi, analysis, codebook) {
 /** 달성률 */
 export function achievementRate(actual, target, direction = "up") {
   if (!Number.isFinite(actual) || !Number.isFinite(target)) return NaN;
+  if (target <= 0) return NaN;
   if (direction === "down") {
     if (target === 0) return actual <= 0 ? 100 : 0;
     return 100 - (actual - target) * 100 / Math.abs(target);
@@ -138,9 +154,11 @@ export function evaluateKpis(kpis, analysis, codebook, thresholds = DEFAULT_THRE
     if (a.error) return { ...k, unit, targetValue: target, actualValue: NaN, rate: NaN, judgment: "측정 불가", error: a.error };
     const rate = achievementRate(a.value, target, k.direction);
     const targetCaution = targetAdequacy(target, k.prevActual === null || k.prevActual === "" ? NaN : Number(k.prevActual), k.direction);
-    return { ...k, unit, targetValue: target, actualValue: a.value, n: a.n, p: a.p, facts: a.facts, rate, targetCaution, judgment: Number.isFinite(target) ? judgeWord(rate, thresholds) : "목표 미설정", error: Number.isFinite(target) ? null : "목표값 미입력" };
+    const criterion = Number.isFinite(target) && target <= 0;
+    const judgment = criterion ? ((k.direction === "down" ? a.value <= target : a.value >= target) ? "달성" : "미달성") : Number.isFinite(target) ? judgeWord(rate, thresholds) : "목표 미설정";
+    return { ...k, unit, targetValue: target, actualValue: a.value, n: a.n, p: a.p, facts: a.facts, rate, targetCaution, judgment, calculationVersion: "2", criterion, error: null };
   });
-  const measured = results.filter(r => Number.isFinite(r.rate));
+  const measured = results.filter(r => Number.isFinite(r.rate) || r.criterion);
   const achieved = measured.filter(r => r.judgment === "달성").length;
   const mostly = measured.filter(r => r.judgment === "대체로 달성").length;
   // 종합: 달성 1, 대체로 달성 0.5 가중
@@ -150,8 +168,8 @@ export function evaluateKpis(kpis, analysis, codebook, thresholds = DEFAULT_THRE
     results,
     summary: {
       total: results.length, measured: measured.length, achieved, mostly, notAchieved: measured.length - achieved - mostly,
-      unmeasured: results.length - measured.length, achievedRatio: ratio,
-      avgRate: measured.length ? mean(measured.map(r => Math.min(r.rate, 150))) : NaN, grade,
+      unmeasured: results.filter(r => r.error).length, unsetTarget: results.filter(r => r.judgment === "목표 미설정").length, achievedRatio: ratio,
+      avgRate: mean(measured.filter(r => Number.isFinite(r.rate)).map(r => Math.min(r.rate, 150))), grade,
       byStage: ["산출", "단기성과", "중기성과", "영향"].map(st => ({ stage: st, total: results.filter(r => r.stage === st).length, achieved: results.filter(r => r.stage === st && r.judgment === "달성").length })).filter(s => s.total),
     },
   };
