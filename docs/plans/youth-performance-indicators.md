@@ -93,7 +93,7 @@
 | 실제 관리자 인증 | 로컬 E2E는 시험용 세션으로 UI 역할만 검증. 실제 계정 로그인 검증과 구분 |
 | 공식 KYWA 원문 | 공식 페이지 이번 조회 502. 첨부 문항·채점·연령·이용 조건 전체 검증 미완료 |
 | 사용자 조사 | 담당자 5명 수행 미실시. 4명 이상 독립 완료 및 만족도/변화 구분 확인 전 일반 공개 금지 |
-| 데이터베이스 | 신규 마이그레이션 파일 작성. 원격 DB 적용은 아직 확인하지 못함 |
+| 데이터베이스 | 원격 `feature_flags`에서 6개 신규 플래그 확인. 모두 `enabled=false`로 관리자 검증 상태 유지 |
 | 배포 | 원격 CI·Pages·운영 버전 확인 후 아래 배포 기록에 추가 |
 
 ### 후속 구현·검증 과제 (완료로 간주하지 않음)
@@ -112,7 +112,7 @@
 - 커밋: `eb504591c80a88fac04e4de8b467cd0b5a4bdc18` (5.47.0).
 - Pages 빌드: 성공, 운영 주소에서 `js/main.js`의 5.47.0 확인.
 - 원격 CI: test 성공, Chrome E2E 성공.
-- Supabase 원격 마이그레이션 적용: 별도 운영 DB 권한·도구 확인 전이므로 미적용 상태. 기능 플래그 기본값은 안전하게 꺼져 있으며, 적용 전 일반 사용자 공개 불가.
+- Supabase 원격 기능 플래그 확인: `measurementQuality`, `surveyVersioning`, `ageSurveyTemplates`, `competencyProfile`, `standardComparisons`, `guidedKpiSetup`가 존재하며 모두 `enabled=false`. 일반 사용자 공개 차단 상태.
 
 ## 근거
 
