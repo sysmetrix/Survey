@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.45.1", date: "2026-09-24", title: "평가 레퍼런스 원문 링크·해외 자료 한글 제목 보완",
+    groups: {
+      "평가 레퍼런스": [
+        "잘못 연결된 국내 자료 링크를 한국청소년활동진흥원 공식 2026년 역량기반 청소년활동 가이드북 자료실로 교체함",
+        "해외 레퍼런스 원문 제목에 이해를 돕는 한글 제목을 병기함",
+      ],
+    },
+  },
+  {
     version: "5.45.0", date: "2026-09-24", title: "성과지표 평가 레퍼런스 페이지·단계별 평가 가이드 추가",
     groups: {
       "성과지표": [

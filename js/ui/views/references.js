@@ -2,10 +2,10 @@
 import { icon } from "../icons.js";
 
 const SOURCES = [
-  { title: "OECD — Monitoring and Evaluation of Child and Youth Policies and Outcomes in Ireland (2024)", type: "평가모형", text: "사업의 목표와 결과를 results framework로 연결하고, 모니터링(진행 확인)과 평가(성과 판단)를 구분합니다.", url: "https://www.oecd.org/en/publications/monitoring-and-evaluation-of-child-and-youth-policies-and-outcomes-in-ireland_2bd86a9d-en/full-report/component-7.html" },
-  { title: "OECD — Youth Policy Toolkit (2024)", type: "청소년 정책", text: "청소년 참여, 비형식 교육, 지원·상담, 기관 간 협력 등 청소년 정책의 평가 영역과 지표 사례를 제시합니다.", url: "https://www.oecd.org/content/dam/oecd/en/publications/reports/2024/11/oecd-youth-policy-toolkit_3de4a9f0/74b6f8f3-en.pdf" },
-  { title: "OECD — Mid-Term Evaluation of Spain’s Youth Guarantee Plus Plan", type: "평가 설계", text: "평가 질문을 먼저 만들고, 각 질문에 지표와 자료원을 연결하는 평가 매트릭스 접근을 사용합니다.", url: "https://www.oecd.org/en/publications/mid-term-evaluation-of-spain-s-youth-guarantee-plus-plan-2021-2027_1197d87d-en/full-report/evaluation-approach-and-methodology_86854b18.html" },
-  { title: "역량기반 청소년활동 자료", type: "국내 청소년활동", text: "선행연구 문항을 바탕으로 청소년활동 전후의 핵심역량 변화를 측정하는 국내 적용 사례입니다.", url: "https://www.gjcenter.kr/data/file/library/1028678779_4KQXTVFl_3f741c391e7a6070e2b4805e9d8ab0dc29d3493d.pdf" },
+  { title: "OECD — Monitoring and Evaluation of Child and Youth Policies and Outcomes in Ireland (2024) · 아일랜드 아동·청소년 정책 및 성과 모니터링·평가", type: "평가모형", text: "사업의 목표와 결과를 results framework로 연결하고, 모니터링(진행 확인)과 평가(성과 판단)를 구분합니다.", url: "https://www.oecd.org/en/publications/monitoring-and-evaluation-of-child-and-youth-policies-and-outcomes-in-ireland_2bd86a9d-en/full-report/component-7.html" },
+  { title: "OECD — Youth Policy Toolkit (2024) · 청소년 정책 툴킷", type: "청소년 정책", text: "청소년 참여, 비형식 교육, 지원·상담, 기관 간 협력 등 청소년 정책의 평가 영역과 지표 사례를 제시합니다.", url: "https://www.oecd.org/content/dam/oecd/en/publications/reports/2024/11/oecd-youth-policy-toolkit_3de4a9f0/74b6f8f3-en.pdf" },
+  { title: "OECD — Mid-Term Evaluation of Spain’s Youth Guarantee Plus Plan · 스페인 청년보장 플러스 계획 중간평가", type: "평가 설계", text: "평가 질문을 먼저 만들고, 각 질문에 지표와 자료원을 연결하는 평가 매트릭스 접근을 사용합니다.", url: "https://www.oecd.org/en/publications/mid-term-evaluation-of-spain-s-youth-guarantee-plus-plan-2021-2027_1197d87d-en/full-report/evaluation-approach-and-methodology_86854b18.html" },
+  { title: "한국청소년활동진흥원 — 2026년 역량기반 청소년활동 가이드북 · Competency-Based Youth Activities Guidebook", type: "국내 청소년활동", text: "한국청소년활동진흥원이 발간한 공식 가이드북으로, 역량기반 청소년활동의 설계·운영과 측정 도구를 안내합니다.", url: "https://www.kywa.or.kr/pressinfo/data_view.jsp?no=35892" },
 ];
 
 const STEPS = [
