@@ -90,6 +90,14 @@ function quickKpis(r) {
   ].filter(Boolean);
 }
 
+function quickKpiHelp(qk) {
+  const id = qk.id;
+  if (["sat", "top2", "nps"].includes(id)) return "참여자의 반응·만족을 확인하는 지표입니다.";
+  if (["diff", "improved"].includes(id)) return "참여 전후 변화가 있는지 확인하는 지표입니다.";
+  if (["count", "sessions", "activityExp"].includes(id)) return "운영 실적을 직접 입력하는 산출 지표입니다.";
+  return "설문 문항과 연결해 자동으로 계산합니다.";
+}
+
 /** 전년 실적 → 목표 → 실적을 가로 막대 3개로 비교(관리자 전용 미리보기: kpiTrendChart) */
 function trendBars(prev, target, actual) {
   const vals = [prev, target, actual].filter(Number.isFinite);
@@ -151,21 +159,32 @@ export function render() {
     <div class="row gap wrap"><button class="btn ghost" data-act="goto" data-to="references">평가 레퍼런스 보기${icon("right", 16)}</button><button class="btn" data-act="goto" data-to="dash">건너뛰고 분석 결과 보기${icon("right", 16)}</button></div>
   </div>
 
+  <section class="card kpi-start-guide">
+    <div class="eyebrow">처음 사용하는 분을 위한 안내</div>
+    <h2>성과지표는 3단계로 설정합니다</h2>
+    <div class="kpi-guide-steps">
+      <div><span>1</span><b>평가 목적을 고릅니다</b><p>만족도인지, 참여 전후 변화인지 먼저 정합니다.</p></div>
+      <div><span>2</span><b>추천 지표를 추가합니다</b><p>설문에 맞는 버튼을 누르면 자동 계산 지표가 들어갑니다.</p></div>
+      <div><span>3</span><b>목표값만 확인합니다</b><p>사업계획서의 목표에 맞게 숫자와 단위를 검토합니다.</p></div>
+    </div>
+    <p class="small muted">단순 만족도 분석만 필요하면 성과지표를 추가하지 않고 바로 분석 결과로 이동해도 됩니다.</p>
+  </section>
+
   <section class="card">
     <div class="row between wrap">
       <h2 class="flush">빠른 추가</h2>
       <div class="row gap">${state.businessFound?.kpi ? `<span class="badge ok">엑셀 성과지표 시트 반영됨</span>` : ""}<button class="btn sm" data-act="kpi-add">+ 빈 지표 추가</button></div>
     </div>
-    <div class="quick-kpis">${quick.map(qk => `<button class="chip-btn" data-act="kpi-quick" data-id="${qk.id}" ${used.has(qk.kpi.metric + "|" + qk.kpi.name) ? "disabled" : ""}>+ ${esc(qk.label)}</button>`).join("")}</div>
+    <div class="quick-kpis">${quick.map(qk => `<div class="quick-kpi-option"><button class="chip-btn" data-act="kpi-quick" data-id="${qk.id}" ${used.has(qk.kpi.metric + "|" + qk.kpi.name) ? "disabled" : ""}>+ ${esc(qk.label)}</button><span>${esc(quickKpiHelp(qk))}</span></div>`).join("")}</div>
     <datalist id="targetList">${targetOptions().map(t => `<option value="${esc(t)}">`).join("")}</datalist>
-    ${state.kpis.length ? kpiTable(r) : `<div class="empty-inline">${icon("chart", 22)}<div><b>아직 성과지표가 없습니다</b><p class="small muted">위의 ‘빠른 추가’를 누르면 이 설문 데이터로 바로 계산되는 지표가 들어갑니다. 목표값만 사업계획서에 맞게 고치면 됩니다.</p></div></div>`}
+    ${state.kpis.length ? `<p class="small muted kpi-edit-note">자동으로 계산되는 값은 회색으로 표시됩니다. 직접 입력할 값은 목표·실적·단위이며, 나머지 항목은 처음에는 기본값을 유지해도 됩니다.</p>${kpiTable(r)}` : `<div class="empty-inline">${icon("chart", 22)}<div><b>아직 성과지표가 없습니다</b><p class="small muted">위의 ‘빠른 추가’를 누르면 이 설문 데이터로 바로 계산되는 지표가 들어갑니다. 목표값만 사업계획서에 맞게 고치면 됩니다.</p></div></div>`}
     ${r.evaluation ? `<p class="summary">종합: 측정 ${r.evaluation.summary.measured}개 중 <b>${r.evaluation.summary.achieved}개 달성</b>, ${r.evaluation.summary.mostly}개 대체로 달성, ${r.evaluation.summary.notAchieved}개 미달성 → 종합 <b>${esc(r.evaluation.summary.grade)}</b></p>` : ""}
     ${r.lint.length ? `<h3>연계 점검</h3><ul class="warnings">${r.lint.map(w => `<li>${levelBadge(w.level)} ${esc(w.msg)}</li>`).join("")}</ul>` : ""}
     ${isFeatureOn("measurementQuality") ? `<div class="measurement-quality"><div class="row between wrap"><h3 class="flush">설문 측정 품질 점검</h3>${isAdminPreview("measurementQuality") ? `<span class="badge muted">관리자 미리보기</span>` : `<span class="badge info">표준 측정도구 참고</span>`}</div>${quality.length ? `<ul class="warnings">${quality.map(w => `<li>${levelBadge(w.level)} <b>${measurementQualityLabel[w.level]}</b> ${esc(w.msg)}</li>`).join("")}</ul>` : `<p class="small good-text">현재 설문에서 우선 확인할 측정 품질 경고가 없습니다.</p>`}<p class="small muted">문항 버전, 사전·사후 일치, 척도 범위, 영역별 문항 수와 표본 규모를 점검합니다.</p></div>` : ""}
     <div class="metric-guide">
       <div class="metric-guide-head">${icon("help", 15)}측정 방법 안내</div>
       <div class="metric-guide-grid">${Object.values(METRICS).map(mm => `<div class="metric-guide-item"><b>${esc(mm.label)}</b>${mm.formula ? `<span class="muted">${esc(mm.formula)}</span>` : ""}</div>`).join("")}</div>
-      <p class="format-help small muted">만족도는 반응(1단계) 지표입니다. 중기성과·영향은 사전·사후 변화, 향상자 비율 등 변화 지표나 행정 실적(직접 입력)을 권장합니다.</p>
+      <p class="format-help small muted"><b>입력 우선순위:</b> 목표값 → 대상 문항 → 단위. 만족도는 반응(1단계) 지표입니다. 중기성과·영향은 사전·사후 변화, 향상자 비율 등 변화 지표나 행정 실적(직접 입력)을 권장합니다.</p>
       <p class="format-help small"><button class="link-btn" data-act="goto" data-to="references">왜 이렇게 평가하는지, 근거와 단계별 가이드 보기 →</button></p>
     </div>
   </section>
