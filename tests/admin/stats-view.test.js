@@ -1,7 +1,7 @@
 // 관리자 '사용 통계' 탭 — 순수 계산 함수(기간 분리·증감률·퍼널 전환율·일별 추이)
 import test from "node:test";
 import assert from "node:assert/strict";
-import { periodWindow, splitByPeriod, totalsBy, deltaPct, kpiTiles, funnelSteps, biggestDropStep, dailyVisitTrend } from "../../js/ui/views/admin/stats.js";
+import { periodWindow, splitByPeriod, totalsBy, deltaPct, kpiTiles, exportBreakdown, funnelSteps, biggestDropStep, dailyVisitTrend } from "../../js/ui/views/admin/stats.js";
 
 test("periodWindow: 이번 기간·직전 기간 시작일을 오늘 기준으로 계산", () => {
   const today = new Date("2026-09-30T15:00:00Z");
@@ -43,10 +43,22 @@ test("kpiTiles: 방문·도달률·내보내기·오류율 네 타일 + 직전 �
   assert.equal(tiles[0].delta, 25); // 80→100
   assert.equal(tiles[1].n, "40%"); // 도달률 40/100
   assert.equal(tiles[1].delta, 15); // 40% - 25%(20/80)
-  assert.equal(tiles[2].n, "25"); // 내보내기 20+5
-  assert.equal(tiles[2].sub, "HWPX 20 · PPTX 5");
+  assert.equal(tiles[2].n, "25"); // 내보내기 20+5(HTML·PDF 기록은 없음)
   assert.equal(tiles[3].n, "2%"); // 오류율 2/100
   assert.equal(tiles[3].kind, "bad");
+});
+
+test("exportBreakdown: 내보내기 5종(HWPX·PPTX·HTML·PDF×2화면)을 각각 건수로 분리", () => {
+  const totals = totalsBy([
+    { view: "report", event: "export_hwpx", count: 20, distinct_sessions: 20 },
+    { view: "present", event: "export_pptx", count: 5, distinct_sessions: 5 },
+    { view: "present", event: "export_html", count: 3, distinct_sessions: 3 },
+    { view: "report", event: "export_pdf", count: 2, distinct_sessions: 2 },
+    { view: "present", event: "export_pdf", count: 1, distinct_sessions: 1 },
+  ]);
+  const rows = exportBreakdown(totals);
+  assert.deepEqual(rows.map(r => r.value), [20, 5, 3, 2, 1]);
+  assert.ok(rows.every(r => typeof r.label === "string" && r.label.length > 0));
 });
 
 test("kpiTiles: 오류 발생률 증감이 나눗셈 부동소수점 오차 없이 깔끔한 값으로 나옴", () => {

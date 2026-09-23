@@ -200,7 +200,7 @@ export const actions = {
   "p-notes": () => { ui.notes = !ui.notes; savePrefs(); refresh(); },
   "p-stage": () => { ui.stage = { auto: "light", light: "dark", dark: "auto" }[ui.stage]; savePrefs(); refresh(); },
   "p-save": () => { view.save = !view.save; view.help = false; refresh(); },
-  "p-save-pdf": () => { view.save = false; refresh(); window.print(); },
+  "p-save-pdf": () => { view.save = false; refresh(); document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "present-pdf" } })); window.print(); },
   "p-save-html": async () => {
     view.save = false;
     refresh();

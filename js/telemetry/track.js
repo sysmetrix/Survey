@@ -14,6 +14,8 @@ const ALLOW = {
   view_enter: [],
   export_hwpx: [],
   export_pptx: [],
+  export_html: [],
+  export_pdf: [],
   sample_load: ["file"],
   js_error: [],
 };

@@ -21,7 +21,7 @@ import { getSession, installIdleWatch } from "./auth/session.js";
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 import { loadFeatureFlags } from "./admin/flags-client.js";
 
-export const APP_VERSION = "5.43.0";
+export const APP_VERSION = "5.44.0";
 // 첫 화면(load)만 곧바로 받아오고, 나머지 화면은 실제로 들어갈 때 받아옴 — 무거운 보고서·발표 편집기 코드가
 // 서비스워커 캐시도 없는 첫 접속에서부터 앱 시작을 늦추지 않도록(모션·기능은 그대로, 첫 로딩만 가벼워짐)
 const VIEW_LOADERS = {
@@ -298,6 +298,9 @@ document.addEventListener("survey:exported", e => {
   const kind = e.detail?.kind;
   if (kind === "hwpx") trackEvent("report", "export_hwpx");
   else if (kind === "present-pptx") trackEvent("present", "export_pptx");
+  else if (kind === "present-html") trackEvent("present", "export_html");
+  else if (kind === "pdf") trackEvent("report", "export_pdf");
+  else if (kind === "present-pdf") trackEvent("present", "export_pdf");
 });
 
 // 예상하지 못한 오류도 사용자에게 알림 (화면이 조용히 멈추지 않도록)

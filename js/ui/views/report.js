@@ -281,7 +281,7 @@ export const actions = {
   "reset-all": () => { state.overrides = {}; state.overrideBase = {}; refresh(); },
   "unhide-all": () => { state.hidden = []; refresh(); },
   "include-data": el => { includeData = el.checked; },
-  print: () => window.print(),
+  print: () => { document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "pdf" } })); window.print(); },
   "export-hwpx": async () => {
     const blocks = reportBlocks();
     const title = blocks.find(b => b.type === "title")?.text || "보고서";

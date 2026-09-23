@@ -1,6 +1,8 @@
 // 관리자 — 사용 통계 탭.
-// 순서: 기간 선택 → 핵심 지표(전 기간 대비 증감) → 일별 추이 → 단계별 도달(퍼널, 단계 간 전환율) →
-// 시간대·기관·경로·기기·브라우저·샘플 인기도(2열 그리드, 같은 폭이라 스케일이 맞아 보임) → 버전 분포 →
+// 순서(섹션마다 admin-h3 구분선): 기간 선택 → 핵심 지표(전 기간 대비 증감) → 일별 추이 →
+// 내보내기 형식별(HWPX·PPTX·HTML·PDF×2화면) → 단계별 도달(퍼널, 단계 간 전환율) →
+// 시간대·접속 경로·기기·브라우저(2열 그리드, 짧은 라벨만 — 같은 폭이라 스케일이 맞아 보임) →
+// 기관·샘플 인기도(전체 폭 — 라벨이 길어 그리드에 넣으면 줄바꿈이 막대와 겹침) → 버전 분포 →
 // 원본 표(접이식, 코드에 한글 뜻 병기·페이지 단위로만 그림). "로그가 아니라 무엇을 결정할 수 있는가"가 먼저 보이게.
 // 위젯마다 따로 불러온다(Promise.all + loadOne) — 하나가 실패(예: 새 뷰 마이그레이션 미적용)해도 나머지는 그대로 보임.
 import { restRequest, rpcRequest } from "../../../auth/api.js";
@@ -34,9 +36,18 @@ const VIEW_LABELS = {
   updates: "업데이트 내역", login: "로그인", admin: "관리자",
 };
 const EVENT_LABELS = {
-  view_enter: "화면 진입", export_hwpx: "한글 보고서 내보내기", export_pptx: "발표자료 내보내기",
+  view_enter: "화면 진입", export_hwpx: "한글 보고서 내보내기", export_pptx: "발표자료 PPTX 내보내기",
+  export_html: "발표자료 HTML 내보내기", export_pdf: "인쇄·PDF 저장",
   sample_load: "샘플 파일 불러오기", js_error: "오류 발생",
 };
+// 보고서·발표 내보내기는 4가지 형식이 있다 — exportBreakdown()·exportHtml() 이 함께 씀
+const EXPORT_FORMATS = [
+  { view: "report", event: "export_hwpx", label: "HWPX(보고서)" },
+  { view: "present", event: "export_pptx", label: "PPTX(발표자료)" },
+  { view: "present", event: "export_html", label: "HTML(발표자료)" },
+  { view: "report", event: "export_pdf", label: "PDF(보고서 인쇄)" },
+  { view: "present", event: "export_pdf", label: "PDF(발표자료 인쇄)" },
+];
 /** "load (불러오기)" 처럼 코드와 뜻을 함께 — 모르는 코드가 새로 생겨도(마이그레이션 지연 등) 코드 자체는 항상 보이게 */
 const withLabel = (code, map) => (map[code] ? `${esc(code)} (${esc(map[code])})` : esc(code));
 
@@ -77,22 +88,26 @@ export function deltaPct(cur, prev) {
   return Math.round(((cur - prev) / prev) * 1000) / 10;
 }
 
+/** 보고서·발표 내보내기 5종(HWPX·PPTX·HTML·PDF×2화면)별 건수 — kpiTiles() 합계·exportHtml() 그래프가 함께 씀 */
+export function exportBreakdown(totals) {
+  const cntOf = (view, event) => totals[`${view}·${event}`]?.count || 0;
+  return EXPORT_FORMATS.map(f => ({ label: f.label, value: cntOf(f.view, f.event) }));
+}
+
 /** 핵심 지표 4개 — 각각 { n, l, delta, kind } (kind: good=녹색이 좋음, bad=녹색이 나쁨(오류처럼 낮을수록 좋음)) */
 export function kpiTiles(curTotals, prevTotals) {
   const of = (t, view, event) => t[`${view}·${event}`]?.sessions || 0;
-  const cntOf = (t, view, event) => t[`${view}·${event}`]?.count || 0;
   const rate = t => { const e = of(t, "load", "view_enter"); return e ? Math.round((of(t, "report", "view_enter") / e) * 100) : 0; };
-  const exportsOf = t => cntOf(t, "report", "export_hwpx") + cntOf(t, "present", "export_pptx");
+  const exportsOf = t => exportBreakdown(t).reduce((s, x) => s + x.value, 0);
   const errRateOf = t => { const e = of(t, "load", "view_enter"); const err = Object.values(t).filter(v => v.event === "js_error").reduce((s, v) => s + v.count, 0); return e ? Math.round((err / e) * 1000) / 10 : 0; };
   const sessions = of(curTotals, "load", "view_enter"), prevSessions = of(prevTotals, "load", "view_enter");
   const reach = rate(curTotals), prevReach = rate(prevTotals);
   const exp = exportsOf(curTotals), prevExp = exportsOf(prevTotals);
   const errRate = errRateOf(curTotals), prevErrRate = errRateOf(prevTotals);
-  const hwpx = cntOf(curTotals, "report", "export_hwpx"), pptx = cntOf(curTotals, "present", "export_pptx");
   return [
     { n: sessions.toLocaleString(), l: "방문 세션(근사)", delta: deltaPct(sessions, prevSessions), kind: "good" },
     { n: `${reach}%`, l: "불러오기 → 보고서 도달률", delta: reach - prevReach, deltaUnit: "%p", kind: "good" },
-    { n: exp.toLocaleString(), l: "보고서·발표 내보내기", delta: deltaPct(exp, prevExp), kind: "good", sub: `HWPX ${hwpx.toLocaleString()} · PPTX ${pptx.toLocaleString()}` },
+    { n: exp.toLocaleString(), l: "보고서·발표 내보내기(5종 합)", delta: deltaPct(exp, prevExp), kind: "good", sub: "형식별 내역은 아래 그래프 참고" },
     // errRate 는 나눗셈을 한 번 더 거쳐(÷1000÷10) 부동소수점 오차가 남을 수 있어(예: 2.1-1.9=0.20000000000000018) 소수 첫째 자리로 한 번 더 반올림
     { n: `${errRate}%`, l: "오류 발생률(방문 대비)", delta: Math.round((errRate - prevErrRate) * 10) / 10, deltaUnit: "%p", kind: "bad" },
   ];
@@ -219,6 +234,13 @@ function trendHtml(curRows, curStart) {
   return `<div class="chart-wrap">${chart.svg}</div>`;
 }
 
+function exportHtml(totals) {
+  const data = exportBreakdown(totals);
+  if (!data.some(d => d.value > 0)) return `<p class="small muted">아직 내보내기 기록이 없습니다.</p>`;
+  const chart = hbar(data, { title: "내보내기 형식별 — 보고서(HWPX·PDF)·발표자료(PPTX·HTML·PDF)", unit: "건", theme: resolvedTheme(), width: 640, labelWidth: 170 });
+  return `<div class="chart-wrap">${chart.svg}</div>`;
+}
+
 function funnelHtml(totals) {
   const steps = funnelSteps(totals);
   if (!steps.some(d => d.value > 0)) return `<p class="small muted">아직 단계별 방문 기록이 없습니다.</p>`;
@@ -230,16 +252,17 @@ function funnelHtml(totals) {
   return `<div class="chart-wrap">${chart.svg}</div>${drop ? `<p class="small warn-text">${icon("alert", 13)} 가장 많이 이탈하는 구간: ‘${esc(drop.from)}’ → ‘${esc(drop.to)}’(${drop.pct}%만 이어감)</p>` : ""}`;
 }
 
-// 아래 "시간대·기관·경로·기기" 묶음은 전부 2열 그리드에 나란히 들어간다 — 같은 폭(GRID_W)으로 그려야
+// 아래 "시간대·접속 경로·기기·브라우저" 묶음은 전부 2열 그리드에 나란히 들어간다 — 같은 폭(GRID_W)으로 그려야
 // 칸마다 막대 눈금 간격(스케일)이 시각적으로 맞아 보인다(하나는 넓고 하나는 좁으면 눈대중 비교가 어려워짐).
+// 기관명·샘플 파일명처럼 길어질 수 있는 라벨은 이 폭에 넣으면 줄바꿈이 막대와 겹쳐 보여 따로(전체 폭) 그린다.
 const GRID_W = 320;
 const gridCell = html => `<div class="chart-grid-cell">${html}</div>`;
 
 function orgHtml(rows) {
   if (!rows.length) return "";
   const data = rows.map(r => ({ label: r.org, value: Number(r.distinct_sessions) || 0 }));
-  const chart = hbar(data, { title: "기관별 방문 세션 — 상위 10", unit: "회", theme: resolvedTheme(), width: GRID_W, labelWidth: 110 });
-  return gridCell(`<div class="chart-wrap">${chart.svg}</div><p class="small muted">기관·부서명을 입력하지 않으면 "(미상)"으로 묶입니다.</p>`);
+  const chart = hbar(data, { title: "기관별 방문 세션 — 상위 10", unit: "회", theme: resolvedTheme(), width: 640, labelWidth: 200 });
+  return `<div class="chart-wrap">${chart.svg}</div><p class="small muted">기관·부서명을 입력하지 않으면 "(미상)"으로 묶입니다.</p>`;
 }
 
 function srcHtml(rows) {
@@ -279,15 +302,15 @@ function migrationHint(migration) {
 }
 
 function sampleHtml() {
-  if (sampleMissing) return gridCell(`<b>샘플 인기도</b>${migrationHint("0007_stats_v2.sql")}`);
+  if (sampleMissing) return `<b>샘플 인기도</b>${migrationHint("0007_stats_v2.sql")}`;
   if (!sampleRows?.length) return "";
   const data = sampleRows.map(r => ({ label: r.file, value: Number(r.distinct_sessions) || 0 }));
-  const chart = hbar(data, { title: "‘샘플로 체험하기’ 클릭 순위", unit: "회", theme: resolvedTheme(), width: GRID_W, labelWidth: 150 });
-  return gridCell(`<div class="chart-wrap">${chart.svg}</div>`);
+  const chart = hbar(data, { title: "‘샘플로 체험하기’ 클릭 순위", unit: "회", theme: resolvedTheme(), width: 640, labelWidth: 260 });
+  return `<div class="chart-wrap">${chart.svg}</div>`;
 }
 
 function versionHtml() {
-  if (versionMissing) return `<h3>앱 버전 분포</h3>${migrationHint("0007_stats_v2.sql")}`;
+  if (versionMissing) return `<h3 class="admin-h3">앱 버전 분포</h3>${migrationHint("0007_stats_v2.sql")}`;
   if (!versionRows?.length) return "";
   const total = versionRows.reduce((s, r) => s + (Number(r.distinct_sessions) || 0), 0) || 1;
   const rows = versionRows.slice(0, 8).map(r => {
@@ -295,7 +318,7 @@ function versionHtml() {
     const pct = Math.round((sessions / total) * 1000) / 10;
     return `<tr><td>${esc(r.version)}</td><td class="c">${sessions.toLocaleString()}</td><td class="c">${pct}%</td><td>${esc(new Date(r.last_seen).toLocaleString("ko-KR"))}</td></tr>`;
   }).join("");
-  return `<h3>앱 버전 분포 <span class="small muted">— 배포 직후 이전 버전 캐시가 남아 있는지 확인(최근 8개)</span></h3>
+  return `<h3 class="admin-h3">앱 버전 분포 <span class="small muted">— 배포 직후 이전 버전 캐시가 남아 있는지 확인(최근 8개)</span></h3>
     <div class="tblwrap"><table class="tbl nowrap-cells"><tr><th>버전</th><th class="c">방문 세션</th><th class="c">비율</th><th>마지막 접속</th></tr>${rows}</table></div>`;
 }
 
@@ -330,23 +353,26 @@ export function render() {
     <p class="small muted" style="margin:0 0 12px">설문 데이터·IP·리퍼러는 포함되지 않음 · 기준 시각 ${esc(new Date().toLocaleString("ko-KR"))}</p>
     ${tilesHtml(kpiTiles(totals, prevTotals))}
     ${trendHtml(curRows, curStart)}
-    <h3 style="margin-top:22px">단계별 도달</h3>
+    <h3 class="admin-h3">내보내기 형식별 <span class="small muted">— HWPX·PPTX·HTML·PDF 중 실제로 무엇을 받아가는지</span></h3>
+    ${exportHtml(totals)}
+    <h3 class="admin-h3">단계별 도달</h3>
     ${funnelHtml(totals)}
-    <h3 style="margin-top:22px">시간대·기관·경로·기기</h3>
+    <h3 class="admin-h3">시간대·접속 경로·기기·브라우저</h3>
     <div class="chart-grid-2col">
       ${hourHtml(hourRows || [])}
-      ${orgHtml(orgRows || [])}
       ${srcHtml(srcRows || [])}
       ${deviceHtml()}
       ${browserHtml()}
-      ${sampleHtml()}
     </div>
+    <h3 class="admin-h3">기관·콘텐츠 인기도</h3>
+    ${orgHtml(orgRows || [])}
+    ${sampleHtml()}
     ${versionHtml()}
     <div class="row gap" style="margin:14px 0">
       <button class="btn sm danger" data-act="admin-stats-cleanup">90일 지난 원본 이벤트 정리</button>
     </div>
     ${detailHtml(curRows)}
-    <h3 style="margin-top:22px">최근 관리자 접속</h3>
+    <h3 class="admin-h3">최근 관리자 접속 <span class="small muted">— 최근 20건</span></h3>
     <div class="tblwrap"><table class="tbl">
       <tr><th>계정</th><th>동작</th><th>시각</th></tr>
       ${(logins || []).length ? logins.map(l => `<tr><td>${esc(l.name)}</td><td>${l.event === "login" ? "로그인" : "로그아웃"}</td><td>${esc(new Date(l.created_at).toLocaleString("ko-KR"))}</td></tr>`).join("") : `<tr><td colspan="3" class="muted">기록 없음</td></tr>`}
