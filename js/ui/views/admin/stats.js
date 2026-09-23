@@ -13,6 +13,8 @@ import { icon } from "../../icons.js";
 import { hbar, trendLine, vbar } from "../../../charts/svg.js";
 import { resolvedTheme } from "../../theme.js";
 import { isMissingTableError } from "./flags.js";
+import { operationalKpis, operationalFunnel, distributionKpis, csvForStats } from "./stats-advanced.js";
+import { isAdminPreview } from "../../../admin/flags-client.js";
 
 const FUNNEL = [
   { view: "load", label: "1 불러오기" },
@@ -27,6 +29,12 @@ const DETAIL_PAGE = 50; // "원본 일별 데이터" 한 번에 보여주는 행
 const DAY_MS = 86400000;
 const fmtDay = d => d.toISOString().slice(0, 10);
 const parseDay = s => new Date(`${s}T00:00:00Z`);
+export function customPeriodWindow(from, to) {
+  const start = parseDay(from), end = parseDay(to);
+  if (!from || !to || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return null;
+  const days = Math.max(1, Math.round((end - start) / DAY_MS) + 1);
+  return { curStart: from, prevStart: fmtDay(new Date(start.getTime() - days * DAY_MS)), fetchFrom: fmtDay(new Date(start.getTime() - days * DAY_MS)), curEnd: to };
+}
 
 // 원본 표의 view·event 코드는 개발자에게는 익숙해도 처음 보는 관리자에게는 뜻을 알기 어렵다 —
 // track_events() SQL(allowed_views·allowed_events)에 있는 코드를 전부 담아 코드와 뜻을 나란히 보여준다.
@@ -155,12 +163,13 @@ export function dailyVisitTrend(curRows, curStartDay) {
 
 // ─────────────────────────── 상태 · 불러오기 ───────────────────────────
 
-let loading = false, error = "", period = 30, loaded = false;
+let loading = false, error = "", period = 30, customFrom = "", customTo = "", loaded = false;
 let curRows = null, prevRows = null; // usage_daily_counts, 기간별로 나눔
 let orgRows = null, srcRows = null, hourRows = null, logins = null;
 let sampleRows = null, sampleMissing = false;
 let versionRows = null, versionMissing = false;
 let deviceRows = null, browserRows = null, deviceBrowserMissing = false;
+let actionRows = [];
 let detailShown = DETAIL_PAGE; // "원본 일별 데이터" 접이식이 한 번에 그리는 행 수(무한정 길어지지 않도록) — "더 보기"로 늘어남
 let detailOpen = false; // 원본 표를 펼쳤는지 — render()가 매번 <details>를 새로 찍어내므로(다른 조작으로 refresh될 때) 이 상태로 열림을 기억해 두지 않으면 "더 보기"를 눌러도 표가 도로 접힘
 if (typeof document !== "undefined") {
@@ -174,9 +183,9 @@ async function load() {
   const s = getSession();
   if (!s) return;
   loading = true; error = ""; refresh();
-  const { fetchFrom, curStart } = periodWindow(period);
+  const { fetchFrom, curStart } = customPeriodWindow(customFrom, customTo) || periodWindow(period);
   const tok = { token: s.access_token };
-  const [daily, orgs, srcs, hours, logRows, profileRows, samples, versions, devices, browsers] = await Promise.all([
+  const [daily, orgs, srcs, hours, logRows, profileRows, samples, versions, devices, browsers, actions] = await Promise.all([
     loadOne(() => restRequest(`/usage_daily_counts?day=gte.${fetchFrom}&order=day.asc&limit=5000`, tok)),
     loadOne(() => restRequest("/usage_org_counts?limit=10", tok)),
     loadOne(() => restRequest("/usage_src_counts?limit=10", tok)),
@@ -187,6 +196,7 @@ async function load() {
     loadOne(() => restRequest("/usage_version_counts?limit=10", tok)),
     loadOne(() => restRequest("/usage_device_counts?limit=10", tok)),
     loadOne(() => restRequest("/usage_browser_counts?limit=10", tok)),
+    loadOne(() => restRequest(`/usage_action_counts?day=gte.${fetchFrom}&order=day.asc&limit=5000`, tok)),
   ]);
   const val = (r, fallback = []) => (r.ok ? r.v ?? fallback : fallback);
   if (!daily.ok) { error = daily.e?.message || "불러오지 못했습니다"; loading = false; refresh(); return; }
@@ -201,6 +211,7 @@ async function load() {
   versionMissing = !versions.ok && isMissingTableError(versions.e?.message);
   deviceRows = devices.ok ? devices.v || [] : null;
   browserRows = browsers.ok ? browsers.v || [] : null;
+  actionRows = actions.ok ? actions.v || [] : [];
   deviceBrowserMissing = (!devices.ok && isMissingTableError(devices.e?.message)) || (!browsers.ok && isMissingTableError(browsers.e?.message));
   detailShown = DETAIL_PAGE;
   loading = false; refresh();
@@ -338,20 +349,34 @@ function detailHtml(rows) {
   </details>`;
 }
 
+function advancedHtml(rows, prevRows) {
+  const tiles = [...operationalKpis([...rows, ...actionRows], prevRows || []), ...distributionKpis(orgRows || [], versionRows || [], "5.47.0")];
+  const funnel = operationalFunnel([...rows, ...actionRows]);
+  const fmt = t => `${Number(t.value || 0).toLocaleString()}${t.unit || ""}`;
+  return `<h3 class="admin-h3">운영 KPI ${isAdminPreview("operationalUsageStats") ? '<span class="badge info">관리자 미리보기</span>' : ""} <span class="small muted">현재 기간 · 익명 세션/이벤트 기준</span></h3>
+    <div class="stat-tiles">${tiles.map(t => `<div class="stat-tile"><div class="n">${esc(fmt(t))}</div><div class="l">${esc(t.label)}</div><div class="small muted">${t.delta === null ? "비교 데이터 없음" : `전기 대비 ${t.delta > 0 ? "+" : ""}${t.delta}%`}</div></div>`).join("")}</div>
+    <h4>운영 행동 퍼널</h4><div class="tblwrap"><table class="tbl"><tr><th>단계</th><th class="c">세션</th><th class="c">전 단계 전환율</th></tr>${funnel.map(x => `<tr><td>${esc(x.label)}</td><td class="c">${x.value.toLocaleString()}</td><td class="c">${x.rate === null ? "—" : `${x.rate}%`}</td></tr>`).join("")}</table></div>
+    <h4>오류 상세</h4><div class="tblwrap"><table class="tbl"><tr><th>화면</th><th>이벤트</th><th class="c">건수</th></tr>${actionRows.filter(r => ["js_error", "file_load_error", "export_error"].includes(r.event)).slice(0, 20).map(r => `<tr><td>${esc(r.view)}</td><td>${esc(r.event)}</td><td class="c">${Number(r.count || 0).toLocaleString()}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">오류 기록 없음</td></tr>'}</table></div>
+    <div class="row gap" style="margin:14px 0"><button class="btn sm" data-act="admin-stats-csv">현재 통계 CSV 다운로드</button></div>`;
+}
+
 export function render() {
   if (error) return `<p class="hint bad" role="alert">${esc(error)}</p><button class="btn sm" data-act="admin-stats-reload">다시 시도</button>`;
   if (!curRows) return `<p class="muted">${loading ? "불러오는 중…" : ""}</p>`;
   const totals = totalsBy(curRows), prevTotals = totalsBy(prevRows || []);
-  const { curStart } = periodWindow(period);
+  const { curStart } = customPeriodWindow(customFrom, customTo) || periodWindow(period);
   return `
     <div class="row gap wrap" style="justify-content:space-between;align-items:center;margin-bottom:10px">
       <div class="seg-filter" role="group" aria-label="기간 선택" style="margin:0">
         ${PERIODS.map(d => `<button type="button" class="seg-btn${d === period ? " on" : ""}" data-act="admin-stats-period" data-days="${d}">최근 ${d}일</button>`).join("")}
       </div>
+      <label class="small">시작일 <input type="date" data-change="admin-stats-custom-date" data-date="from" value="${esc(customFrom)}"></label>
+      <label class="small">종료일 <input type="date" data-change="admin-stats-custom-date" data-date="to" value="${esc(customTo)}"></label>
       <button class="btn sm" data-act="admin-stats-reload">${icon("history", 14)}새로고침${loading ? " · 불러오는 중" : ""}</button>
     </div>
     <p class="small muted" style="margin:0 0 12px">설문 데이터·IP·리퍼러는 포함되지 않음 · 기준 시각 ${esc(new Date().toLocaleString("ko-KR"))}</p>
     ${tilesHtml(kpiTiles(totals, prevTotals))}
+    ${advancedHtml(curRows, prevRows)}
     ${trendHtml(curRows, curStart)}
     <h3 class="admin-h3">내보내기 형식별 <span class="small muted">— HWPX·PPTX·HTML·PDF 중 실제로 무엇을 받아가는지</span></h3>
     ${exportHtml(totals)}
@@ -382,7 +407,14 @@ export function render() {
 export const actions = {
   "admin-stats-reload": () => { loaded = false; curRows = null; load(); },
   "admin-stats-period": el => { period = Number(el.dataset.days) || 30; loaded = false; curRows = null; load(); },
+  "admin-stats-custom-date": el => { if (el.dataset.date === "from") customFrom = el.value; else customTo = el.value; if (customPeriodWindow(customFrom, customTo)) { loaded = false; curRows = null; load(); } },
   "admin-stats-detail-more": () => { detailShown += DETAIL_PAGE; detailOpen = true; refresh(); },
+  "admin-stats-csv": () => {
+    const csv = csvForStats(curRows || []);
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `usage-stats-${period}d.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  },
   "admin-stats-cleanup": async () => {
     const s = getSession();
     if (!s) return;

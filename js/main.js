@@ -302,6 +302,15 @@ document.addEventListener("survey:exported", e => {
   else if (kind === "present-html") trackEvent("present", "export_html");
   else if (kind === "pdf") trackEvent("report", "export_pdf");
   else if (kind === "present-pdf") trackEvent("present", "export_pdf");
+  trackEvent(kind.startsWith("present") ? "present" : "report", kind.startsWith("present") ? "present_complete" : "report_complete");
+});
+document.addEventListener("survey:export-start", e => {
+  const kind = e.detail?.kind || "";
+  trackEvent(kind.startsWith("present") ? "present" : "report", kind.startsWith("present") ? "present_started" : "report_started");
+});
+document.addEventListener("survey:export-error", e => {
+  const kind = e.detail?.kind || "";
+  trackEvent(kind.startsWith("present") ? "present" : "report", "export_error", { code: "export_failed" });
 });
 
 // 예상하지 못한 오류도 사용자에게 알림 (화면이 조용히 멈추지 않도록)

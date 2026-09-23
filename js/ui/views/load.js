@@ -156,11 +156,13 @@ async function openBytes(bytes, fileName) {
     const note = loadDataset(ds, state.pendingProject || null);
     state.pendingProject = null;
     const cb = state.codebook;
+    trackEvent("load", "file_load");
     toast(`${fileName}: 응답 시트 ${cb.responseSheets.length}개, 열 ${cb.columns.length}개 인식${note ? ` · ${note}` : ""}${state.businessFound?.business || state.businessFound?.kpi ? " · 사업정보/성과지표 시트 반영" : ""}`, "ok", 3000);
     document.dispatchEvent(new CustomEvent("survey:loaded", { detail: { fileName } }));
     go("setup");
   } catch (e) {
     console.error(e);
+    trackEvent("load", "file_load_error", { code: e?.code || "parse_error" });
     toast(`파일을 읽지 못했습니다: ${e.message}`, "bad", 6000);
   } finally { busy(false); }
 }

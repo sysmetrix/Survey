@@ -17,6 +17,14 @@ const ALLOW = {
   export_html: [],
   export_pdf: [],
   sample_load: ["file"],
+  file_load: [],
+  file_load_error: ["code"],
+  analysis_complete: [],
+  report_started: [],
+  report_complete: [],
+  present_started: [],
+  present_complete: [],
+  export_error: ["code"],
   js_error: [],
 };
 

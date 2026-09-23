@@ -1,7 +1,7 @@
 // 관리자 '사용 통계' 탭 — 순수 계산 함수(기간 분리·증감률·퍼널 전환율·일별 추이)
 import test from "node:test";
 import assert from "node:assert/strict";
-import { periodWindow, splitByPeriod, totalsBy, deltaPct, kpiTiles, exportBreakdown, funnelSteps, biggestDropStep, dailyVisitTrend } from "../../js/ui/views/admin/stats.js";
+import { periodWindow, customPeriodWindow, splitByPeriod, totalsBy, deltaPct, kpiTiles, exportBreakdown, funnelSteps, biggestDropStep, dailyVisitTrend } from "../../js/ui/views/admin/stats.js";
 
 test("periodWindow: 이번 기간·직전 기간 시작일을 오늘 기준으로 계산", () => {
   const today = new Date("2026-09-30T15:00:00Z");
@@ -9,6 +9,11 @@ test("periodWindow: 이번 기간·직전 기간 시작일을 오늘 기준으�
   assert.equal(w.curStart, "2026-09-01"); // 오늘 포함 30일 전
   assert.equal(w.prevStart, "2026-08-02"); // 그 직전 30일
   assert.equal(w.fetchFrom, w.prevStart);
+});
+
+test("customPeriodWindow: 사용자 지정 기간과 동일 길이의 비교 기간을 계산", () => {
+  const w = customPeriodWindow("2026-09-10", "2026-09-12");
+  assert.deepEqual(w, { curStart: "2026-09-10", curEnd: "2026-09-12", prevStart: "2026-09-07", fetchFrom: "2026-09-07" });
 });
 
 test("splitByPeriod: day 기준으로 이번/직전 기간 행을 정확히 나눔(경계 포함)", () => {

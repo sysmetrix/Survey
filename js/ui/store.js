@@ -14,6 +14,7 @@ import { DEFAULT_THRESHOLDS, cleanScoreBasis } from "../narrative/vocab.js";
 import { koDate } from "../core/util.js";
 import { safeCssColor } from "./present-edit-model.js";
 import { FONT_PRESETS, FONT_SIZES, LINE_SPACINGS, DEFAULT_FONT_PRESET, DEFAULT_BASE_SIZE, DEFAULT_LINE_SPACING, cleanFontName } from "../report/hwpx/fonts.js";
+import { trackEvent } from "../telemetry/track.js";
 
 const LS_KEY = "survey-v5-settings";
 function loadSettings() {
@@ -174,6 +175,7 @@ export function compute() {
   const lint = kpis.length || state.logicModel.goals.length ? lintEvaluation(state.logicModel, kpis, cb, analysis, state.settings.thresholds) : [];
   const blocksRaw = buildReport({ analysis, evaluation, lint, logicModel: state.logicModel, codebook: cb, settings: { ...state.settings, excludedCount }, survey });
   state.results = { survey, analysis, evaluation, lint, blocksRaw, straight, excludedCount, codebookWarnings: lintCodebook(cb), ms: Math.round(performance.now() - t0) };
+  trackEvent("dash", "analysis_complete");
     state.results.visibilityKey = visibilityKey;
     state.dirty = false;
   return state.results;
