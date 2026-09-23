@@ -17,11 +17,11 @@ import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redo
 import * as load from "./ui/views/load.js";
 import { RELEASE_TAP_COUNT, hasReleaseAccess, grantReleaseAccess } from "./admin/access.js";
 import { startGuide, syncGuide, offerFirstRun } from "./ui/tutorial.js";
-import { getSession, installIdleWatch } from "./auth/session.js";
+import { getSession, installIdleWatch, installTokenRefresh } from "./auth/session.js";
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 import { loadFeatureFlags } from "./admin/flags-client.js";
 
-export const APP_VERSION = "5.44.0";
+export const APP_VERSION = "5.44.1";
 // 첫 화면(load)만 곧바로 받아오고, 나머지 화면은 실제로 들어갈 때 받아옴 — 무거운 보고서·발표 편집기 코드가
 // 서비스워커 캐시도 없는 첫 접속에서부터 앱 시작을 늦추지 않도록(모션·기능은 그대로, 첫 로딩만 가벼워짐)
 const VIEW_LOADERS = {
@@ -361,5 +361,6 @@ installAutoFlush();
 // 관리자 미리보기 기능 플래그 — 실패해도 조용히 넘어가고(기본값 꺼짐), 늦게 도착하면 다시 그려 반영
 loadFeatureFlags().then(() => refresh());
 installIdleWatch(() => { toast("자리를 비운 동안 자동으로 로그아웃되었습니다", "info", 6000); refresh(); });
+installTokenRefresh(); // 관리자 화면에 오래 머물러도 로그인 세션(JWT)이 조용히 갱신되도록
 render();
 if (currentId !== "login" && currentId !== "admin") offerFirstRun(); // 관리자 화면에서는 일반 이용자용 가이드를 띄우지 않음
