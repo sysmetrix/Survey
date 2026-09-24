@@ -1,6 +1,6 @@
 // DB enabled만으로 미구현 기능을 켤 수 없다.
 export const FEATURE_STATUS = Object.freeze({
-  guidedKpiSetup: "preview",
+  guidedKpiSetup: "preview", referenceEvidence: "preview",
   operationalUsageStats: "preview",
   measurementQuality: "preview", surveyVersioning: "preview",
   ageSurveyTemplates: "planned", competencyProfile: "preview", standardComparisons: "preview",

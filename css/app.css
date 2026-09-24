@@ -584,6 +584,10 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .reference-application, .reference-caution { margin-top: 8px !important; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); }
 .reference-caution { color: var(--text-3) !important; }
 .reference-matrix { margin-top: 16px; }
+.reference-evidence { margin: 12px 0 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+.reference-evidence h3 { margin: 3px 0 9px; }
+.reference-evidence-list { display: grid; gap: 6px; }
+.reference-evidence-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface); }
 .benchmark-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 .benchmark-item { padding: 14px; border-left: 3px solid var(--brand); border-radius: var(--radius-sm); background: var(--surface-2); }
 .benchmark-item h3 { margin: 0 0 5px; font-size: 14px; }

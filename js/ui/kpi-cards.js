@@ -1,13 +1,14 @@
 import { esc, option } from "./util.js";
 import { METRICS } from "../evaluation/kpi.js";
 export const PURPOSES = { output: "운영 규모", experience: "참여 경험·만족", change: "역량·태도 변화", followup: "후속 실천" };
-export function kpiCards(kpis, results, targets) {
+export function kpiCards(kpis, results, targets, { evidenceOn = false } = {}) {
   return kpis.map((k, i) => {
     const r = results.find(x => x.id === k.id), metric = METRICS[k.metric] || METRICS.manual;
     const choices = targets.map(t => typeof t === "string" ? { value:t, label:t } : t);
     if (k.targetRef && !choices.some(t => t.value === k.targetRef)) choices.unshift({value:k.targetRef,label:`기존 연결: ${k.targetRef}`});
     const input = (field, label, numeric = false) => `<label class="field">${label}<input class="in" ${numeric ? 'type="number" step="any"' : ''} value="${esc(k[field] ?? '')}" data-change="kpi" data-i="${i}" data-field="${field}"></label>`;
     return `<article class="card"><div class="grid2">${input("name", "지표 이름")}${metric.kind === "manual" ? input("actual", "운영 기록의 실적", true) : `<label class="field">측정할 문항·영역<select class="in" data-change="kpi" data-i="${i}" data-field="targetRef">${option("", "선택해 주세요", !k.targetRef)}${choices.map(t => option(t.value, t.label, t.value === k.targetRef)).join("")}</select></label>`}${input("target", "목표값 (비우면 목표 없이 측정)", true)}${input("targetBasis", "목표 설정 근거 (선택)")}</div>
+      ${evidenceOn ? `<label class="field"><span>근거 레퍼런스</span><input class="in" value="${esc(k.evidenceRef || "")}" placeholder="예: OECD results framework" data-change="kpi" data-i="${i}" data-field="evidenceRef"></label>` : ""}
       <p>실적: <b>${Number.isFinite(r?.actualValue) ? r.actualValue.toFixed(2) : "아직 계산할 수 없음"}</b> ${esc(k.unit || metric.unit)} · ${esc(r?.judgment || "입력 중")}</p>
       ${r?.error ? `<p class="warn-text">${esc(r.error)}</p>` : ""}
       <p class="small muted">${esc(metric.formula || "담당자가 확인한 운영 기록을 입력합니다.")} ${r?.facts ? `· ${esc(r.facts)}` : ""}</p>

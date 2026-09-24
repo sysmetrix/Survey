@@ -12,6 +12,7 @@ import { _resetForTest as resetFlagsCache } from "../../../admin/flags-client.js
 const LABELS = {
   operationalUsageStats: { title: "관리자 운영 사용 통계", desc: "운영 KPI·행동 퍼널·오류 모니터링을 관리자 미리보기로 검증합니다.", where: "관리자 사용 통계 화면", example: "" },
   guidedKpiSetup: { title: "성과지표 간편 설정", desc: "목적 선택·카드 입력·목표 근거를 관리자 검증합니다.", where: "③ 성과지표", example: "" },
+  referenceEvidence: { title: "성과지표 근거 연결", desc: "성과지표마다 참고 레퍼런스와 적용 판단을 기록해 근거를 추적합니다.", where: "③ 성과지표·평가 레퍼런스", example: "" },
   smallSampleWarning: {
     title: "소표본·검정력 주의 문구",
     desc: "표본 수가 적을 때(사전·사후 n<30, 집단비교 n<10) 해석 주의 문구를 표시합니다.",
