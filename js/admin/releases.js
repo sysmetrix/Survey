@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.27", date: "2026-09-24", title: "선택 중 스크롤 위치 보존",
+    groups: {
+      "전 화면 공통": [
+        "같은 화면 안에서 탭·필터·문항·옵션을 선택하거나 설정을 바꿀 때, 페이지의 세로·가로 스크롤 위치를 그대로 유지합니다.",
+        "문항표·목록·가로 표처럼 독립 스크롤이 있는 영역도 위치를 함께 복원합니다. 단계 자체를 이동할 때만 새 화면 상단에서 시작합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.26", date: "2026-09-24", title: "학교 연계형 연령 구간 추가",
     groups: {
       "응답자 특성 비교": [

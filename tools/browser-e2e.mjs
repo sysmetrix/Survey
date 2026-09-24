@@ -98,10 +98,22 @@ try {
   await evaluate(`document.querySelector('[data-file="${SAMPLE}"]').click()`);
   await waitFor(`location.hash === '#/setup' && !!document.querySelector('.setup-workspace .column-workspace')`);
   await shot("2-setup");
+  // 같은 화면 안에서 설정 방식을 바꾸거나 문항을 선택해도 본문이 맨 위로 튀면 안 된다.
+  const setupScrollBefore = await evaluate(`(() => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    if (max < 40) throw new Error('스크롤 보존을 검증할 수 있을 만큼 데이터 설정 화면이 길지 않습니다 (' + max + 'px)');
+    window.scrollTo(0, Math.min(240, max));
+    return scrollY;
+  })()`);
   // 전체 표 편집은 페이지가 아닌 표 본문만 스크롤되어야 한다. 긴 문항 목록에서
   // 필터·다음 단계 버튼이 밀리거나, 스크롤 중 표 헤더/설정 버튼을 잃는 회귀를 막는다.
   await evaluate(`document.querySelector('[data-act="setup-mode"][data-mode="table"]').click()`);
   await waitFor(`!!document.querySelector('.setup-table-wrap .setup-grid')`);
+  await sleep(80);
+  const setupScrollAfterMode = await evaluate(`scrollY`);
+  if (Math.abs(setupScrollAfterMode - setupScrollBefore) > 2) {
+    throw new Error(`설정 방식 전환 뒤 본문 스크롤이 바뀌었습니다 (${setupScrollBefore}px → ${setupScrollAfterMode}px)`);
+  }
   const tableCheck = await evaluate(`(() => {
     const wrap = document.querySelector('.setup-table-wrap');
     // sticky 속성은 thead 컨테이너가 아니라 각 th 셀에 적용된다.
@@ -128,6 +140,10 @@ try {
   })()`);
   await waitFor(`!!document.querySelector('.setup-grid-detail-body input[data-change="col"]')`);
   await sleep(100);
+  const setupScrollAfterSelect = await evaluate(`scrollY`);
+  if (Math.abs(setupScrollAfterSelect - setupScrollBefore) > 2) {
+    throw new Error(`문항 선택 뒤 본문 스크롤이 바뀌었습니다 (${setupScrollBefore}px → ${setupScrollAfterSelect}px)`);
+  }
   const tableCenterDistance = await evaluate(`(() => {
     const key = ${JSON.stringify(selectedTableKey)};
     const wrap = document.querySelector('.setup-table-wrap');
@@ -143,7 +159,7 @@ try {
   await shot("2c-setup-table-scroll");
   await evaluate(`document.querySelector('[data-act="setup-mode"][data-mode="quick"]').click()`);
   await waitFor(`!!document.querySelector('.setup-workspace .column-workspace')`);
-  results.push(`전체 표: 본문 독립 스크롤 ${tableCheck.clientHeight}px/${tableCheck.scrollHeight}px, 고정 헤더·설정 패널 접근 OK`);
+  results.push(`전체 표: 본문 독립 스크롤 ${tableCheck.clientHeight}px/${tableCheck.scrollHeight}px, 고정 헤더·설정 패널 접근 OK, 본문 스크롤 ${setupScrollBefore}px 유지`);
   if (await evaluate(`!!document.querySelector('[data-act="toggle-labels"]')`)) {
     await evaluate(`document.querySelector('[data-act="toggle-labels"]').click()`);
     await waitFor(`!!document.querySelector('.labelpanel')`);

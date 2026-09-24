@@ -12,6 +12,7 @@ import { markupToHtml, htmlToMarkup } from "./ui/inline-edit.js";
 import { installScrollHints } from "./ui/scrollhint.js";
 import { installStickyThead } from "./ui/sticky-thead.js";
 import { createPressGuard } from "./ui/press-guard.js";
+import { shouldRestoreViewport, captureScrollState, restoreViewport } from "./ui/scroll-preservation.js";
 import { parseDeckKey } from "./present/edit/keys.js";
 import { initHistory, trackChange, resetTracking, saveSnapshot, undoChange, redoChange, canUndo, canRedo, resumeProject, cache as historyCache } from "./ui/history/manager.js";
 import * as load from "./ui/views/load.js";
@@ -21,7 +22,7 @@ import { getSession, installIdleWatch, installTokenRefresh } from "./auth/sessio
 import { initTelemetry, trackEvent, installAutoFlush } from "./telemetry/track.js";
 import { loadFeatureFlags } from "./admin/flags-client.js";
 
-export const APP_VERSION = "5.47.26";
+export const APP_VERSION = "5.47.27";
 // 첫 화면(load)만 곧바로 받아오고, 나머지 화면은 실제로 들어갈 때 받아옴 — 무거운 보고서·발표 편집기 코드가
 // 서비스워커 캐시도 없는 첫 접속에서부터 앱 시작을 늦추지 않도록(모션·기능은 그대로, 첫 로딩만 가벼워짐)
 const VIEW_LOADERS = {
@@ -123,7 +124,10 @@ function renderWith(mod, id, sub, keepScroll) {
   if (changed) current.unmount?.();
   current = mod; currentId = id;
   document.body.classList.toggle("presenting", id === "present");
-  const y = window.scrollY;
+  const preserveViewport = shouldRestoreViewport({ viewChanged: changed, keepScroll });
+  const scrollState = preserveViewport
+    ? { top: window.scrollY, left: window.scrollX, nested: captureScrollState(document.getElementById("main")) }
+    : null;
   renderChrome(id);
   const main = document.getElementById("main");
   try {
@@ -135,7 +139,7 @@ function renderWith(mod, id, sub, keepScroll) {
   }
   syncGuide();
   if (changed) trackEvent(id, "view_enter");
-  if (keepScroll && !changed) window.scrollTo(0, y);
+  if (scrollState) restoreViewport({ ...scrollState, root: main });
   else if (changed) window.scrollTo(0, 0);
 }
 setRenderer(render);
