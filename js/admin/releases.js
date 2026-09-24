@@ -2,6 +2,16 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.18", date: "2026-09-24", title: "데이터 설정 작업 방식 재구성",
+    groups: {
+      "데이터 설정": [
+        "기본 화면을 문항 목록과 선택 편집 패널로 바꿔, 한 문항의 분석 설정을 접지 않고 확인하도록 했습니다.",
+        "여러 문항을 비교·수정하는 전체 표 편집을 별도 탭으로 복원하고, 고정 열과 설정 안내를 추가했습니다.",
+        "노드 화면은 ‘분석 연결 보기’로 분리해 문항의 원본·분석 역할·연결 대상을 확인할 때만 사용합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.17", date: "2026-09-24", title: "응답 품질 안내 문구 정정",
     groups: {
       "데이터 설정": [

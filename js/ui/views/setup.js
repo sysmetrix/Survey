@@ -194,6 +194,12 @@ export function render() {
     </tr>`);
   }).join("");
   const unmappedWarn = unmappedCols.length ? `<li>${levelBadge("error")} 점수로 바뀌지 않은 응답이 있는 문항 ${unmappedCols.length}개: ${unmappedCols.slice(0, 4).map(u => `${esc(u.c.label)}(${u.n}건)`).join(", ")}${unmappedCols.length > 4 ? " 등" : ""} — 아래 표의 <b>보기 점수</b>에서 문구별 점수를 지정하세요(지정 전에는 무응답으로 처리).</li>` : "";
+  // 빠른 설정과 별개로, 여러 열을 비교·수정하는 표 편집 기능을 보존한다.
+  const tableWorkspace = `<section class="setup-table-workspace" aria-label="전체 표 편집">
+    <div class="setup-workspace-note"><div><b>전체 표 편집</b><span>여러 문항의 기본 값을 한눈에 비교하고 바로 수정합니다. 왼쪽 두 열은 스크롤해도 고정됩니다.</span></div><span class="badge info">${cb.columns.length}개 문항</span></div>
+    <div class="tbl-wrap setup-table-wrap"><table class="tbl setup"><thead><tr><th>#</th><th>원래 열 이름 · 응답 예</th><th>표시 이름</th><th>분석 역할 · 채점</th><th>척도</th><th>역문항</th><th>같이 묶을 주제</th><th>시점</th><th>대표 만족</th><th></th></tr></thead><tbody>${colRows}</tbody></table></div>
+    <p class="setup-table-help">‘같이 묶을 주제’는 같은 주제를 묻는 척도 문항이 2개 이상일 때만 같은 이름을 입력합니다. 한 문항만 분석하면 비워 두세요.</p>
+  </section>`;
   const needsReview = c => (c.detected?.confidence ?? 1) < .7 || c.labelAmbiguous || c.pii || (["likert", "nps"].includes(c.role) && unmappedValues(c, rawColumn(state.dataset, c)).length > 0);
   const filters = [["all", "전체"], ["review", "확인 필요"], ["scale", "척도·NPS"], ["profile", "응답자 특성"], ["other", "기타"]];
   const matchesColumn = c => columnFilter === "all"
@@ -247,8 +253,11 @@ export function render() {
   })() : `<div class="empty-inline"><div><b>설정할 문항이 없습니다</b><p class="small muted">다른 필터를 선택해 주세요.</p></div></div>`;
   // 연결 구조 화면도 빠른 설정과 같은 말로 보여 줘 두 화면의 의미가 어긋나지 않게 한다.
   columnWorkspace = columnWorkspace
-    .replace("분석 영역<input", "같이 묶어 볼 주제 (선택)<input")
-    .replace('placeholder="영역 없음"', 'placeholder="예: 참여 경험"');
+    .replace('<div class="column-edit-grid">', '<div class="role-guide"><b>분석 역할은 결과에 이 열을 쓰는 방법입니다.</b><span>점수로 읽을 문항은 ‘척도 문항’, 대상별 차이를 볼 정보는 ‘응답자 특성’, 보고서에 쓰지 않을 열은 ‘분석 제외’를 고르세요.</span></div><div class="column-edit-grid">')
+    .replace("분석 영역<input", "같이 묶어 볼 주제 (선택)<small>같은 주제를 묻는 문항이 2개 이상일 때만 같은 이름을 입력합니다. 한 문항만 분석하면 비워 두세요.</small><input")
+    .replace('placeholder="영역 없음"', 'placeholder="예: 참여 경험"')
+    .replace("점수 방향을 반대로 계산", "부정 문항일 때만 선택합니다.")
+    .replace("전반 만족</b><small>대표 만족도 문항으로 사용", "대표 만족도 문항</b><small>전반 만족도를 보여 줄 문항으로 사용");
   const detailForBulk = c => {
     const scaled = ["likert", "nps"].includes(c.role);
     const unm = scaled ? unmappedValues(c, rawColumn(state.dataset, c)) : [];
@@ -338,8 +347,8 @@ export function render() {
     <div class="row between wrap"><h2>문항(열) 설정</h2>
       <span class="small muted">처음에는 빠른 설정에서 문항 역할을 확인하세요. 문항 간 연결을 검토할 때만 연결 구조를 사용합니다.${isFeatureOn("respondentRepresentativeness") && isAdminPreview("respondentRepresentativeness") ? ' · 응답자 특성 열의 모집단 비율은 <span class="badge muted">관리자 미리보기</span> 기능입니다' : ""}</span></div>
     <datalist id="domainList">${cb.domains.map(d => `<option value="${esc(d.name)}">`).join("")}</datalist>
-    <div class="setup-mode-tabs" role="tablist" aria-label="문항 설정 방식"><button class="setup-mode-tab${mappingMode === "quick" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "quick"}" data-act="setup-mode" data-mode="quick">빠른 설정</button><button class="setup-mode-tab${mappingMode === "map" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "map"}" data-act="setup-mode" data-mode="map">문항 연결 구조</button></div>
-    ${mappingMode === "map" ? `${questionMap}${columnWorkspace}` : bulkWorkspace}
+    <div class="setup-mode-tabs" role="tablist" aria-label="문항 설정 방식"><button class="setup-mode-tab${mappingMode === "quick" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "quick"}" data-act="setup-mode" data-mode="quick">빠른 설정</button><button class="setup-mode-tab${mappingMode === "table" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "table"}" data-act="setup-mode" data-mode="table">전체 표 편집</button><button class="setup-mode-tab${mappingMode === "map" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "map"}" data-act="setup-mode" data-mode="map">분석 연결 보기</button></div>
+    ${mappingMode === "map" ? `${questionMap}${columnWorkspace}` : mappingMode === "table" ? tableWorkspace : `<section class="setup-workspace" aria-label="빠른 설정"><div class="setup-workspace-note"><div><b>빠른 설정</b><span>왼쪽에서 문항을 고르고, 오른쪽에서 필요한 설정을 모두 확인·수정하세요. 확인이 필요한 문항부터 먼저 보입니다.</span></div><span class="badge ${visibleColumns.filter(needsReview).length ? "warn" : "ok"}">${visibleColumns.filter(needsReview).length ? `확인 필요 ${visibleColumns.filter(needsReview).length}개` : "모두 확인됨"}</span></div>${columnWorkspace}</section>`}
     <div class="row end gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button></div>
   </section>`;
 }
@@ -348,7 +357,7 @@ const colByKey = key => state.codebook.columns.find(x => x.key === key);
 
 export const actions = {
   ...scoreBasisActions,
-  "setup-mode": el => { if (["map", "quick"].includes(el.dataset.mode)) { mappingMode = el.dataset.mode; refresh(); } },
+  "setup-mode": el => { if (["map", "quick", "table"].includes(el.dataset.mode)) { mappingMode = el.dataset.mode; refresh(); } },
   "column-select": el => { if (state.codebook.columns.some(c => c.key === el.dataset.key)) selectedColumnKey = el.dataset.key; refresh(); },
   "column-filter": el => { if (["all", "review", "scale", "profile", "other"].includes(el.dataset.filter)) { columnFilter = el.dataset.filter; selectedColumnKey = ""; refresh(); } },
   "toggle-labels": el => { selectedColumnKey = el.dataset.key; expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },

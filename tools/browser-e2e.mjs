@@ -96,7 +96,7 @@ try {
   await shot("1-load");
 
   await evaluate(`document.querySelector('[data-file="${SAMPLE}"]').click()`);
-  await waitFor(`location.hash === '#/setup' && !!document.querySelector('.tbl.setup')`);
+  await waitFor(`location.hash === '#/setup' && !!document.querySelector('.setup-workspace .column-workspace')`);
   await shot("2-setup");
   if (await evaluate(`!!document.querySelector('[data-act="toggle-labels"]')`)) {
     await evaluate(`document.querySelector('[data-act="toggle-labels"]').click()`);
@@ -283,7 +283,7 @@ try {
   await waitFor(`document.readyState === 'complete' && !!document.querySelector('.sample')`, 20000);
   await waitFor(`!document.getElementById('net').hidden`, 5000);
   await evaluate(`document.querySelector('[data-file="${SAMPLE}"]').click()`);
-  await waitFor(`location.hash === '#/setup' && !!document.querySelector('.tbl.setup')`, 15000);
+  await waitFor(`location.hash === '#/setup' && !!document.querySelector('.setup-workspace .column-workspace')`, 15000);
   await shot("9-offline-setup");
   await cdp("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   offlinePhase = false;
