@@ -2,6 +2,7 @@
 import { isBlank } from "../core/util.js";
 import { normalizeLogicModel, KPI_STAGES } from "./logic-model.js";
 import { metricFromText } from "./kpi.js";
+import { normalizeEvidenceRef } from "./reference-evidence.js";
 
 export const ITEM_MAP = [
   [/^사업\s*명|프로그램\s*명/, "programName"], [/사업\s*기간|운영\s*기간|기간/, "period"], [/예산|사업비/, "budget"],
@@ -49,6 +50,8 @@ export function parseKpiSheet(sheet, logicModel) {
     id: col(/지표id|지표번호|^id$|번호/i), name: col(/지표명|성과지표$|지표$/), stage: col(/단계/), goal: col(/연계목표|목표명|추진목표/),
     method: col(/측정방법|측정방식|산출방식|설문지표/), target: col(/목표값|목표치|^목표$/), actual: col(/실적값|실적/),
     ref: col(/대상문항|문항|영역/), dir: col(/방향/), unit: col(/단위/), note: col(/산식|비고|측정도구/),
+    evidenceRef: col(/근거id|레퍼런스id|evidenceref/i), evidenceRationale: col(/근거적용사유|적용사유|evidencerationale/i),
+    evidenceReviewed: col(/원문검토|검토확인|evidencereviewed/i),
   };
   const goals = logicModel?.goals || [];
   return sheet.rows.map((r, i) => {
@@ -66,6 +69,9 @@ export function parseKpiSheet(sheet, logicModel) {
       target: num(get("target")), actual: num(get("actual")),
       direction: /하향|감소|낮을/.test(String(get("dir") ?? "")) ? "down" : "up",
       unit: String(get("unit") ?? "").trim(), note: String(get("note") ?? "").trim(),
+      evidenceRef: normalizeEvidenceRef(get("evidenceRef")),
+      evidenceRationale: String(get("evidenceRationale") ?? "").trim(),
+      evidenceReviewed: /^(예|y|yes|true|1|확인|완료)$/i.test(String(get("evidenceReviewed") ?? "").trim()),
     };
   }).filter(Boolean);
 }

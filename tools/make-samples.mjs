@@ -14,6 +14,19 @@ const pick = a => a[Math.floor(rnd() * a.length)];
 const norm = () => { const u = rnd() || 1e-9, v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 const lik = (mu, sd = 0.8, min = 1, max = 5) => Math.max(min, Math.min(max, Math.round(mu + norm() * sd)));
 
+const OUTPUT_EVIDENCE = ["oecd-results-framework", "활동 산출과 참여자 성과를 구분해 지표의 성과단계를 해석하는 데 적용", "예"];
+const PREPOST_EVIDENCE = ["kywa-measurement-tools", "동일 문항과 척도로 측정한 사전·사후 결과의 비교 가능성을 확인하는 데 적용", "예"];
+const RETRO_EVIDENCE = ["kywa-competency-guide", "청소년활동의 산출과 참여자 역량 변화를 구분하되 회고식 측정의 한계를 함께 해석하는 데 적용", "예"];
+const MATRIX_EVIDENCE = ["oecd-evaluation-matrix", "평가 질문인 만족도·추천 의향과 해당 설문 문항 및 산출 지표를 명시적으로 연결하는 데 적용", "예"];
+function applyEvidenceToKpiSheet(wb, assignments) {
+  const sheet = wb.Sheets["성과지표"];
+  if (!sheet) return;
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+  rows[0].push("근거ID", "근거 적용 사유", "원문 검토");
+  rows.slice(1).forEach(row => row.push(...(assignments[row[0]] || ["", "", ""])));
+  wb.Sheets["성과지표"] = XLSX.utils.aoa_to_sheet(rows);
+}
+
 const GOOD = ["진로 체험 활동이 재미있고 실제 직업을 알게 되어 도움이 되었어요", "강사 선생님이 친절하게 설명해 주셔서 이해가 잘 됐어요", "친구들과 팀 활동을 하면서 협력하는 방법을 배웠습니다", "내가 좋아하는 것이 무엇인지 생각해 보는 계기가 되었어요", "다양한 직업을 체험할 수 있어서 좋았습니다", "멘토님과 대화하면서 진로에 대한 자신감이 생겼어요", "간식도 맛있고 분위기가 편안했어요", "없음"];
 const WISH = ["활동 시간이 짧아서 아쉬웠고 더 길게 했으면 좋겠어요", "강의실이 좁고 에어컨이 약해서 더웠어요", "체험할 수 있는 직업 종류가 더 다양했으면 좋겠습니다", "신청 안내 문자를 좀 더 일찍 보내 주세요", "주말에도 프로그램이 있었으면 좋겠어요", "간식이 조금 더 많았으면 좋겠어요", "없습니다", "시설 화장실 청결 관리가 필요합니다"];
 
@@ -66,6 +79,7 @@ const WISH = ["활동 시간이 짧아서 아쉬웠고 더 길게 했으면 좋�
     ["K5", "진로 준비 향상자 비율", "중기성과", "진로 관심 및 자기 이해 향상", "향상자 비율", "진로 준비", 60, "", "상향", "%"],
     ["K6", "전반적 만족도(100점 환산)", "단기성과", "참여자 만족도 제고", "100점 환산", "전반적 만족도", 80, "", "상향", "점"],
   ]), "성과지표");
+  applyEvidenceToKpiSheet(wb, { K1: OUTPUT_EVIDENCE, K2: OUTPUT_EVIDENCE, K3: PREPOST_EVIDENCE, K4: PREPOST_EVIDENCE, K5: PREPOST_EVIDENCE });
   await writeFile("samples/2026_진로탐색_사전사후.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 }
 
@@ -127,6 +141,7 @@ const WISH = ["활동 시간이 짧아서 아쉬웠고 더 길게 했으면 좋�
     ["K5", "지역사회 관심 향상자 비율", "중기성과", "지역사회 관심 제고 및 참여 만족도 확보", "향상자 비율", "지역사회에 대한 관심", 50, "", "상향", "%"],
     ["K6", "전반적 만족도(100점 환산)", "단기성과", "지역사회 관심 제고 및 참여 만족도 확보", "100점 환산", "전반적 만족도", 85, "", "상향", "점"],
   ]), "성과지표");
+  applyEvidenceToKpiSheet(wb, { K1: OUTPUT_EVIDENCE, K2: OUTPUT_EVIDENCE, K3: RETRO_EVIDENCE, K4: RETRO_EVIDENCE, K5: RETRO_EVIDENCE });
   await writeFile("samples/2026_참여위원회_회고식.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 }
 // ───── 4) 네이버폼 원본 형식 (제목 행, 응답일시, 긴 문항, 문자 척도, 복수응답, 이모지 의견) ─────
@@ -189,6 +204,7 @@ const WISH = ["활동 시간이 짧아서 아쉬웠고 더 길게 했으면 좋�
     ["K5", "공동체 의식 향상자 비율", "중기성과", "공동체 의식 함양 및 참여 만족도 제고", "향상자 비율", "공동체 의식", 55, "", "상향", "%"],
     ["K6", "전반적 만족도(100점 환산)", "단기성과", "공동체 의식 함양 및 참여 만족도 제고", "100점 환산", "전반적 만족도", 85, "", "상향", "점"],
   ]), "성과지표");
+  applyEvidenceToKpiSheet(wb, { K1: OUTPUT_EVIDENCE, K2: OUTPUT_EVIDENCE, K3: PREPOST_EVIDENCE, K4: PREPOST_EVIDENCE, K5: PREPOST_EVIDENCE });
   await writeFile("samples/2026_리더십캠프_사전사후_한시트.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 }
 
@@ -229,6 +245,7 @@ const WISH = ["활동 시간이 짧아서 아쉬웠고 더 길게 했으면 좋�
     ["K4", "협력 기회 충분도(100점 환산)", "단기성과", "활동 흥미도와 협력 경험 확대", "100점 환산", "다른 친구들과 협력할 기회가 충분했다", 78, "", "상향", "점"],
     ["K5", "순추천지수(NPS)", "단기성과", "프로그램 추천 의향(NPS) 제고", "NPS", "이 활동을 친구에게 추천할 의향(0~10점)", 30, "", "상향", "점"],
   ]), "성과지표");
+  applyEvidenceToKpiSheet(wb, { K1: OUTPUT_EVIDENCE, K2: OUTPUT_EVIDENCE, K3: MATRIX_EVIDENCE, K4: MATRIX_EVIDENCE, K5: MATRIX_EVIDENCE });
   await writeFile("samples/2026_생태탐험_7점척도_NPS.xlsx", XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
 }
 console.log("samples/ 6종 생성 완료");

@@ -60,9 +60,11 @@ test("사업정보·성과지표 시트 파싱", () => {
     ["논리모형", "투입", "예산 1,000만원\n강사 5명", null], ["논리모형", "활동", "진로캠프 4회", null], ["논리모형", "단기성과", "진로 관심 향상", null],
   ] });
   assert.equal(lm.programName, "2026 진로탐색 캠프"); assert.equal(lm.goals.length, 2); assert.deepEqual(lm.inputs, ["예산 1,000만원", "강사 5명"]);
-  const kp = parseKpiSheet({ headers: ["지표ID", "지표명", "성과단계", "연계목표", "측정방법", "대상문항", "목표값", "실적값", "방향", "단위"], rows: [
-    ["K1", "참여 인원", "산출", "진로 관심 향상", "직접입력", null, "200", "230", "상향", "명"],
-    ["K2", "진로관심 변화", "단기성과", "G1", "사전사후 변화량", "진로관심", 0.3, null, null, "점"],
+  const kp = parseKpiSheet({ headers: ["지표ID", "지표명", "성과단계", "연계목표", "측정방법", "대상문항", "목표값", "실적값", "방향", "단위", "근거ID", "근거 적용 사유", "원문 검토"], rows: [
+    ["K1", "참여 인원", "산출", "진로 관심 향상", "직접입력", null, "200", "230", "상향", "명", "oecd-results-framework", "산출과 성과를 구분해 해석하기 위해 적용", "예"],
+    ["K2", "진로관심 변화", "단기성과", "G1", "사전사후 변화량", "진로관심", 0.3, null, null, "점", "unknown", "무효 근거", "아니오"],
   ] }, lm);
   assert.equal(kp[0].goalId, "G1"); assert.equal(kp[0].target, 200); assert.equal(kp[1].metric, "prepostDiff");
+  assert.equal(kp[0].evidenceRef, "oecd-results-framework"); assert.equal(kp[0].evidenceReviewed, true);
+  assert.equal(kp[1].evidenceRef, ""); assert.equal(kp[1].evidenceReviewed, false);
 });

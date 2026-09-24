@@ -2,6 +2,16 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.3", date: "2026-09-24", title: "샘플 근거 연결",
+    groups: {
+      "샘플·근거": [
+        "4개 XLSX 샘플의 성과지표에 측정 방식과 맞는 검증된 근거 ID, 적용 사유, 원문 검토 상태를 포함했습니다.",
+        "산출·사전사후·회고식·만족도/NPS를 서로 다른 근거로 구분하고, 근거가 약한 단순 만족도 지표와 CSV 샘플에는 연결을 강제하지 않습니다.",
+        "업로드 시 근거 열을 읽어 고정 카탈로그 ID와 검토 상태를 검증하고 분석·보고서의 근거 추적 정보로 이어집니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.2", date: "2026-09-24", title: "근거 적용 검증 강화",
     groups: {
       "검증 통제": [
