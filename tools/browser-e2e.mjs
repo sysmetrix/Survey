@@ -119,9 +119,27 @@ try {
     if (Math.abs(after - before) > 2) throw new Error('전체 표 헤더가 본문 스크롤 중 고정되지 않습니다');
     return { clientHeight: wrap.clientHeight, scrollHeight: wrap.scrollHeight, scrollTop: wrap.scrollTop };
   })()`);
-  await evaluate(`document.querySelector('.setup-table-wrap [data-act="column-select"]').click()`);
+  const selectedTableKey = await evaluate(`(() => {
+    const buttons = [...document.querySelectorAll('.setup-table-wrap [data-act="column-select"]')];
+    const target = buttons[Math.min(10, buttons.length - 1)];
+    if (!target) throw new Error('전체 표에서 설정할 문항이 없습니다');
+    target.click();
+    return target.dataset.key;
+  })()`);
   await waitFor(`!!document.querySelector('.setup-grid-detail-body input[data-change="col"]')`);
-  await evaluate(`document.querySelector('.setup-grid-detail-body').scrollIntoView({ block: 'nearest' })`);
+  await sleep(100);
+  const tableCenterDistance = await evaluate(`(() => {
+    const key = ${JSON.stringify(selectedTableKey)};
+    const wrap = document.querySelector('.setup-table-wrap');
+    const button = [...wrap.querySelectorAll('[data-act="column-select"]')].find(el => el.dataset.key === key);
+    const row = button?.closest('tr');
+    if (!row) throw new Error('선택한 문항 행을 찾을 수 없습니다');
+    const wrapBox = wrap.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    const distance = Math.abs((rowBox.top + rowBox.height / 2) - (wrapBox.top + wrap.clientHeight / 2));
+    if (distance > Math.max(14, wrap.clientHeight * .15)) throw new Error('설정한 문항이 표 본문 중앙에 오지 않습니다 (' + Math.round(distance) + 'px)');
+    return Math.round(distance);
+  })()`);
   await shot("2c-setup-table-scroll");
   await evaluate(`document.querySelector('[data-act="setup-mode"][data-mode="quick"]').click()`);
   await waitFor(`!!document.querySelector('.setup-workspace .column-workspace')`);

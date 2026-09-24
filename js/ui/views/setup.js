@@ -20,6 +20,24 @@ let columnFilter = "all";
 let selectedColumnKey = "";
 let mappingMode = "quick";
 
+/** 전체 표에서 설정을 열 때, 새로 그린 표의 선택 행을 본문 중앙에 유지한다.
+ * 페이지 자체를 이동시키지 않고 표의 독립 스크롤 영역만 움직인다. */
+function centerSelectedTableRow(key) {
+  if (mappingMode !== "table" || typeof document === "undefined") return;
+  const schedule = typeof requestAnimationFrame === "function" ? requestAnimationFrame : fn => setTimeout(fn, 0);
+  schedule(() => schedule(() => {
+    const wrap = document.querySelector(".setup-table-wrap");
+    const button = [...(wrap?.querySelectorAll('[data-act="column-select"]') || [])]
+      .find(el => el.dataset.key === key);
+    const row = button?.closest("tr");
+    if (!wrap || !row) return;
+    const wrapBox = wrap.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    const target = wrap.scrollTop + rowBox.top - wrapBox.top - (wrap.clientHeight - rowBox.height) / 2;
+    wrap.scrollTop = Math.max(0, Math.min(target, wrap.scrollHeight - wrap.clientHeight));
+  }));
+}
+
 /** 열의 문자 응답(숫자 아닌 값)과 응답 수 */
 function textResponses(col) {
   const counts = new Map();
@@ -367,7 +385,12 @@ const colByKey = key => state.codebook.columns.find(x => x.key === key);
 export const actions = {
   ...scoreBasisActions,
   "setup-mode": el => { if (["map", "quick", "table"].includes(el.dataset.mode)) { mappingMode = el.dataset.mode; refresh(); } },
-  "column-select": el => { if (state.codebook.columns.some(c => c.key === el.dataset.key)) selectedColumnKey = el.dataset.key; refresh(); },
+  "column-select": el => {
+    if (!state.codebook.columns.some(c => c.key === el.dataset.key)) return;
+    selectedColumnKey = el.dataset.key;
+    refresh();
+    centerSelectedTableRow(selectedColumnKey);
+  },
   "column-filter": el => { if (["all", "review", "scale", "profile", "other"].includes(el.dataset.filter)) { columnFilter = el.dataset.filter; selectedColumnKey = ""; refresh(); } },
   "toggle-labels": el => { selectedColumnKey = el.dataset.key; expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },
   "toggle-yearbucket": el => { selectedColumnKey = el.dataset.key; expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },

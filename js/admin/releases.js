@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.22", date: "2026-09-24", title: "전체 표 선택 위치 보정",
+    groups: {
+      "데이터 설정": [
+        "전체 표에서 ‘설정’을 누르면 페이지가 아니라 표 본문만 이동하고, 선택한 문항 행이 중앙에 오도록 보정했습니다.",
+        "긴 목록에서도 선택 문항과 바로 아래 설정 영역을 잃지 않고 이어서 확인할 수 있습니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.21", date: "2026-09-24", title: "전체 표 편집 스크롤 보정",
     groups: {
       "데이터 설정": [
