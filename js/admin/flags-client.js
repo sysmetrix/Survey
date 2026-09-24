@@ -25,15 +25,14 @@ export function loadFeatureFlags() {
  */
 export function isFeatureOn(key) {
   if (featureStatus(key) === "planned") return false;
-  if (isAdmin()) return true;
-  if (featureStatus(key) !== "ready") return false;
   if ((FEATURE_DEPENDENCIES[key] || []).some(dependency => !isFeatureOn(dependency))) return false;
+  if (isAdmin()) return true;
   return !!cache?.[key];
 }
 
 /** 지금 보이는 이유가 "전체 공개"가 아니라 "관리자라서"인지 — 화면에 미리보기 표시를 붙일지 판단할 때 사용 */
 export function isAdminPreview(key) {
-  return featureStatus(key) !== "planned" && isAdmin() && (featureStatus(key) !== "ready" || !cache?.[key]);
+  return featureStatus(key) !== "planned" && isAdmin() && !cache?.[key];
 }
 export function featureVisibilityKey() { return JSON.stringify([isAdmin(), cache]); }
 

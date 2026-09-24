@@ -6,7 +6,7 @@ import { esc, toast } from "../../util.js";
 import { refresh } from "../../router.js";
 import { icon } from "../../icons.js";
 import { featureStatus } from "../../../admin/feature-status.js";
-import { _resetForTest as resetFlagsCache } from "../../../admin/flags-client.js";
+import { _resetForTest as resetFlagsCache, loadFeatureFlags } from "../../../admin/flags-client.js";
 
 // example: 관리자가 실제로 데이터를 올리지 않아도 어떤 모습인지 바로 알 수 있도록 넣는 정적 예시(가짜 숫자, 실제 자료 아님)
 const LABELS = {
@@ -168,12 +168,13 @@ export const actions = {
     const s = getSession();
     if (!s) return;
     const key = el.dataset.key;
-    if (featureStatus(key) !== "ready") { el.checked = false; return; }
+    if (featureStatus(key) === "planned") { el.checked = false; toast("아직 구현되지 않은 기능은 공개할 수 없습니다", "bad"); return; }
     const enabled = el.checked;
     if (enabled && !confirm(`"${LABELS[key]?.title || key}" 기능을 모든 이용자에게 공개할까요?`)) { el.checked = false; return; }
     try {
       await rpcRequest("set_feature_flag", { p_key: key, p_enabled: enabled }, { token: s.access_token });
-      resetFlagsCache(); // 이 브라우저(관리자)는 항상 미리보기 상태라 영향 없지만, 다음 조회 시 최신값을 받도록 캐시만 비움
+      resetFlagsCache();
+      await loadFeatureFlags(); // 같은 화면과 다음 렌더부터 방금 저장한 공개 상태를 즉시 사용
       toast(enabled ? "전체 공개로 전환했습니다" : "관리자 전용으로 되돌렸습니다", "ok");
       loaded = false; await load();
     } catch (e) { el.checked = !enabled; toast(e.message || "변경하지 못했습니다", "bad"); }

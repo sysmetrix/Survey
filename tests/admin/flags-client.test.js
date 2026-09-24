@@ -18,14 +18,14 @@ const { clearSession } = await import("../../js/auth/session.js");
 const { isFeatureOn, isAdminPreview, _resetForTest, _setForTest } = await import("../../js/admin/flags-client.js");
 
 test.beforeEach(() => { clearSession(); _resetForTest(); });
-test("미완성 기능은 서버 공개값과 무관하게 일반 사용자에게 닫히며 미구현 기능은 관리자도 사용할 수 없다", () => {
+test("검증 중 기능은 스위치로 공개할 수 있고 미구현 기능은 관리자도 사용할 수 없다", () => {
   _setForTest({ guidedKpiSetup: true, ageSurveyTemplates: true });
-  assert.equal(isFeatureOn("guidedKpiSetup"), false);
+  assert.equal(isFeatureOn("guidedKpiSetup"), true);
   localStorage.setItem("survey-v5-session", JSON.stringify({ access_token:"at",expires_at:Date.now()+3600000,role:"admin",user:{id:"u"} }));
   assert.equal(isFeatureOn("guidedKpiSetup"), true);
   assert.equal(isFeatureOn("ageSurveyTemplates"), false);
   clearSession();
-  assert.equal(isFeatureOn("guidedKpiSetup"), false);
+  assert.equal(isFeatureOn("guidedKpiSetup"), true, "전체 공개된 검증 기능은 로그아웃 뒤에도 유지");
 });
 
 test("서버 값을 못 받아왔으면(캐시 없음) 일반 이용자에게는 꺼짐(안전한 기본값)", () => {
@@ -66,4 +66,10 @@ test("isAdminPreview: 관리자는 아직 전체 공개(enabled)가 아닌 기�
   assert.equal(isAdminPreview("kpiTargetAdequacy"), true, "명시적으로 꺼져 있으면 미리보기");
   _setForTest({ kpiTargetAdequacy: true });
   assert.equal(isAdminPreview("kpiTargetAdequacy"), false, "이미 전체 공개면 미리보기 표시 불필요");
+});
+
+test("preview 상태 기능도 서버 스위치를 켜면 일반 사용자에게 작동한다", () => {
+  _setForTest({ referenceEvidence: true, operationalUsageStats: true });
+  assert.equal(isFeatureOn("referenceEvidence"), true);
+  assert.equal(isFeatureOn("operationalUsageStats"), true);
 });

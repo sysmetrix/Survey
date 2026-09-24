@@ -16,6 +16,20 @@ test("근거 레퍼런스는 고정 ID만 허용하고 KPI 카드에서 선택�
   const html = kpiCards([{ id:"K1", name:"참여 경험", metric:"manual", evidenceRef:ref.id }], [], [], { evidenceOn:true });
   assert.match(html, /분석 해석 근거/);
   assert.match(html, new RegExp(`value="${ref.id}" selected`));
+  assert.match(html, /보고서 반영 조건/);
+  assert.match(html, /현재 측정방법에 맞는 근거/);
+  assert.match(html, /적용 사유 10자 이상/);
+  assert.match(html, /원문 위치·한계 확인/);
+  assert.match(html, /세 조건을 모두 충족한 근거만 분석 결과·보고서·발표자료에 표시/);
+});
+
+test("성과지표 카드가 근거 조건 충족 여부를 즉시 표시한다", () => {
+  const ref = REFERENCE_EVIDENCE[0];
+  const incomplete = kpiCards([{ id:"K1", name:"참여 인원", metric:"manual", evidenceRef:ref.id, evidenceRationale:"짧음", evidenceReviewed:false }], [], [], { evidenceOn:true });
+  assert.match(incomplete, /원문 검토 확인 필요/);
+  assert.doesNotMatch(incomplete, /보고서 반영 가능/);
+  const complete = kpiCards([{ id:"K1", name:"참여 인원", metric:"manual", evidenceRef:ref.id, evidenceRationale:"활동 산출과 참여자 성과를 구분하는 데 적용", evidenceReviewed:true }], [], [], { evidenceOn:true });
+  assert.match(complete, /보고서 반영 가능/);
 });
 
 test("연결된 근거는 분석 보고서에 ID·원칙·원문 URL로 추적된다", () => {
