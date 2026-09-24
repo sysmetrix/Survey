@@ -735,6 +735,13 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .rt-io-group { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }
 .rt-io-group .rt-btn.primary { background: var(--brand); color: var(--on-brand); }
 .rt-io-group .rt-btn.primary:hover { background: var(--brand-hover); color: var(--on-brand); }
+.business-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+.business-action { min-height: 34px; padding-inline: 10px; font-size: 12.5px; }
+.business-action .ico { flex: 0 0 auto; }
+.business-action.business-danger { color: var(--bad); }
+.business-action.business-danger:hover { border-color: color-mix(in srgb, var(--bad) 38%, var(--border-strong)); background: var(--bad-soft); color: var(--bad); }
+.business-help { padding-inline: 9px; }
+@media (max-width: 760px) { .business-actions { width: 100%; justify-content: flex-start; } .business-action { flex: 1 1 auto; } }
 @media (max-width: 760px) {
   .report-toolbar { position: static; flex-wrap: wrap; row-gap: 6px; padding: 8px 4px; }
 }

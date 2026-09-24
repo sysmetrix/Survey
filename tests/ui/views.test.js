@@ -591,6 +591,7 @@ test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   business.actions["kpi-tab"]({ dataset: { tab: "quick" } });
   let html = business.render();
   assert.ok(html.includes("빠른 설정") && html.includes("선택 · 고급") && html.includes("논리모형"), "빠른 설정 탭과 사업정보·논리모형 영역 표시");
+  assert.ok(!html.includes("<details><summary>사업정보") && html.includes("설정 저장") && html.includes("설정 가져오기") && html.includes("문서로 채우기"), "사업정보·논리모형은 펼쳐진 상태이며 작업 명칭은 이용자 관점으로 표시");
   assert.match(html, /class="quick-kpi-help"/, "빠른 추가 설명은 보조 툴팁 영역으로 표시");
   business.actions["kpi-quick"]({ dataset: { id: "sat" } });
   assert.equal(state.kpis.length, 1);

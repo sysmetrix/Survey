@@ -185,21 +185,17 @@ export function render() {
   </section>
 
   <section class="card">
-    ${guided ? '<details><summary>사업정보 · 논리모형 (선택) 펼치기</summary>' : ''}
     <div class="row between wrap">
       <h2 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}${state.businessFound?.doc ? ` <span class="badge ok">문서에서 초안 반영 · 확인 필요</span>` : ""}</h2>
-      <div class="rt-io-group" role="group" aria-label="사업정보·성과지표 저장·불러오기">
-        <button class="rt-btn" data-act="save-preset" title="사업정보·지표 파일로 저장">${icon("download", 16)}사업정보·지표 파일로 저장</button>
-        <div class="rt-sep" aria-hidden="true"></div>
-        <label class="rt-btn" title="파일 불러오기">${icon("upload", 16)}파일 불러오기<input type="file" accept=".json" data-change="load-preset" hidden></label>
-        <div class="rt-sep" aria-hidden="true"></div>
-        <label class="rt-btn" title="문서에서 채우기(.hwpx)">${icon("doc", 16)}문서에서 채우기(.hwpx)<input type="file" accept=".hwpx" data-change="load-plan-doc" hidden></label>
-        <div class="rt-sep" aria-hidden="true"></div>
+      <div class="business-actions" role="toolbar" aria-label="사업 정보 도구">
+        <button class="btn sm business-action primary" data-act="save-preset" title="사업 정보와 성과지표 설정을 JSON 파일로 저장">${icon("download", 16)}<span>설정 저장</span></button>
+        <label class="btn sm business-action" title="저장한 사업 설정 JSON 파일 가져오기">${icon("upload", 16)}<span>설정 가져오기</span><input type="file" accept=".json" data-change="load-preset" hidden></label>
+        <label class="btn sm business-action" title="HWPX 사업계획서에서 사업 정보·논리모형·성과지표 채우기">${icon("doc", 16)}<span>문서로 채우기</span><input type="file" accept=".hwpx" data-change="load-plan-doc" hidden></label>
         <div class="rt-pop-wrap">
-          <button class="rt-btn" data-act="toggle-plan-doc-help" aria-expanded="${planDocHelpOpen}" aria-haspopup="true" aria-label="문서에서 채우기 사용법" title="문서에서 채우기 사용법">${icon("help", 16)}</button>
-          ${planDocHelpOpen ? `<div class="rt-pop wide right" role="dialog" aria-label="문서에서 채우기 사용법">${planDocHelpPanel()}</div>` : ""}
+          <button class="btn sm ghost business-action business-help" data-act="toggle-plan-doc-help" aria-expanded="${planDocHelpOpen}" aria-haspopup="true" aria-label="문서로 채우기 사용법" title="문서로 채우기 사용법">${icon("help", 16)}<span>사용법</span></button>
+          ${planDocHelpOpen ? `<div class="rt-pop wide right" role="dialog" aria-label="문서로 채우기 사용법">${planDocHelpPanel()}</div>` : ""}
         </div>
-        ${hasLm ? `<div class="rt-sep" aria-hidden="true"></div><button class="rt-btn" data-act="clear-business" title="사업정보·논리모형 입력 내용 지우기">${icon("trash", 16)}지우기</button>` : ""}
+        ${hasLm ? `<button class="btn sm ghost business-action business-danger" data-act="clear-business" title="사업 정보와 논리모형 입력 내용을 모두 비우기">${icon("trash", 16)}<span>내용 비우기</span></button>` : ""}
       </div>
     </div>
     <p class="small muted">입력하면 보고서에 ‘사업 개요’와 ‘논리모형’ 표, 목표별 달성 평가가 추가됩니다. 몰라도 보고서 작성에는 문제없습니다.</p>
@@ -217,7 +213,6 @@ export function render() {
       ${LOGIC_STAGES.map((s, i) => `<label class="logic-col"><b>${s.label}</b><span class="muted small">${esc(s.hint)}</span>
         <textarea class="in" rows="5" placeholder="${esc(LOGIC_STAGE_EXAMPLES[s.key] || "")}" data-change="lm-stage" data-stage="${s.key}">${esc((lm[s.key] || []).join("\n"))}</textarea></label>${i < LOGIC_STAGES.length - 1 ? `<span class="arrow">→</span>` : ""}`).join("")}
     </div>
-    ${guided ? '</details>' : ''}
   </section>
 
   ${!guided ? renderMeasurement() : ""}
