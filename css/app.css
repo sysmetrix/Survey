@@ -527,6 +527,11 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .tbl.mini tr.unmapped td { background: var(--bad-soft); }
 .quick-kpis { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
 .kpi-start-guide { border-left: 4px solid var(--brand); }
+.kpi-guide-details > summary, .kpi-advanced > summary, .metric-guide-details > summary { cursor: pointer; color: var(--brand-text); font-size: 13px; font-weight: 700; }
+.kpi-guide-details[open] > summary, .metric-guide-details[open] > summary { margin-bottom: 10px; }
+.kpi-advanced { margin-top: 12px; }
+.metric-guide-details { margin-top: 14px; }
+.metric-guide-details .metric-guide { margin-top: 8px; }
 .kpi-guide-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 8px; }
 .kpi-guide-steps > div { padding: 12px; border-radius: var(--radius-sm); background: var(--surface-2); }
 .kpi-guide-steps span { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 7px; border-radius: 50%; background: var(--brand); color: var(--on-brand); font-weight: 800; }
