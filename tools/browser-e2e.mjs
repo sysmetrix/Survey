@@ -134,7 +134,7 @@ try {
     await shot("2b-label-panel");
   }
 
-  for (const [hash, name, sel] of [["#/business", "3-business", ".tbl.kpi"], ["#/dash", "4-dash", ".cards"], ["#/dash/사전·사후 성과 변화", "4b-dash-prepost", ".paper"], ["#/report", "5-report", "#reportPaper"]]) {
+  for (const [hash, name, sel] of [["#/business", "3-business", ".kpi-tab-panel[data-panel=\"quick\"]"], ["#/dash", "4-dash", ".cards"], ["#/dash/사전·사후 성과 변화", "4b-dash-prepost", ".paper"], ["#/report", "5-report", "#reportPaper"]]) {
     await evaluate(`location.hash = ${JSON.stringify(hash)}`);
     await waitFor(`!!document.querySelector(${JSON.stringify(sel)})`);
     await sleep(300);
