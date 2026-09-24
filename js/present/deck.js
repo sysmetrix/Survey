@@ -8,6 +8,7 @@ import { levelLabels } from "../report/build-report.js";
 import { koDate } from "../core/util.js";
 import { isFeatureOn } from "../admin/flags-client.js";
 import { measurementResults } from "../evaluation/measurement-results.js";
+import { referenceEvidenceById } from "../evaluation/reference-evidence.js";
 
 const q = s => `‘${s}’`;
 const short = (s, n = 18) => (String(s).length > n ? String(s).slice(0, n - 1) + "…" : String(s));
@@ -61,8 +62,8 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       subtitle: `종합 평가 ${s.grade} · 평균 달성률 ${f1(s.avgRate)}%`,
       chart: measured.length ? { kind: "kpiBullet", data: measured.map(r => ({ label: r.name, rate: r.rate })), opts: { mostly: t.kpiMostly, width: 900 } } : null,
       aside: miss.length ? { title: "미달성 지표", items: miss.map(r => `${r.name} ${f1(r.rate)}%`) } : { title: "모든 지표 목표 근접", items: E.results.map(r => `${r.name} ${f1(r.rate)}%`).slice(0, 4) },
-      notes: E.results.map(r => `${r.name}: 목표 ${r.targetValue}${r.unit || ""}, 실적 ${Number.isFinite(r.actualValue) ? r.actualValue.toFixed(2).replace(/\.00$/, "") : "-"}${r.unit || ""}, ${r.judgment}${r.facts ? ` (${r.facts})` : ""}`),
-      source: `달성률 = 실적 ÷ 목표 × 100 · 판정: ${t.kpiAchieved}% 이상 달성, ${t.kpiMostly}% 이상 대체로 달성`,
+      notes: E.results.map(r => { const evidence = isFeatureOn("referenceEvidence") ? referenceEvidenceById(r.evidenceRef) : null; return `${r.name}: 목표 ${r.targetValue}${r.unit || ""}, 실적 ${Number.isFinite(r.actualValue) ? r.actualValue.toFixed(2).replace(/\.00$/, "") : "-"}${r.unit || ""}, ${r.judgment}${r.facts ? ` (${r.facts})` : ""}${evidence ? ` · 해석 근거 [${evidence.id}] ${evidence.title}: ${evidence.principle}` : ""}`; }),
+      source: `달성률 = 실적 ÷ 목표 × 100 · 판정: ${t.kpiAchieved}% 이상 달성, ${t.kpiMostly}% 이상 대체로 달성${isFeatureOn("referenceEvidence") ? ` · 근거 연결 ${E.results.filter(r => referenceEvidenceById(r.evidenceRef)).length}건` : ""}`,
     });
   }
 

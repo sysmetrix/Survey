@@ -2,6 +2,17 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.1", date: "2026-09-24", title: "성과지표 해석 근거 추적",
+    groups: {
+      "근거·해석": [
+        "성과지표마다 검증된 레퍼런스 ID를 선택하고, 해당 출처의 적용 원칙과 한계를 분석 결과에 함께 기록합니다.",
+        "분석 화면·보고서·발표자료에 동일한 근거 ID가 남아 어떤 출처를 사용했는지 추적할 수 있습니다.",
+        "근거 추적표에는 출처 제목·원문 URL·적용 원칙을 표시하며 통계 계산 근거와 해석 참고 근거를 구분합니다.",
+      ],
+      "관리자 검증": ["referenceEvidence 기능 플래그로 관리자 미리보기 후 전체 공개할 수 있습니다."],
+    },
+  },
+  {
     version: "5.47.0", date: "2026-09-24", title: "성과지표 간편 설정·측정 관리 (관리자 검증)",
     groups: {
       "계산·해석": [

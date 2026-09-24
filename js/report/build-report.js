@@ -10,6 +10,7 @@ import { isFeatureOn } from "../admin/flags-client.js";
 import { measurementQuality, measurementQualityLabel } from "../evaluation/measurement-quality.js";
 import { measurementResults } from "../evaluation/measurement-results.js";
 import { representativenessCheck, REP_DIFF_CAUTION } from "../analysis/representativeness.js";
+import { referenceEvidenceById } from "../evaluation/reference-evidence.js";
 
 const DEFAULT_LEVEL_LABELS = {
   4: ["전혀 그렇지 않다", "그렇지 않다", "그렇다", "매우 그렇다"],
@@ -71,6 +72,14 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   const impTheme = A.text.flatMap(tx => tx.themes.filter(th => th.negative >= 2)).sort((a, b) => b.negative - a.negative)[0]?.name;
   if (impTheme) sum.push(B("sum.text", 1, `□ 주요 개선 요구: ${q(impTheme)} 관련 의견`, true));
   push({ type: "box", lines: sum.map(s => ({ key: s.key, text: s.text, frag: s.frag })) });
+  if (kpiOn && isFeatureOn("referenceEvidence")) {
+    const linked = E.results.map(r => ({ r, evidence: referenceEvidenceById(r.evidenceRef) })).filter(x => x.evidence);
+    if (linked.length) {
+      push(H(2, "분석 해석 근거"));
+      bullets(linked.map(({ r, evidence }) => B(`evidence.${r.id}`, 1, `${q(r.name)} 해석에는 [${evidence.id}] ${evidence.title}의 원칙을 적용함: ${evidence.principle} 적용 한계: ${evidence.caution}`)));
+      push({ type: "table", caption: "성과지표 해석 근거 추적표", columns: [{ weight: 2 }, { weight: 2.4 }, { weight: 3.6, align: "LEFT" }], rows: [["성과지표", "근거 출처", "적용 원칙"].map(cellH), ...linked.map(({ r, evidence }) => [r.name, `${evidence.title}\n${evidence.url}`, { text: evidence.principle, align: "LEFT" }])], notes: ["주: 명시적으로 연결된 출처만 표시함. 통계 계산값은 설문 원자료와 계산식에서 산출되며, 출처는 해석 원칙과 적용 한계를 제공함."] });
+    }
+  }
   const quality = measurementQuality(CB, A);
   if (quality.length) {
     push(H(2, "측정의 한계와 확인 사항"));

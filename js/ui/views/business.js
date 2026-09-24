@@ -15,6 +15,7 @@ import { isFeatureOn, isAdminPreview } from "../../admin/flags-client.js";
 import { PROGRAM_FIELD_EXAMPLES, LOGIC_STAGE_EXAMPLES, BACKGROUND_EXAMPLE, PURPOSE_EXAMPLE, GOALS_EXAMPLE } from "../examples.js";
 import { measurementQuality, measurementQualityLabel } from "../../evaluation/measurement-quality.js";
 import { kpiCards, PURPOSES } from "../kpi-cards.js";
+import { normalizeEvidenceRef } from "../../evaluation/reference-evidence.js";
 import { renderMeasurement, measurementActions, clearMeasurementDrafts } from "../measurement-workbench.js";
 export function unmount() { clearMeasurementDrafts(); }
 
@@ -273,7 +274,7 @@ export const actions = {
     const k = state.kpis[+el.dataset.i], f = el.dataset.field;
     if (!k) return;
     if (f === "target" || f === "actual" || f === "prevActual") k[f] = el.value === "" ? null : Number(el.value);
-    else k[f] = el.value;
+    else k[f] = f === "evidenceRef" ? normalizeEvidenceRef(el.value) : el.value;
     if (f === "metric" && !k.unit) k.unit = METRICS[k.metric]?.unit || "";
     invalidate(); refresh();
   },
