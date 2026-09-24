@@ -4,7 +4,8 @@ import { esc } from "../util.js";
 import { refresh } from "../router.js";
 import { state } from "../store.js";
 import { isFeatureOn } from "../../admin/flags-client.js";
-import { referenceEvidenceById } from "../../evaluation/reference-evidence.js";
+import { validateKpiEvidence } from "../../evaluation/reference-evidence.js";
+import { METRICS } from "../../evaluation/kpi.js";
 
 const SOURCES = [
   { title: "OECD — Monitoring and Evaluation of Child and Youth Policies and Outcomes in Ireland (2024) · 아일랜드 아동·청소년 정책 및 성과 모니터링·평가", type: "평가모형", text: "사업의 목표와 결과를 results framework로 연결하고, 모니터링(진행 확인)과 평가(성과 판단)를 구분합니다.", url: "https://www.oecd.org/en/publications/monitoring-and-evaluation-of-child-and-youth-policies-and-outcomes-in-ireland_2bd86a9d-en/full-report/component-7.html" },
@@ -53,7 +54,7 @@ function renderContent() {
 export function render() {
   let section = -1;
   let html = renderContent();
-  const evidenceHtml = isFeatureOn("referenceEvidence") ? `<div class="reference-evidence"><div class="eyebrow">현재 프로젝트 적용 현황</div><h3>성과지표별 근거 연결</h3>${state.kpis?.length ? `<div class="reference-evidence-list">${state.kpis.map(k => { const ref = referenceEvidenceById(k.evidenceRef); return `<div class="reference-evidence-row"><b>${esc(k.name || k.id)}</b><span class="small ${ref ? "" : "muted"}">${esc(ref?.title || "근거 미연결")}</span></div>`; }).join("")}</div>` : `<p class="small muted">성과지표를 먼저 추가하면 지표별 근거 연결 상태가 표시됩니다.</p>`}</div>` : "";
+  const evidenceHtml = isFeatureOn("referenceEvidence") ? `<div class="reference-evidence"><div class="eyebrow">현재 프로젝트 적용 현황</div><h3>성과지표별 근거 검증 상태</h3>${state.kpis?.length ? `<div class="reference-evidence-list">${state.kpis.map(k => { const v = validateKpiEvidence(k, (METRICS[k.metric] || METRICS.manual).kind); return `<div class="reference-evidence-row"><b>${esc(k.name || k.id)}</b><span class="small ${v.valid ? "good-text" : "warn-text"}">${esc(v.valid ? `검토 완료 · ${v.evidence.title}` : v.reason)}</span></div>`; }).join("")}</div>` : `<p class="small muted">성과지표를 먼저 추가하면 지표별 근거 연결 상태가 표시됩니다.</p>`}</div>` : "";
   html = html.replace(/(<div class="reference-sources">)/, `${evidenceHtml}$1`);
   let sourceIndex = 0;
   html = html.replace(/(<article class="reference-source">[\s\S]*?<h3>[\s\S]*?<\/h3>)<p>([\s\S]*?)<\/p><\/article>/g, (_match, head, summary) => {

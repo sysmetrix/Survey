@@ -2,6 +2,16 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.2", date: "2026-09-24", title: "근거 적용 검증 강화",
+    groups: {
+      "검증 통제": [
+        "출처별 적용 가능한 측정 유형을 제한하고, 적용 사유와 원문 검토 확인이 없으면 분석 근거로 표시하지 않습니다.",
+        "보고서에는 원문 위치·확인일·적용 사유·적용 한계를 함께 기록합니다.",
+        "통계 계산 결과와 외부 레퍼런스에 기반한 해석을 명확히 구분합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.1", date: "2026-09-24", title: "성과지표 해석 근거 추적",
     groups: {
       "근거·해석": [

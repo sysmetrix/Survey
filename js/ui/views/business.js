@@ -274,6 +274,7 @@ export const actions = {
     const k = state.kpis[+el.dataset.i], f = el.dataset.field;
     if (!k) return;
     if (f === "target" || f === "actual" || f === "prevActual") k[f] = el.value === "" ? null : Number(el.value);
+    else if (f === "evidenceReviewed") k[f] = !!el.checked;
     else k[f] = f === "evidenceRef" ? normalizeEvidenceRef(el.value) : el.value;
     if (f === "metric" && !k.unit) k.unit = METRICS[k.metric]?.unit || "";
     invalidate(); refresh();
@@ -371,7 +372,7 @@ function formatPlanDocConfirm(preview) {
   return lines.join("\n");
 }
 
-const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "prevActual", "direction", "unit", "note", "targetBasis", "measurementTime", "requireTarget", "evaluationPurpose", "evidenceRef"];
+const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "prevActual", "direction", "unit", "note", "targetBasis", "measurementTime", "requireTarget", "evaluationPurpose", "evidenceRef", "evidenceRationale", "evidenceReviewed"];
 function pickKpi(k) {
   const o = {};
   for (const f of KPI_FIELDS) {

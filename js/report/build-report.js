@@ -10,7 +10,7 @@ import { isFeatureOn } from "../admin/flags-client.js";
 import { measurementQuality, measurementQualityLabel } from "../evaluation/measurement-quality.js";
 import { measurementResults } from "../evaluation/measurement-results.js";
 import { representativenessCheck, REP_DIFF_CAUTION } from "../analysis/representativeness.js";
-import { referenceEvidenceById } from "../evaluation/reference-evidence.js";
+import { validateKpiEvidence } from "../evaluation/reference-evidence.js";
 
 const DEFAULT_LEVEL_LABELS = {
   4: ["전혀 그렇지 않다", "그렇지 않다", "그렇다", "매우 그렇다"],
@@ -73,11 +73,11 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   if (impTheme) sum.push(B("sum.text", 1, `□ 주요 개선 요구: ${q(impTheme)} 관련 의견`, true));
   push({ type: "box", lines: sum.map(s => ({ key: s.key, text: s.text, frag: s.frag })) });
   if (kpiOn && isFeatureOn("referenceEvidence")) {
-    const linked = E.results.map(r => ({ r, evidence: referenceEvidenceById(r.evidenceRef) })).filter(x => x.evidence);
+    const linked = E.results.map(r => ({ r, validation: validateKpiEvidence(r, (METRICS[r.metric] || METRICS.manual).kind) })).filter(x => x.validation.valid).map(({ r, validation }) => ({ r, evidence:validation.evidence }));
     if (linked.length) {
       push(H(2, "분석 해석 근거"));
-      bullets(linked.map(({ r, evidence }) => B(`evidence.${r.id}`, 1, `${q(r.name)} 해석에는 [${evidence.id}] ${evidence.title}의 원칙을 적용함: ${evidence.principle} 적용 한계: ${evidence.caution}`)));
-      push({ type: "table", caption: "성과지표 해석 근거 추적표", columns: [{ weight: 2 }, { weight: 2.4 }, { weight: 3.6, align: "LEFT" }], rows: [["성과지표", "근거 출처", "적용 원칙"].map(cellH), ...linked.map(({ r, evidence }) => [r.name, `${evidence.title}\n${evidence.url}`, { text: evidence.principle, align: "LEFT" }])], notes: ["주: 명시적으로 연결된 출처만 표시함. 통계 계산값은 설문 원자료와 계산식에서 산출되며, 출처는 해석 원칙과 적용 한계를 제공함."] });
+      bullets(linked.map(({ r, evidence }) => B(`evidence.${r.id}`, 1, `${q(r.name)} 해석에는 [${evidence.id}] ${evidence.title}의 원칙을 적용함: ${evidence.principle} 적용 사유: ${r.evidenceRationale}. 적용 한계: ${evidence.caution}`)));
+      push({ type: "table", caption: "성과지표 해석 근거 추적표", columns: [{ weight: 1.8 }, { weight: 2.3 }, { weight: 3.9, align: "LEFT" }], rows: [["성과지표", "근거 출처", "검증 기록"].map(cellH), ...linked.map(({ r, evidence }) => [r.name, `${evidence.title}\n${evidence.url}`, { text: `원문 위치: ${evidence.locator}\n확인일: ${evidence.checkedAt}\n적용 사유: ${r.evidenceRationale}\n적용 한계: ${evidence.caution}`, align: "LEFT" }])], notes: ["주: 관리자가 원문 검토를 확인하고 적용 사유를 입력한 출처만 표시함. 통계 계산값은 설문 원자료와 계산식에서 산출되며, 출처는 해석 원칙과 적용 한계를 제공함."] });
     }
   }
   const quality = measurementQuality(CB, A);
