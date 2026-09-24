@@ -111,7 +111,7 @@ export function render() {
       </div>
     </section>
   </div>
-  <div class="ld-foot no-print"><span class="ld-priv">${icon("shield", 14)}HTML · CSS · JavaScript · Supabase로 만든 설문 분석 도구</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy"><a href="legacy/v4.html">이전 버전(v4.3)</a></span></div>`;
+  <div class="ld-foot no-print"><span class="ld-priv" data-tip="R/Python 실행 환경 없이 브라우저에서 바로 분석하고, 별도 설치가 필요하지 않기 때문에 JavaScript를 사용합니다.">${icon("shield", 14)}현재 통계 분석은 브라우저에서 JavaScript로 수행됩니다.</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy"><a href="legacy/v4.html">이전 버전(v4.3)</a></span></div>`;
 }
 
 // ── 화면 표시·정리 (main.js 가 렌더 뒤 mount, 다른 화면으로 옮길 때 unmount 호출) ──
