@@ -10,6 +10,7 @@ import { _resetForTest as resetFlagsCache } from "../../../admin/flags-client.js
 
 // example: 관리자가 실제로 데이터를 올리지 않아도 어떤 모습인지 바로 알 수 있도록 넣는 정적 예시(가짜 숫자, 실제 자료 아님)
 const LABELS = {
+  operationalUsageStats: { title: "관리자 운영 사용 통계", desc: "운영 KPI·행동 퍼널·오류 모니터링을 관리자 미리보기로 검증합니다.", where: "관리자 사용 통계 화면", example: "" },
   guidedKpiSetup: { title: "성과지표 간편 설정", desc: "목적 선택·카드 입력·목표 근거를 관리자 검증합니다.", where: "③ 성과지표", example: "" },
   smallSampleWarning: {
     title: "소표본·검정력 주의 문구",
@@ -123,7 +124,9 @@ function missingKeysHelp(missingKeys) {
 function flagCard(r) {
   const meta = LABELS[r.key] || { title: r.key, desc: "", where: "", example: "" };
   const planned = featureStatus(r.key) === "planned";
-  const locked = featureStatus(r.key) !== "ready";
+  // preview 는 관리자 검증 상태이므로 전체 공개 스위치를 조작할 수 있어야 한다.
+  // 실제 잠금은 아직 구현되지 않은 planned 기능에만 적용한다.
+  const locked = planned;
   return `<div class="flag-row">
     <div class="row between" style="align-items:flex-start">
       <div class="row gap" style="align-items:center;flex-wrap:wrap">
