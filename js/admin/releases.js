@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.21", date: "2026-09-24", title: "전체 표 편집 스크롤 보정",
+    groups: {
+      "데이터 설정": [
+        "전체 표 본문을 고정 높이의 독립 스크롤 영역으로 바꿔, 긴 문항 목록도 페이지 하단을 밀거나 가리지 않게 했습니다.",
+        "표 헤더·필터·다음 단계 버튼은 화면에 남기고 표 본문만 세로·가로로 스크롤합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.20", date: "2026-09-24", title: "전체 표 편집 압축·상세 편집 개선",
     groups: {
       "데이터 설정": [
