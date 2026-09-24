@@ -162,7 +162,7 @@ export function render() {
   }).join("");
 
   const unmappedCols = [];
-  const colRows = cb.columns.map(c => {
+  const renderTableRow = c => {
     const numeric = ["likert", "nps", "numeric"].includes(c.role);
     const conf = c.detected?.confidence ?? 1;
     const scaled = ["likert", "nps"].includes(c.role);
@@ -179,27 +179,24 @@ export function render() {
     const popOn = c.role === "demographic" && isFeatureOn("respondentRepresentativeness");
     const popCount = c.popPct ? Object.keys(c.popPct).length : 0;
     const popBtn = popOn ? `<div><button class="btn sm ${popCount ? "" : "ghost"}" data-act="toggle-poppanel" data-key="${esc(c.key)}">모집단 비율${popCount ? ` <span class="badge info">${popCount}개</span>` : ""}</button></div>` : "";
-    return (`<tr class="${c.role === "ignore" ? "dim" : ""}">
-      <td class="small muted">${multiSheet ? esc(cb.sheets[c.sheet].name) + "<br>" : ""}${c.index + 1}</td>
-      <td class="hdr" title="${esc(c.header)}">${esc(c.header)}<div class="small muted">${esc(sampleValues(c))}</div></td>
-      <td><input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label" aria-label="'${esc(c.header)}' 열의 표시 이름"></td>
-      <td><select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role" aria-label="'${esc(c.label)}' 열의 역할">${Object.entries(ROLES).map(([k, v]) => option(k, v, c.role === k)).join("")}</select>
-        ${conf < 0.7 && !c.labelAmbiguous ? `<div class="small warn-text" title="${esc(c.detected.reason)}">판별 불확실</div>` : ""}${c.pii ? `<div class="small warn-text">개인정보 추정</div>` : ""}${labelBtn}${yearBtn}${popBtn}</td>
-      <td class="nowrap">${numeric ? `<input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min" aria-label="'${esc(c.label)}' 척도 최솟값">~<input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max" aria-label="'${esc(c.label)}' 척도 최댓값">` : ""}</td>
-      <td class="c">${c.role === "likert" ? `<input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse" aria-label="'${esc(c.label)}' 역문항으로 처리">` : ""}</td>
-      <td>${c.role === "likert" ? `<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="(없음)" data-change="col" data-key="${esc(c.key)}" data-field="domain" aria-label="'${esc(c.label)}' 영역">` : ""}</td>
-      <td>${numeric ? `<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time" aria-label="'${esc(c.label)}' 시점">${option("", "-", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select>` : ""}</td>
-      <td class="c">${c.role === "likert" && c.time !== "pre" ? `<input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall" aria-label="'${esc(c.label)}'을(를) 전반 만족 문항으로 표시">` : ""}</td>
-      <td class="c">${colEdited(cb, c) ? `<button class="icon-btn sm" data-act="col-reset" data-key="${esc(c.key)}" title="자동 판별 값으로 되돌리기" aria-label="'${esc(c.label)}' 자동 판별 값으로 되돌리기">${icon("undo", 14)}</button>` : ""}</td>
+    const reviewNotes = [
+      conf < .7 && !c.labelAmbiguous ? "자동 판별 확인" : "",
+      c.labelAmbiguous ? "4·5점 척도 확인" : "",
+      c.pii ? "개인정보 가능성" : "",
+      nUnm ? `보기 점수 ${nUnm}건` : "",
+    ].filter(Boolean);
+    const measure = numeric ? `<div class="table-measure"><label>척도 <span><input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min" aria-label="'${esc(c.label)}' 척도 최솟값"><i>~</i><input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max" aria-label="'${esc(c.label)}' 척도 최댓값"></span></label><label>시점 <select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time" aria-label="'${esc(c.label)}' 시점">${option("", "시점 없음", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select></label></div>` : `<span class="table-na">점수 계산 없음</span>`;
+    const linkage = c.role === "likert" ? `<div class="table-linkage"><label>같이 묶을 주제<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="예: 참여 경험" data-change="col" data-key="${esc(c.key)}" data-field="domain" aria-label="'${esc(c.label)}' 같이 묶어 볼 주제"></label><div class="table-toggles"><label><input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse"><span>점수 반대</span></label>${c.time !== "pre" ? `<label><input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall"><span>대표 만족</span></label>` : ""}</div></div>` : `<span class="table-na">해당 없음</span>`;
+    return (`<tr class="setup-grid-row ${c.role === "ignore" ? "dim" : ""}">
+      <td class="setup-grid-index"><span>${c.index + 1}</span></td>
+      <td class="setup-grid-question" title="${esc(c.header)}"><strong>${esc(c.header)}</strong><small>${multiSheet ? esc(cb.sheets[c.sheet].name) + " · " : ""}${esc(sampleValues(c) || "응답 예 없음")}</small><input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label" aria-label="'${esc(c.header)}' 열의 표시 이름"></td>
+      <td class="setup-grid-role"><select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role" aria-label="'${esc(c.label)}' 열의 역할">${Object.entries(ROLES).map(([k, v]) => option(k, v, c.role === k)).join("")}</select><div class="table-role-actions">${labelBtn}${yearBtn}${popBtn}</div></td>
+      <td class="setup-grid-measure">${measure}</td>
+      <td class="setup-grid-link">${linkage}</td>
+      <td class="setup-grid-status"><span class="badge ${reviewNotes.length ? "warn" : c.role === "ignore" ? "muted" : "ok"}">${reviewNotes.length ? "확인 필요" : c.role === "ignore" ? "분석 제외" : "준비됨"}</span>${reviewNotes.length ? `<small>${esc(reviewNotes.join(" · "))}</small>` : `<small>${c.role === "ignore" ? "결과에 사용하지 않음" : "분석에 반영됩니다"}</small>`}${colEdited(cb, c) ? `<button class="btn sm ghost" data-act="col-reset" data-key="${esc(c.key)}">${icon("undo", 14)}자동 판별로</button>` : ""}</td>
     </tr>`);
-  }).join("");
+  };
   const unmappedWarn = unmappedCols.length ? `<li>${levelBadge("error")} 점수로 바뀌지 않은 응답이 있는 문항 ${unmappedCols.length}개: ${unmappedCols.slice(0, 4).map(u => `${esc(u.c.label)}(${u.n}건)`).join(", ")}${unmappedCols.length > 4 ? " 등" : ""} — 아래 표의 <b>보기 점수</b>에서 문구별 점수를 지정하세요(지정 전에는 무응답으로 처리).</li>` : "";
-  // 빠른 설정과 별개로, 여러 열을 비교·수정하는 표 편집 기능을 보존한다.
-  const tableWorkspace = `<section class="setup-table-workspace" aria-label="전체 표 편집">
-    <div class="setup-workspace-note"><div><b>전체 표 편집</b><span>여러 문항의 기본 값을 한눈에 비교하고 바로 수정합니다. 왼쪽 두 열은 스크롤해도 고정됩니다.</span></div><span class="badge info">${cb.columns.length}개 문항</span></div>
-    <div class="tbl-wrap setup-table-wrap"><table class="tbl setup"><thead><tr><th>#</th><th>원래 열 이름 · 응답 예</th><th>표시 이름</th><th>분석 역할 · 채점</th><th>척도</th><th>역문항</th><th>같이 묶을 주제</th><th>시점</th><th>대표 만족</th><th></th></tr></thead><tbody>${colRows}</tbody></table></div>
-    <p class="setup-table-help">‘같이 묶을 주제’는 같은 주제를 묻는 척도 문항이 2개 이상일 때만 같은 이름을 입력합니다. 한 문항만 분석하면 비워 두세요.</p>
-  </section>`;
   const needsReview = c => (c.detected?.confidence ?? 1) < .7 || c.labelAmbiguous || c.pii || (["likert", "nps"].includes(c.role) && unmappedValues(c, rawColumn(state.dataset, c)).length > 0);
   const filters = [["all", "전체"], ["review", "확인 필요"], ["scale", "척도·NPS"], ["profile", "응답자 특성"], ["other", "기타"]];
   const matchesColumn = c => columnFilter === "all"
@@ -217,6 +214,13 @@ export function render() {
   }
   const selectedColumn = visibleColumns.find(c => c.key === selectedColumnKey) || visibleColumns[0] || null;
   const filterCount = id => cb.columns.filter(c => id === "all" || (id === "review" && needsReview(c)) || (id === "scale" && ["likert", "nps"].includes(c.role)) || (id === "profile" && c.role === "demographic") || (id === "other" && !["likert", "nps", "demographic"].includes(c.role))).length;
+  const tableRows = visibleColumns.map(renderTableRow).join("");
+  const tableWorkspace = `<section class="setup-table-workspace" aria-label="전체 표 편집">
+    <div class="setup-workspace-note"><div><b>전체 표 편집</b><span>여러 문항을 비교하며 수정할 때 사용합니다. 필요한 문항만 걸러서, 한 행에서 분석 방식과 결과 반영을 함께 확인하세요.</span></div><span class="badge ${visibleColumns.filter(needsReview).length ? "warn" : "info"}">${visibleColumns.filter(needsReview).length ? `확인 필요 ${visibleColumns.filter(needsReview).length}개` : `${visibleColumns.length}개 문항`}</span></div>
+    <div class="column-filter-list setup-table-filter" role="group" aria-label="전체 표 문항 필터">${filters.map(([id, label]) => `<button class="column-filter${columnFilter === id ? " on" : ""}" data-act="column-filter" data-filter="${id}" aria-pressed="${columnFilter === id}">${label}<b>${filterCount(id)}</b></button>`).join("")}</div>
+    <div class="tbl-wrap setup-table-wrap"><table class="tbl setup-grid"><thead><tr class="setup-grid-groups"><th colspan="2">문항</th><th>분석 방식</th><th>점수·시점</th><th>결과 연결</th><th>검토 상태</th></tr><tr><th>#</th><th>원래 문항 · 표시 이름</th><th>이 열을 어떻게 분석할까요?</th><th>점수 계산 기준</th><th>같이 볼 문항·표시 옵션</th><th>지금 확인할 내용</th></tr></thead><tbody>${tableRows || `<tr><td colspan="6"><div class="empty-inline"><div><b>해당 문항이 없습니다</b><p class="small muted">다른 필터를 선택해 주세요.</p></div></div></td></tr>`}</tbody></table></div>
+    <p class="setup-table-help">‘같이 묶을 주제’는 같은 주제를 묻는 척도 문항이 2개 이상일 때만 같은 이름을 입력합니다. ‘점수 반대’는 부정 문항일 때만, ‘대표 만족’은 전체 만족도를 대표할 문항 하나에만 선택하세요.</p>
+  </section>`;
   const nodeState = c => needsReview(c) ? "review" : c.role === "ignore" ? "muted" : "ready";
   const nodeBadge = c => needsReview(c) ? "확인 필요" : c.role === "ignore" ? "분석 제외" : "설정됨";
   const mapDestination = c => {

@@ -125,7 +125,8 @@ test("데이터 설정: 보기 점수 패널·일괄 적용", async () => {
   assert.ok(tableHtml.includes('data-field="reverse"') && tableHtml.includes('data-field="domain"') && tableHtml.includes('data-field="time"'), "역문항·문항 묶기·시점 설정을 모두 제공");
   setup.actions["setup-mode"]({ dataset: { mode: "table" } });
   const gridHtml = setup.render();
-  assert.ok(gridHtml.includes("전체 표 편집") && gridHtml.includes('class="tbl setup"') && gridHtml.includes("같이 묶을 주제"), "숙련 사용자가 모든 열을 한 화면에서 비교·편집할 표 기능을 유지");
+  assert.ok(gridHtml.includes("전체 표 편집") && gridHtml.includes('class="tbl setup-grid"') && gridHtml.includes("이 열을 어떻게 분석할까요?") && gridHtml.includes("지금 확인할 내용"), "숙련 사용자가 분석 방식·결과 연결·검토 상태를 한 행에서 비교·편집한다");
+  assert.ok(gridHtml.includes('data-filter="review"') && gridHtml.includes("점수 반대") && gridHtml.includes("대표 만족"), "전체 표도 확인 필요 필터와 역문항·대표 만족 설정을 보존한다");
   setup.actions["setup-mode"]({ dataset: { mode: "map" } });
   L.forEach((t, i) => setup.actions.labelmap({ dataset: { key: a.key, raw: t }, value: String(i + 1) }));
   setup.actions["labelmap-apply-all"]({ dataset: { key: a.key } });

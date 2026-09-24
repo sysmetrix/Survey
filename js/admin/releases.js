@@ -2,6 +2,16 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.19", date: "2026-09-24", title: "전체 표 편집 작업 그리드 개선",
+    groups: {
+      "데이터 설정": [
+        "전체 표를 문항·분석 방식·점수/시점·결과 연결·검토 상태로 재구성해 한 행에서 판단할 수 있게 했습니다.",
+        "확인 필요, 척도·NPS, 응답자 특성 등 필터를 전체 표에도 적용했습니다.",
+        "점수 반대·대표 만족·문항 묶기·보기 점수·자동 판별 복원 기능을 표 안에서 유지했습니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.18", date: "2026-09-24", title: "데이터 설정 작업 방식 재구성",
     groups: {
       "데이터 설정": [
