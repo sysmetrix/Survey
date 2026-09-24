@@ -1,5 +1,6 @@
 // 청소년 활동·사업 평가 레퍼런스와 단계별 작성 가이드
 import { icon } from "../icons.js";
+import { refresh } from "../router.js";
 
 const SOURCES = [
   { title: "OECD — Monitoring and Evaluation of Child and Youth Policies and Outcomes in Ireland (2024) · 아일랜드 아동·청소년 정책 및 성과 모니터링·평가", type: "평가모형", text: "사업의 목표와 결과를 results framework로 연결하고, 모니터링(진행 확인)과 평가(성과 판단)를 구분합니다.", url: "https://www.oecd.org/en/publications/monitoring-and-evaluation-of-child-and-youth-policies-and-outcomes-in-ireland_2bd86a9d-en/full-report/component-7.html" },
@@ -26,7 +27,9 @@ const BENCHMARKS = [
   ["측정 품질 안내", "문항 누락, 응답 수 부족, 사전·사후 불일치, 역문항 처리 여부를 분석 전 점검 결과로 보여줌"],
 ];
 
-const sectionTabs = `<nav class="tabs reference-tabs" aria-label="레퍼런스 영역"><a class="tab on" href="#reference-guide">핵심 흐름</a><a class="tab" href="#reference-sources">근거 자료</a><a class="tab" href="#reference-benchmark">벤치마킹 검토</a><a class="tab" href="#reference-checklist">적용 체크리스트</a></nav>`;
+let activeTab = "guide";
+const REFERENCE_TABS = [["guide", "핵심 흐름"], ["sources", "근거 자료"], ["benchmark", "벤치마킹 검토"], ["checklist", "적용 체크리스트"]];
+const sectionTabs = () => `<nav class="tabs reference-tabs" aria-label="레퍼런스 영역">${REFERENCE_TABS.map(([key, label]) => `<button type="button" class="tab${activeTab === key ? " on" : ""}" ${activeTab === key ? 'aria-current="page"' : ""} data-act="reference-tab" data-tab="${key}">${label}</button>`).join("")}</nav>`;
 function renderContent() {
   return `<div class="page-head"><div><h1>평가 레퍼런스</h1><p class="small muted">청소년 활동·사업의 성과지표를 설계하고 결과를 해석할 때 참고할 수 있는 근거와 실무 흐름입니다.</p></div><div class="row gap wrap"><button class="btn" data-act="back">성과지표로 돌아가기${icon("left", 16)}</button></div></div>
     <section class="card"><div class="eyebrow">권장 평가 흐름</div><h2>사업 목적에서 개선안까지</h2><div class="reference-steps">${STEPS.map(([n,t,d]) => `<article class="reference-step"><span class="step-number">${n}</span><div><h3>${t}</h3><p>${d}</p></div></article>`).join("")}</div></section>
@@ -36,5 +39,12 @@ function renderContent() {
 }
 
 export function render() {
-  return sectionTabs + renderContent();
+  let section = -1;
+  const html = renderContent().replace(/<section class="card">/g, () => `<section class="card"${++section === REFERENCE_TABS.findIndex(([key]) => key === activeTab) ? "" : " hidden"}>`);
+  return sectionTabs() + html;
 }
+
+export const actions = {
+  back: () => { window.history.back(); },
+  "reference-tab": el => { activeTab = REFERENCE_TABS.some(([key]) => key === el.dataset.tab) ? el.dataset.tab : "guide"; refresh(); },
+};
