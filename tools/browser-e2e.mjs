@@ -104,7 +104,8 @@ try {
   await waitFor(`!!document.querySelector('.setup-table-wrap .setup-grid')`);
   const tableCheck = await evaluate(`(() => {
     const wrap = document.querySelector('.setup-table-wrap');
-    const header = wrap.querySelector('thead');
+    // sticky 속성은 thead 컨테이너가 아니라 각 th 셀에 적용된다.
+    const header = wrap.querySelector('thead th:nth-child(3)');
     const edit = wrap.querySelector('[data-act="column-select"]');
     const style = getComputedStyle(wrap);
     if (!header || !edit) throw new Error('전체 표의 헤더 또는 설정 버튼이 없습니다');
