@@ -298,12 +298,12 @@ try {
   await waitFor(`!!document.querySelector('[data-change="kpi-purpose"]')`);
   await evaluate(`document.querySelector('[data-change="kpi-purpose"][data-id="change"]').click()`);
   await evaluate(`document.querySelector('[data-act="kpi-quick"][data-id="diff"]').click()`);
-  await waitFor(`!!document.querySelector('article.card select[data-field="targetRef"]')`);
+  await waitFor(`!!document.querySelector('article.kpi-editor-card select[data-field="targetRef"]')`);
   const guided = await evaluate(`(async () => {
     const {state,compute}=await import('./js/ui/store.js');
     const before=state.kpis.at(-1);
     if(before.target!==null || !compute().evaluation.results.at(-1).error) throw Error('목표 기본값/문항 미선택 검증 실패');
-    const select=[...document.querySelectorAll('article.card select[data-field="targetRef"]')].at(-1);
+    const select=[...document.querySelectorAll('article.kpi-editor-card select[data-field="targetRef"]')].at(-1);
     select.value=[...select.options].find(o=>o.value.startsWith('@item:')).value;
     select.dispatchEvent(new Event('change',{bubbles:true}));
     const result=compute().evaluation.results.at(-1);
