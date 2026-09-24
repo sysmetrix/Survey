@@ -533,7 +533,9 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .kpi-guide-steps b { font-size: 14px; }
 .kpi-guide-steps p { margin: 7px 0 0; color: var(--text-2); font-size: 12.5px; line-height: 1.45; }
 .quick-kpi-option { display: flex; flex-direction: column; gap: 4px; min-width: 185px; }
-.quick-kpi-option > span { padding-left: 4px; color: var(--text-2); font-size: 11.5px; line-height: 1.35; }
+.quick-kpi-option { position: relative; }
+.quick-kpi-option > .quick-kpi-help { position: absolute; z-index: 3; left: 0; top: calc(100% + 5px); width: min(280px, 72vw); padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-2); box-shadow: var(--shadow-sm); font-size: 11.5px; line-height: 1.35; opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-3px); transition: opacity .14s ease, transform .14s ease, visibility .14s; }
+.quick-kpi-option:hover > .quick-kpi-help, .quick-kpi-option:focus-within > .quick-kpi-help { opacity: 1; visibility: visible; transform: translateY(0); }
 .kpi-edit-note { margin: 0 0 8px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2); }
 @media (max-width: 700px) { .kpi-guide-steps { grid-template-columns: 1fr; } .quick-kpi-option { min-width: 160px; } }
 .chip-btn { border: 1px dashed var(--border-strong); background: var(--surface); color: var(--text); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }

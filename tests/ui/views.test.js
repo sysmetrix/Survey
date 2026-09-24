@@ -590,6 +590,7 @@ test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
   let html = business.render();
   assert.ok(html.includes("빠른 추가") && html.includes("선택 · 고급") && html.includes("논리모형"), "사업정보·논리모형은 처음부터 펼쳐짐");
+  assert.match(html, /class="quick-kpi-help"/, "빠른 추가 설명은 보조 툴팁 영역으로 표시");
   business.actions["kpi-quick"]({ dataset: { id: "sat" } });
   assert.equal(state.kpis.length, 1);
   assert.equal(state.kpis[0].metric, "score100");
