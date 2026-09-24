@@ -38,7 +38,9 @@ test("간편 지표: 목적 선택·목표 없는 입력·문항 지정·저장 
   _setFlagsForTest({ guidedKpiSetup: true, surveyVersioning: true, competencyProfile: true, standardComparisons: true });
   try {
     business.actions["kpi-purpose"]({ dataset: { id: "experience" }, checked: true });
-    assert.ok(business.render().includes("측정 문항 선택 필요"));
+    const purposeHtml = business.render();
+    assert.ok(purposeHtml.includes("측정 문항 선택 필요"));
+    assert.ok(purposeHtml.includes("운영 횟수"), "목적을 선택해도 다른 목적의 지표 옵션은 사라지지 않음");
     business.actions["kpi-quick"]({ dataset: { id: "sat" } });
     const k = state.kpis.at(-1), index = state.kpis.length - 1;
     assert.equal(k.target, null);
@@ -105,6 +107,10 @@ test("데이터 설정: 보기 점수 패널·일괄 적용", async () => {
   assert.equal(a.role, "likert");
   const html = setup.render();
   assert.ok(html.includes("보기별 점수") && html.includes("미변환"), "문자 응답 패널 자동 표시");
+  assert.ok(html.includes("column-workspace") && html.includes("column-node") && html.includes("column-editor"), "문항 설정은 노드 목록과 선택 문항 편집 패널로 표시");
+  assert.ok(!html.includes('<table class="tbl setup">'), "기존 가로 문항 매핑 표를 노출하지 않음");
+  setup.actions["column-select"]({ dataset: { key: b.key } });
+  assert.match(setup.render(), new RegExp(`data-key="${b.key}" aria-pressed="true"`), "문항 노드를 선택하면 해당 문항만 편집 패널에 표시");
   L.forEach((t, i) => setup.actions.labelmap({ dataset: { key: a.key, raw: t }, value: String(i + 1) }));
   setup.actions["labelmap-apply-all"]({ dataset: { key: a.key } });
   assert.equal(b.role, "likert"); assert.equal(b.labelMap["완전 좋음"], 5);
@@ -600,6 +606,7 @@ test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   _setFlagsForTest({ guidedKpiSetup: true });
   html = business.render();
   assert.ok(html.includes("빠른 설정") && html.includes("전체 표 편집") && html.includes("측정 가이드"));
+  assert.ok(html.includes("kpi-purpose-cards") && html.includes("kpi-recommendations"), "평가 목적은 카드형으로 선택하고 추천 지표는 같은 목록에서 강조");
   assert.ok(!html.includes("성과지표 설정 방법 보기") && !html.includes("측정 방법 도움말 보기"), "상위 작업은 펼침 토글 대신 탭으로 표시");
   business.actions["kpi-tab"]({ dataset: { tab: "guide" } });
   html = business.render();
