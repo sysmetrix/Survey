@@ -618,6 +618,11 @@ test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   assert.ok(html.includes("빠른 설정") && html.includes("전체 표 편집") && html.includes("측정 가이드"));
   assert.ok(html.includes("kpi-purpose-cards") && html.includes("kpi-recommendations"), "평가 목적은 카드형으로 선택하고 추천 지표는 같은 목록에서 강조");
   assert.ok(!html.includes("성과지표 설정 방법 보기") && !html.includes("측정 방법 도움말 보기"), "상위 작업은 펼침 토글 대신 탭으로 표시");
+  assert.ok(html.includes('data-act="kpi-add"'), "새 지표 추가 행동이 빠른 설정 상단에 항상 렌더링");
+  const appCss = await readFile("css/app.css", "utf8");
+  assert.ok(appCss.includes(".kpi-workspace { padding-top: 0; overflow: visible; }") && appCss.includes(".kpi-tab-panel > .row:first-child { display: grid;"), "탭이 행동 영역을 가리지 않고 버튼 공간을 확보");
+  const uxStandard = await readFile("docs/UX_IMPLEMENTATION_STANDARD.md", "utf8");
+  assert.ok(uxStandard.includes("버튼은 잘리거나 말줄임표로 숨기지 않는다") && uxStandard.includes("1280px, 1024px, 768px, 390px"), "화면 구현 기준과 검토 폭을 문서화");
   business.actions["kpi-tab"]({ dataset: { tab: "guide" } });
   html = business.render();
   assert.ok(html.includes("측정 방법 안내") && html.includes("성과지표는 3단계로 설정합니다"));

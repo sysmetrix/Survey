@@ -350,7 +350,7 @@ function detailHtml(rows) {
 }
 
 function advancedHtml(rows, prevRows) {
-  const tiles = [...operationalKpis([...rows, ...actionRows], prevRows || []), ...distributionKpis(orgRows || [], versionRows || [], "5.47.12")];
+  const tiles = [...operationalKpis([...rows, ...actionRows], prevRows || []), ...distributionKpis(orgRows || [], versionRows || [], "5.47.13")];
   const funnel = operationalFunnel([...rows, ...actionRows]);
   const fmt = t => `${Number(t.value || 0).toLocaleString()}${t.unit || ""}`;
   return `<h3 class="admin-h3">운영 KPI ${isAdminPreview("operationalUsageStats") ? '<span class="badge info">관리자 미리보기</span>' : ""} <span class="small muted">현재 기간 · 익명 세션/이벤트 기준</span></h3>

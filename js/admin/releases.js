@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.13", date: "2026-09-24", title: "성과지표 행동 영역 안정화",
+    groups: {
+      "성과지표": [
+        "탭이 새 지표 추가 행동을 덮지 않도록 고정·잘림 구조를 제거하고, 화면 폭이 좁으면 행동 영역이 다음 줄로 안전하게 이동하도록 바꿨습니다.",
+        "화면 구현 기준을 문서화하고, 행동 버튼의 렌더링·레이아웃 규칙·검토 폭을 테스트로 확인합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.12", date: "2026-09-24", title: "문항 설정의 지도·빠른 설정 보완",
     groups: {
       "데이터 설정": [
