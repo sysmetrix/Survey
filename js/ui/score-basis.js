@@ -23,9 +23,9 @@ function impactOf(items) {
 
 /**
  * @param items 분석된 척도 문항(itemStats 결과, 원자료 평균 mean 포함). 없으면 일반 예시로 설명
- * @param {{compact?: boolean}} [opts] compact: 데이터 설정처럼 다른 카드가 많은 화면에서 요약 한 줄 + '자세히' 로 접어 보여줌
+ * @param {{compact?: boolean, embedded?: boolean}} [opts] compact: 데이터 설정처럼 다른 카드가 많은 화면에서 요약 한 줄 + '자세히' 로 접어 보여줌
  */
-export function scoreBasisPanel(items = [], { compact = false } = {}) {
+export function scoreBasisPanel(items = [], { compact = false, embedded = false } = {}) {
   const cur = cleanScoreBasis(state.settings.scoreBasis);
   const curBasis = SCORE_BASES.find(b => b.id === cur);
   const imp = impactOf(items);
@@ -79,11 +79,11 @@ export function scoreBasisPanel(items = [], { compact = false } = {}) {
   // compact: 다른 카드가 많은 데이터 설정 화면 — 한 줄 요약 + 두 선택지만 두고, 산식·예시는 '자세히'로 접음
   const compactBody = () => `<p class="small muted">평균을 반올림하기 전/후 중 어느 값으로 100점 환산할지 고릅니다${imp.total ? ` — 이 파일은 척도 문항 ${imp.total}개 중 <b>${imp.changed}개</b>가 두 기준에서 값이 다릅니다` : ""}. 지금은 <b>${esc(curBasis.short)}</b> 기준입니다.</p>
     ${opts()}`;
-  return `<section class="card basis-card" id="basis-card">
+  const body = `
     <div class="row between wrap"><h2>100점 환산 기준</h2>
       ${compact ? `<button type="button" class="btn sm sub" data-act="basis-toggle">${expanded ? "간단히" : "산식·예시 보기"}</button>` : ""}</div>
-    ${compact && !expanded ? compactBody() : fullBody()}
-  </section>`;
+    ${compact && !expanded ? compactBody() : fullBody()}`;
+  return embedded ? `<div class="basis-card basis-embedded" id="basis-card">${body}</div>` : `<section class="card basis-card" id="basis-card">${body}</section>`;
 }
 
 export const scoreBasisActions = {

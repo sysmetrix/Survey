@@ -188,11 +188,39 @@ export function render() {
     || (columnFilter === "scale" && ["likert", "nps"].includes(c.role))
     || (columnFilter === "profile" && c.role === "demographic")
     || (columnFilter === "other" && !["likert", "nps", "demographic"].includes(c.role));
-  const visibleColumns = cb.columns.filter(matchesColumn);
+  let visibleColumns = cb.columns.filter(matchesColumn);
+  // A filter belongs to the prior dataset/view. Never let that stale state hide
+  // the only controls that can recover the question workspace.
+  if (!visibleColumns.length && cb.columns.length && columnFilter !== "all") {
+    columnFilter = "all";
+    selectedColumnKey = "";
+    visibleColumns = cb.columns;
+  }
   const selectedColumn = visibleColumns.find(c => c.key === selectedColumnKey) || visibleColumns[0] || null;
   const filterCount = id => cb.columns.filter(c => id === "all" || (id === "review" && needsReview(c)) || (id === "scale" && ["likert", "nps"].includes(c.role)) || (id === "profile" && c.role === "demographic") || (id === "other" && !["likert", "nps", "demographic"].includes(c.role))).length;
   const nodeState = c => needsReview(c) ? "review" : c.role === "ignore" ? "muted" : "ready";
   const nodeBadge = c => needsReview(c) ? "확인 필요" : c.role === "ignore" ? "분석 제외" : "설정됨";
+  const mapDestination = c => {
+    const parts = [];
+    if (c.domain) parts.push(domainName(c.domain));
+    if (c.time) parts.push(c.time === "pre" ? "사전" : "사후");
+    if (!parts.length && ["likert", "nps", "numeric"].includes(c.role)) parts.push(`${c.scale?.min ?? "?"}~${c.scale?.max ?? "?"}점`);
+    return parts.join(" · ") || (c.role === "ignore" ? "분석에 사용하지 않음" : "분석 흐름에 연결");
+  };
+  const mapLanes = [
+    ["measure", "성과·측정", "점수와 변화로 읽는 문항", c => ["likert", "nps", "numeric"].includes(c.role)],
+    ["profile", "응답자 특성", "대상별 차이를 보는 문항", c => c.role === "demographic"],
+    ["support", "운영·기타", "식별·분류·분석 제외 문항", c => !["likert", "nps", "numeric", "demographic"].includes(c.role)],
+  ];
+  const questionMap = `<section class="question-map" aria-label="문항 연결 지도">
+    <div class="question-map-head"><div><span class="eyebrow">문항 연결 지도</span><h3>문항을 선택해 분석 흐름을 확인하세요</h3></div><span class="small muted">노드를 선택하면 아래에서 연결 값만 편집합니다.</span></div>
+    <div class="column-filter-list question-map-filter" role="group" aria-label="문항 상태 필터">${filters.map(([id, label]) => `<button class="column-filter${columnFilter === id ? " on" : ""}" data-act="column-filter" data-filter="${id}" aria-pressed="${columnFilter === id}">${label}<b>${filterCount(id)}</b></button>`).join("")}</div>
+    ${selectedColumn ? `<div class="selected-map-flow" aria-label="선택한 문항의 분석 흐름"><div class="flow-node source"><span>원본 문항</span><b>${esc(selectedColumn.label || selectedColumn.header)}</b></div><span class="flow-link">${icon("right", 16)}</span><div class="flow-node role"><span>분석 역할</span><b>${esc(ROLES[selectedColumn.role] || selectedColumn.role)}</b></div><span class="flow-link">${icon("right", 16)}</span><div class="flow-node target"><span>분석 연결</span><b>${esc(mapDestination(selectedColumn))}</b></div></div>` : `<div class="empty-inline"><div><b>불러온 문항이 없습니다</b><p class="small muted">파일을 다시 불러오면 문항 연결 지도가 표시됩니다.</p></div></div>`}
+    <div class="question-map-lanes">${mapLanes.map(([id, title, detail, accepts]) => {
+      const cols = visibleColumns.filter(accepts);
+      return `<section class="question-map-lane ${id}"><header><span class="map-lane-port"></span><div><b>${title}</b><small>${detail}</small></div><em>${cols.length}</em></header><div class="question-map-nodes">${cols.map(col => `<button class="question-map-node ${nodeState(col)}${selectedColumn?.key === col.key ? " on" : ""}" data-act="column-select" data-key="${esc(col.key)}" aria-pressed="${selectedColumn?.key === col.key}"><span class="map-node-index">${col.index + 1}</span><span class="map-node-copy"><strong>${esc(col.label || col.header)}</strong><small>${esc(ROLES[col.role] || col.role)} ${icon("right", 11)} ${esc(mapDestination(col))}</small></span><span class="map-node-state ${nodeState(col)}"></span></button>`).join("") || `<p class="map-lane-empty">이 분류의 문항이 없습니다.</p>`}</div></section>`;
+    }).join("")}</div>
+  </section>`;
   const columnWorkspace = selectedColumn ? (() => {
     const c = selectedColumn;
     const numeric = ["likert", "nps", "numeric"].includes(c.role);
@@ -204,9 +232,16 @@ export function render() {
     const popOn = c.role === "demographic" && isFeatureOn("respondentRepresentativeness");
     return `<div class="column-workspace"><aside class="column-node-list"><div class="column-filter-list" role="group" aria-label="문항 상태 필터">${filters.map(([id, label]) => `<button class="column-filter${columnFilter === id ? " on" : ""}" data-act="column-filter" data-filter="${id}" aria-pressed="${columnFilter === id}">${label}<b>${filterCount(id)}</b></button>`).join("")}</div><div class="column-nodes">${visibleColumns.map((col, i) => `<button class="column-node ${nodeState(col)}${c.key === col.key ? " on" : ""}" data-act="column-select" data-key="${esc(col.key)}" aria-pressed="${c.key === col.key}"><span class="column-node-index">${col.index + 1}</span><span class="column-node-copy"><strong>${esc(col.label || col.header)}</strong><small>${esc(ROLES[col.role] || col.role)} · ${esc(sampleValues(col) || "응답 예 없음")}</small></span><span class="badge ${nodeState(col) === "review" ? "warn" : nodeState(col) === "ready" ? "ok" : "muted"}">${nodeBadge(col)}</span></button>`).join("") || `<div class="empty-inline"><div><b>해당 문항이 없습니다</b><p class="small muted">다른 필터를 선택해 주세요.</p></div></div>`}</div></aside><section class="column-editor" aria-label="선택 문항 설정"><header class="column-editor-head"><div><span class="column-editor-index">${c.index + 1}번 열 · ${esc(c.header)}</span><h3>${esc(c.label || c.header)}</h3></div><div class="row gap"><span class="badge ${nodeState(c) === "review" ? "warn" : "info"}">${esc(ROLES[c.role] || c.role)}</span>${colEdited(cb, c) ? `<button class="icon-btn sm" data-act="col-reset" data-key="${esc(c.key)}" title="자동 판별로 되돌리기" aria-label="${esc(c.label)} 자동 판별로 되돌리기">${icon("undo", 14)}</button>` : ""}</div></header><div class="column-node-flow"><span>원본 열</span>${icon("right", 14)}<b>${esc(ROLES[c.role] || c.role)}</b>${numeric ? `${icon("right", 14)}<span>${c.scale?.min ?? "?"}~${c.scale?.max ?? "?"}점</span>` : ""}${c.domain ? `${icon("right", 14)}<span>${esc(domainName(c.domain))}</span>` : ""}${c.time ? `<span class="badge info">${c.time === "pre" ? "사전" : "사후"}</span>` : ""}</div><div class="column-edit-grid"><label class="field">표시 이름<input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label" aria-label="${esc(c.header)} 표시 이름"></label><label class="field">분석 역할<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role" aria-label="${esc(c.label)} 역할">${Object.entries(ROLES).map(([key, value]) => option(key, value, c.role === key)).join("")}</select></label>${numeric ? `<label class="field">척도 범위<span class="inline-inputs"><input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min" aria-label="${esc(c.label)} 척도 최솟값"><i>~</i><input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max" aria-label="${esc(c.label)} 척도 최댓값"></span></label><label class="field">측정 시점<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time" aria-label="${esc(c.label)} 시점">${option("", "시점 없음", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select></label>` : ""}${c.role === "likert" ? `<label class="field">분석 영역<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="영역 없음" data-change="col" data-key="${esc(c.key)}" data-field="domain" aria-label="${esc(c.label)} 영역"></label><label class="node-switch"><input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse"><span><b>역문항</b><small>점수 방향을 반대로 계산</small></span></label>${c.time !== "pre" ? `<label class="node-switch"><input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall"><span><b>전반 만족</b><small>대표 만족도 문항으로 사용</small></span></label>` : ""}` : ""}</div><div class="column-actions">${scaled ? `<button class="btn sm ${unm.length ? "primary" : ""}" data-act="toggle-labels" data-key="${esc(c.key)}">${icon("edit", 15)}보기 점수 설정${unm.length ? ` <span class="badge bad">${unm.reduce((sum, item) => sum + item.n, 0)}건 확인</span>` : ""}</button>` : ""}${yearKind ? `<button class="btn sm" data-act="toggle-yearbucket" data-key="${esc(c.key)}">${icon("grid", 15)}연도 구간${yName ? ` · ${esc(yName)}` : ""}</button>` : ""}${popOn ? `<button class="btn sm" data-act="toggle-poppanel" data-key="${esc(c.key)}">${icon("users", 15)}모집단 비율${c.popPct ? ` · ${Object.keys(c.popPct).length}개` : ""}</button>` : ""}</div>${scaled && expanded === c.key ? labelPanel(c, unm) : ""}${yearKind && expanded === c.key ? yearBucketPanel(c) : ""}${popOn && expandedPop === c.key ? popPanel(c, sv) : ""}</section></div>`;
   })() : `<div class="empty-inline"><div><b>설정할 문항이 없습니다</b><p class="small muted">다른 필터를 선택해 주세요.</p></div></div>`;
+  const supportPanel = `<section class="card setup-support-card"><details>
+    <summary><span><b>분석 설정과 자료 점검</b><small>100점 환산 기준과 불성실 응답 제외 조건을 필요할 때 확인합니다.</small></span><span class="badge muted">선택 설정</span></summary>
+    <div class="setup-support-body">
+      ${r.analysis.items.length ? scoreBasisPanel(r.analysis.items, { compact: true, embedded: true }) : ""}
+      <div class="setup-straight-check"><h3>자료 점검</h3><label class="check"><input type="checkbox" ${state.excludeStraight ? "checked" : ""} data-change="exclude-straight"> 모든 척도 문항에 같은 값으로 응답한 사례(불성실 응답 의심) <b>${r.straight}명</b> 분석에서 제외</label></div>
+    </div>
+  </details></section>`;
 
   return `
-  <section class="card">
+  <section class="card setup-overview">
     <div class="page-head">
       <div><h1>데이터 설정</h1><p class="muted">자동 판별 결과를 확인하고 필요한 부분만 고치세요. 변경 사항은 분석·보고서에 바로 반영됩니다.</p></div>
       <div class="row gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button><button class="btn ghost" data-act="goto" data-to="dash">건너뛰고 분석 결과 보기</button></div>
@@ -228,8 +263,6 @@ export function render() {
     </div>
   </section>` : ""}
 
-  ${r.analysis.items.length ? scoreBasisPanel(r.analysis.items, { compact: true }) : ""}
-
   ${cb.design === "prepost-sheets" ? `
   <section class="card">
     <h2>사전·사후 응답자 연결</h2>
@@ -248,18 +281,14 @@ export function render() {
   </section>` : ""}
 
   <section class="card">
-    <h2>자료 점검</h2>
-    <label class="check"><input type="checkbox" ${state.excludeStraight ? "checked" : ""} data-change="exclude-straight">
-      모든 척도 문항에 같은 값으로 응답한 사례(불성실 응답 의심) <b>${r.straight}명</b> 분석에서 제외</label>
-  </section>
-
-  <section class="card">
     <div class="row between wrap"><h2>문항(열) 설정</h2>
       <span class="small muted">왼쪽에서 문항을 선택하면 오른쪽에서 역할·척도·영역·시점을 한 번에 설정합니다. 연결 흐름을 보고 필요한 값만 수정하세요.${isFeatureOn("respondentRepresentativeness") && isAdminPreview("respondentRepresentativeness") ? ' · 응답자 특성 열의 모집단 비율은 <span class="badge muted">관리자 미리보기</span> 기능입니다' : ""}</span></div>
     <datalist id="domainList">${cb.domains.map(d => `<option value="${esc(d.name)}">`).join("")}</datalist>
+    ${questionMap}
     ${columnWorkspace}
     <div class="row end gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button></div>
-  </section>`;
+  </section>
+  ${supportPanel}`;
 }
 
 const colByKey = key => state.codebook.columns.find(x => x.key === key);

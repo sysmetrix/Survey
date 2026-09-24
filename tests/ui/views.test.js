@@ -119,6 +119,11 @@ test("데이터 설정: 보기 점수 패널·일괄 적용", async () => {
   assert.ok(!setup.render().includes("미변환"));
   setup.actions["labelmap-reverse"]({ dataset: { key: a.key } });
   assert.equal(a.labelMap["완전 별로"], 5);
+  state.codebook.columns.forEach(col => setup.actions.col({ dataset: { key: col.key, field: "role" }, value: "ignore" }));
+  setup.actions["column-filter"]({ dataset: { filter: "profile" } });
+  const recovered = setup.render();
+  assert.ok(recovered.includes('data-filter="all" aria-pressed="true"'), "빈 필터는 전체 문항으로 안전 복구");
+  assert.ok(recovered.includes("question-map") && recovered.includes("column-editor"), "빈 필터 뒤에도 노드 지도와 편집 화면을 계속 사용 가능");
 });
 
 test("데이터 설정: 응답으로 보이는 시트가 여럿이면 고르는 카드가 뜨고, 고르면 그 시트로 다시 판별", () => {
