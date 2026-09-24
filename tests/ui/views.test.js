@@ -178,6 +178,8 @@ test("데이터 설정: 응답 시트가 하나면 시트 분리 사전·사후�
   const html = setup.render();
   assert.ok(html.includes("응답 시트가 1개") && html.includes("준비 필요"), "시트 분리 조건과 필요한 파일 형태를 화면에서 설명");
   assert.match(html, /value="prepost-sheets"[^>]*disabled/, "불가능한 조사 방식은 선택할 수 없음");
+  assert.ok(html.includes("제외할 응답 없음") && html.includes("같은 점수를 반복해 답한 응답"), "응답 품질 점검은 0명을 검토 대상으로 부르지 않고 이유를 설명");
+  assert.ok(!html.includes("${r.straight}"), "응답자 수는 템플릿 문자열이 아니라 실제 값으로 표시");
 });
 
 test("KPI 편집 → 재계산", async () => {

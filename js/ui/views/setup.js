@@ -281,11 +281,14 @@ export function render() {
     <div class="bulk-settings-note"><div><b>빠른 설정</b><span>① 확인 필요 문항부터 보고 ② 이름·역할을 확인한 뒤 ③ 필요한 옵션만 수정하세요.</span></div><span class="badge ${reviewCount ? "warn" : "ok"}">${reviewCount ? `확인 필요 ${reviewCount}개` : "모두 확인됨"}</span></div>
     <div class="bulk-question-list">${orderedColumns.map(bulkQuestionCard).join("")}</div>
   </section>`;
+  const qualityControl = r.straight
+    ? `<label class="quality-toggle"><input type="checkbox" ${state.excludeStraight ? "checked" : ""} data-change="exclude-straight"><span><b>${state.excludeStraight ? `동일 점수 응답 ${r.straight}명 제외 적용됨` : `동일 점수 응답 ${r.straight}명`}</b><small>${state.excludeStraight ? "분석·보고서에서 이 응답을 제외하고 있습니다." : "내용을 확인한 뒤 선택하면 분석·보고서에서 제외합니다."}</small></span></label>`
+    : `<div class="quality-status"><b>제외할 응답 없음</b><small>3개 이상 척도 문항에 모두 같은 점수로 답한 사람이 없습니다.</small></div>`;
   const supportPanel = `<section class="card setup-support-card">
     <div class="setup-support-title"><span><em>분석 전 확인</em><b>결과 점수와 응답 품질</b><small>보고서에 쓰일 점수 기준을 고르고, 제외할 응답이 있는지 확인합니다.</small></span></div>
     <div class="setup-support-body">
       ${scoreBasisPanel(r.analysis.items, { embedded: true })}
-      <section class="setup-quality-check"><div><span class="eyebrow">응답 품질 점검</span><h3>모든 척도 문항에 같은 점수를 준 응답</h3><p>무조건 제외하지 않습니다. 담당자가 확인한 경우에만 분석에서 뺍니다.</p></div><label class="quality-toggle"><input type="checkbox" ${state.excludeStraight ? "checked" : ""} data-change="exclude-straight"><span><b>${state.excludeStraight ? "${r.straight}명 제외 중" : "${r.straight}명 검토 필요"}</b><small>${state.excludeStraight ? "분석·보고서에 제외 결과를 반영합니다." : "선택하면 분석에서 제외합니다."}</small></span></label></section>
+      <section class="setup-quality-check"><div><span class="eyebrow">응답 품질 점검</span><h3>같은 점수를 반복해 답한 응답</h3><p>3개 이상 척도 문항에 모두 같은 점수로 답한 경우입니다. 성실 응답일 수도 있어 자동으로 제외하지 않습니다.</p></div>${qualityControl}</section>
     </div>
   </section>`;
 

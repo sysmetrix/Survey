@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.17", date: "2026-09-24", title: "응답 품질 안내 문구 정정",
+    groups: {
+      "데이터 설정": [
+        "‘0명 검토 필요’ 같은 시스템 문구를 없애고, 제외할 응답이 없으면 그 사실과 판정 기준을 바로 설명합니다.",
+        "대상이 있을 때만 동일 점수 응답 수, 제외 동작, 보고서 반영 상태를 분명히 표시합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.16", date: "2026-09-24", title: "조사 방식 안전장치와 분석 전 판단 흐름",
     groups: {
       "데이터 설정": [
