@@ -98,6 +98,33 @@ try {
   await evaluate(`document.querySelector('[data-file="${SAMPLE}"]').click()`);
   await waitFor(`location.hash === '#/setup' && !!document.querySelector('.setup-workspace .column-workspace')`);
   await shot("2-setup");
+  // 전체 표 편집은 페이지가 아닌 표 본문만 스크롤되어야 한다. 긴 문항 목록에서
+  // 필터·다음 단계 버튼이 밀리거나, 스크롤 중 표 헤더/설정 버튼을 잃는 회귀를 막는다.
+  await evaluate(`document.querySelector('[data-act="setup-mode"][data-mode="table"]').click()`);
+  await waitFor(`!!document.querySelector('.setup-table-wrap .setup-grid')`);
+  const tableCheck = await evaluate(`(() => {
+    const wrap = document.querySelector('.setup-table-wrap');
+    const header = wrap.querySelector('thead');
+    const edit = wrap.querySelector('[data-act="column-select"]');
+    const style = getComputedStyle(wrap);
+    if (!header || !edit) throw new Error('전체 표의 헤더 또는 설정 버튼이 없습니다');
+    const before = header.getBoundingClientRect().top;
+    const maxScroll = wrap.scrollHeight - wrap.clientHeight;
+    if (maxScroll <= 8) throw new Error('전체 표 본문에 독립 스크롤이 없습니다 (' + wrap.scrollHeight + '/' + wrap.clientHeight + ')');
+    if (!['auto', 'scroll'].includes(style.overflowY)) throw new Error('전체 표 세로 스크롤 설정이 올바르지 않습니다 (' + style.overflowY + ')');
+    wrap.scrollTop = Math.min(180, maxScroll);
+    const after = header.getBoundingClientRect().top;
+    if (wrap.scrollTop < 8) throw new Error('전체 표 본문이 실제로 스크롤되지 않습니다');
+    if (Math.abs(after - before) > 2) throw new Error('전체 표 헤더가 본문 스크롤 중 고정되지 않습니다');
+    return { clientHeight: wrap.clientHeight, scrollHeight: wrap.scrollHeight, scrollTop: wrap.scrollTop };
+  })()`);
+  await evaluate(`document.querySelector('.setup-table-wrap [data-act="column-select"]').click()`);
+  await waitFor(`!!document.querySelector('.setup-grid-detail-body input[data-change="col"]')`);
+  await evaluate(`document.querySelector('.setup-grid-detail-body').scrollIntoView({ block: 'nearest' })`);
+  await shot("2c-setup-table-scroll");
+  await evaluate(`document.querySelector('[data-act="setup-mode"][data-mode="quick"]').click()`);
+  await waitFor(`!!document.querySelector('.setup-workspace .column-workspace')`);
+  results.push(`전체 표: 본문 독립 스크롤 ${tableCheck.clientHeight}px/${tableCheck.scrollHeight}px, 고정 헤더·설정 패널 접근 OK`);
   if (await evaluate(`!!document.querySelector('[data-act="toggle-labels"]')`)) {
     await evaluate(`document.querySelector('[data-act="toggle-labels"]').click()`);
     await waitFor(`!!document.querySelector('.labelpanel')`);
