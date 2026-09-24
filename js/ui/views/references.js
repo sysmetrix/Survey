@@ -28,6 +28,7 @@ const BENCHMARKS = [
 ];
 
 let activeTab = "guide";
+const BENCHMARK_MATRIX = `<div class="reference-matrix"><h3>비교 기준 한눈에 보기</h3><div class="tblwrap"><table class="tbl"><thead><tr><th>비교 항목</th><th>참고 사례의 방식</th><th>우리 서비스 적용</th><th>판단</th></tr></thead><tbody><tr><td>초기 설정</td><td>단계별 안내</td><td>목적 선택 → 추천 지표 → 상세 설정</td><td><span class="badge ok">유지</span></td></tr><tr><td>근거 자료</td><td>원문 중심 제공</td><td>한국어 핵심 요약 후 원문 링크</td><td><span class="badge info">개선</span></td></tr><tr><td>상세 옵션</td><td>필요할 때 확장</td><td>기본 화면은 단순화, 상세 편집은 탭으로 분리</td><td><span class="badge info">적용</span></td></tr><tr><td>운영 점검</td><td>품질·오류를 별도 관리</td><td>관리자 통계의 운영·상세 데이터 탭</td><td><span class="badge info">적용</span></td></tr></tbody></table></div></div>`;
 const REFERENCE_TABS = [["guide", "핵심 흐름"], ["sources", "근거 자료"], ["benchmark", "벤치마킹 검토"], ["checklist", "적용 체크리스트"]];
 const sectionTabs = () => `<nav class="tabs reference-tabs" aria-label="레퍼런스 영역">${REFERENCE_TABS.map(([key, label]) => `<button type="button" class="tab${activeTab === key ? " on" : ""}" ${activeTab === key ? 'aria-current="page"' : ""} data-act="reference-tab" data-tab="${key}">${label}</button>`).join("")}</nav>`;
 function renderContent() {
@@ -40,7 +41,10 @@ function renderContent() {
 
 export function render() {
   let section = -1;
-  const html = renderContent().replace(/<section class="card">/g, () => `<section class="card"${++section === REFERENCE_TABS.findIndex(([key]) => key === activeTab) ? "" : " hidden"}>`);
+  let html = renderContent();
+  html = html.replace(/(<article class="reference-source">[\s\S]*?<h3>[\s\S]*?<\/h3>)<p>([\s\S]*?)<\/p><\/article>/g, '$1<p><b>핵심 요약</b> $2</p><p class="reference-application"><b>적용 판단</b> 이 자료의 원칙을 서비스의 지표 설계·안내 흐름에 반영합니다.</p><p class="reference-caution"><b>주의점</b> 원문 기준을 그대로 복사하지 않고 기관의 목적·대상·자료 범위에 맞춰 검토합니다.</p></article>');
+  html = html.replace(/(<div class="benchmark-grid">[\s\S]*?<\/div>)/, `$1${BENCHMARK_MATRIX}`);
+  html = html.replace(/<section class="card">/g, () => `<section class="card"${++section === REFERENCE_TABS.findIndex(([key]) => key === activeTab) ? "" : " hidden"}>`);
   return sectionTabs() + html;
 }
 
