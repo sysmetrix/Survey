@@ -571,6 +571,8 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .arrow { align-self: center; color: var(--brand-text); font-weight: 800; }
 .link-btn { border: 0; padding: 0; background: none; color: var(--brand-text); font: inherit; cursor: pointer; text-decoration: underline; }
 .reference-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.reference-tabs { margin: 0 0 14px; }
+.reference-tabs a { text-decoration: none; }
 .reference-step { display: flex; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
 .reference-step h3, .reference-source h3 { margin: 0 0 5px; font-size: 14px; }
 .reference-step p, .reference-source p { margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.55; }

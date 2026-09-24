@@ -26,10 +26,15 @@ const BENCHMARKS = [
   ["측정 품질 안내", "문항 누락, 응답 수 부족, 사전·사후 불일치, 역문항 처리 여부를 분석 전 점검 결과로 보여줌"],
 ];
 
-export function render() {
+const sectionTabs = `<nav class="tabs reference-tabs" aria-label="레퍼런스 영역"><a class="tab on" href="#reference-guide">핵심 흐름</a><a class="tab" href="#reference-sources">근거 자료</a><a class="tab" href="#reference-benchmark">벤치마킹 검토</a><a class="tab" href="#reference-checklist">적용 체크리스트</a></nav>`;
+function renderContent() {
   return `<div class="page-head"><div><h1>평가 레퍼런스</h1><p class="small muted">청소년 활동·사업의 성과지표를 설계하고 결과를 해석할 때 참고할 수 있는 근거와 실무 흐름입니다.</p></div><div class="row gap wrap"><button class="btn" data-act="back">성과지표로 돌아가기${icon("left", 16)}</button></div></div>
     <section class="card"><div class="eyebrow">권장 평가 흐름</div><h2>사업 목적에서 개선안까지</h2><div class="reference-steps">${STEPS.map(([n,t,d]) => `<article class="reference-step"><span class="step-number">${n}</span><div><h3>${t}</h3><p>${d}</p></div></article>`).join("")}</div></section>
     <section class="card"><div class="row between wrap"><div><div class="eyebrow">근거 자료</div><h2>확인 가능한 레퍼런스</h2></div><span class="badge muted">외부 원문 링크</span></div><div class="reference-sources">${SOURCES.map(s => `<article class="reference-source"><div class="row between gap"><span class="badge info">${s.type}</span><a href="${s.url}" target="_blank" rel="noopener noreferrer">원문 열기 ${icon("external", 14)}</a></div><h3>${s.title}</h3><p>${s.text}</p></article>`).join("")}</div></section>
     <section class="card"><div class="eyebrow">벤치마킹 검토</div><h2>이 통계 시스템에 반영할 제안</h2><div class="benchmark-grid">${BENCHMARKS.map(([t,d]) => `<article class="benchmark-item"><h3>${t}</h3><p>${d}</p></article>`).join("")}</div><p class="small muted">우선순위는 ① 문항 버전·사전·사후 일치 검증 ② 연령별 표준 설문 템플릿 ③ 역량 프로파일·변화 보고서 순서가 적절합니다.</p></section>
     <section class="card"><div class="eyebrow">작성 전 점검</div><h2>지표 품질 체크리스트</h2><div class="checklist"><label><input type="checkbox"> 사업 목적과 지표가 연결되어 있나요?</label><label><input type="checkbox"> 산출(운영 실적)과 성과(변화)를 구분했나요?</label><label><input type="checkbox"> 목표값·단위·측정시점이 명확한가요?</label><label><input type="checkbox"> 만족도만으로 효과를 단정하지 않았나요?</label><label><input type="checkbox"> 응답자 수와 소수 집단 보호를 확인했나요?</label><label><input type="checkbox"> 결과를 다음 사업 개선안으로 연결했나요?</label></div><p class="small muted">체크 상태는 저장되지 않으며, 실제 평가 결과와 판단을 대신하지 않습니다.</p></section>`;
+}
+
+export function render() {
+  return sectionTabs + renderContent();
 }
