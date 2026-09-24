@@ -76,10 +76,18 @@ export function scoreBasisPanel(items = [], { compact = false, embedded = false 
       "<b>표에 적힌 평균으로 환산</b>합니다. 표의 숫자로 직접 검산하면 그대로 맞고 기존 엑셀 계산 방식과 같습니다. 대신 반올림 오차(최대 ±0.125점)가 결과에 그대로 들어가, 판정 기준선(예: 목표 90점) 근처에서는 반올림 전 기준과 판정이 달라질 수 있고 평균이 같은 문항은 같은 점수로 정렬됩니다.",
     ])}
     <p class="small muted">선택한 기준은 문항 순위 정렬, 수준 판정, 성과지표 달성 판정, 차트, 발표 자료에 모두 그대로 적용됩니다. 사전·사후 변화량, 효과크기, 검정 결과 같은 통계는 어느 쪽이든 원자료로 계산합니다. 상단 톱니바퀴의 <b>로컬 설정</b>에서 언제든 바꿀 수 있으며 이 브라우저에 기억됩니다.</p>`;
+  const embeddedBody = () => `<div class="basis-decision"><div><span class="eyebrow">결과표 계산 방식</span><h2>100점 환산 기준</h2><p><b>새 보고서를 만들면 ‘반올림 전 평균’</b>이 정확합니다. 기존 표·엑셀의 소수 둘째 자리 평균으로 검산해야 하면 ‘반올림 후 평균’을 고르세요.</p></div><div class="basis-current"><span>현재 적용</span><b>${esc(curBasis.short)}</b><small>${cur === "exact" ? "새 분석에 권장" : "기존 표와 숫자 맞춤"}</small></div></div>
+    ${fileImpact}
+    ${opts([
+      "새 분석·정확도 우선: 원자료 평균을 그대로 계산합니다.",
+      "기존 표·엑셀 검산 우선: 표에 적힌 소수 둘째 자리 평균을 사용합니다.",
+    ])}
+    <details class="basis-details"><summary>계산 예시와 이 파일의 차이 확인</summary><div>${diagrams}<p class="small muted">반올림 후 기준은 5점 척도에서 최대 ±0.125점 차이가 날 수 있어 환산 점수가 <b>높아질 수도(올림), 낮아질 수도(내림)</b> 있습니다. 목표 기준선 근처에서는 판정이 달라질 수 있습니다.</p></div></details>
+    <p class="small muted">이 선택은 문항 순위·수준·성과지표 판정·차트·발표 자료에 적용됩니다. 사전·사후 변화량과 통계 검정은 원자료로 계산합니다.</p>`;
   // compact: 다른 카드가 많은 데이터 설정 화면 — 한 줄 요약 + 두 선택지만 두고, 산식·예시는 '자세히'로 접음
   const compactBody = () => `<p class="small muted">평균을 반올림하기 전/후 중 어느 값으로 100점 환산할지 고릅니다${imp.total ? ` — 이 파일은 척도 문항 ${imp.total}개 중 <b>${imp.changed}개</b>가 두 기준에서 값이 다릅니다` : ""}. 지금은 <b>${esc(curBasis.short)}</b> 기준입니다.</p>
     ${opts()}`;
-  const body = `
+  const body = embedded ? embeddedBody() : `
     <div class="row between wrap"><h2>100점 환산 기준</h2>
       ${compact ? `<button type="button" class="btn sm sub" data-act="basis-toggle">${expanded ? "간단히" : "산식·예시 보기"}</button>` : ""}</div>
     ${compact && !expanded ? compactBody() : fullBody()}`;

@@ -148,6 +148,18 @@ export function render() {
   const sheetCandidates = dataSheetCandidates(state.dataset);
   const idCandidates = si => cb.columns.filter(c => c.sheet === si && ["id", "ignore", "demographic", "numeric"].includes(c.role));
   const m = sv.matching;
+  const hasSeparateSheets = cb.responseSheets.length === 2 && cb.responseSheets.every(si => Array.isArray(state.dataset.sheets[si]?.rows));
+  const designGuides = {
+    single: "한 번 받은 설문 결과만 분석합니다.",
+    "prepost-wide": "같은 사람의 사전·사후 응답이 한 시트에 함께 있을 때 선택합니다.",
+    "prepost-sheets": "한 파일 안의 사전·사후 응답 시트를 ID로 연결해 변화량을 봅니다.",
+    retrospective: "사후 설문에서 참여 전과 현재를 함께 물었을 때 선택합니다.",
+  };
+  const designChoices = Object.entries(DESIGN_LABELS).map(([key, label]) => {
+    const unavailable = key === "prepost-sheets" && !hasSeparateSheets;
+    const help = unavailable ? "현재 파일에는 응답 시트가 1개입니다. 사전·사후 응답 시트 2개가 있는 파일에서 사용할 수 있습니다." : designGuides[key];
+    return `<label class="design-choice${cb.design === key ? " on" : ""}${unavailable ? " locked" : ""}"><input type="radio" name="survey-design" value="${key}" ${cb.design === key ? "checked" : ""} ${unavailable ? "disabled" : ""} data-change="design"><span class="design-choice-copy"><b>${esc(label)}</b><small>${help}</small></span>${unavailable ? '<span class="badge muted">준비 필요</span>' : cb.design === key ? '<span class="badge info">선택됨</span>' : ""}</label>`;
+  }).join("");
 
   const unmappedCols = [];
   const colRows = cb.columns.map(c => {
@@ -270,10 +282,10 @@ export function render() {
     <div class="bulk-question-list">${orderedColumns.map(bulkQuestionCard).join("")}</div>
   </section>`;
   const supportPanel = `<section class="card setup-support-card">
-    <div class="setup-support-title"><span><b>분석 설정과 자료 점검</b><small>100점 환산 기준과 불성실 응답 제외 조건을 확인합니다.</small></span></div>
+    <div class="setup-support-title"><span><em>분석 전 확인</em><b>결과 점수와 응답 품질</b><small>보고서에 쓰일 점수 기준을 고르고, 제외할 응답이 있는지 확인합니다.</small></span></div>
     <div class="setup-support-body">
-      ${r.analysis.items.length ? scoreBasisPanel(r.analysis.items, { embedded: true }) : ""}
-      <div class="setup-straight-check"><h3>자료 점검</h3><label class="check"><input type="checkbox" ${state.excludeStraight ? "checked" : ""} data-change="exclude-straight"> 모든 척도 문항에 같은 값으로 응답한 사례(불성실 응답 의심) <b>${r.straight}명</b> 분석에서 제외</label></div>
+      ${scoreBasisPanel(r.analysis.items, { embedded: true })}
+      <section class="setup-quality-check"><div><span class="eyebrow">응답 품질 점검</span><h3>모든 척도 문항에 같은 점수를 준 응답</h3><p>무조건 제외하지 않습니다. 담당자가 확인한 경우에만 분석에서 뺍니다.</p></div><label class="quality-toggle"><input type="checkbox" ${state.excludeStraight ? "checked" : ""} data-change="exclude-straight"><span><b>${state.excludeStraight ? "${r.straight}명 제외 중" : "${r.straight}명 검토 필요"}</b><small>${state.excludeStraight ? "분석·보고서에 제외 결과를 반영합니다." : "선택하면 분석에서 제외합니다."}</small></span></label></section>
     </div>
   </section>`;
 
@@ -287,8 +299,8 @@ export function render() {
       <div><span>파일</span><b>${esc(state.dataset.fileName)}</b></div>
       <div><span>시트</span><b>${cb.sheets.map(s => `${esc(s.name)}(${SHEET_ROLE[s.role] || s.role})`).join(", ")}</b></div>
       <div><span>분석 응답자</span><b>${sv.n}명</b></div>
-      <div><span>조사 설계</span><select class="in" data-change="design" aria-label="조사 설계">${Object.entries(DESIGN_LABELS).map(([k, v]) => option(k, v, cb.design === k)).join("")}</select></div>
     </div>
+    <section class="setup-design" aria-labelledby="design-title"><div class="setup-design-head"><span class="eyebrow">조사 방식</span><h2 id="design-title">응답을 어떻게 받았나요?</h2><p>선택에 따라 사전·사후 변화 분석과 응답자 연결 방법이 달라집니다. 확실하지 않으면 ‘단일 시점 조사’로 시작하세요.</p></div><div class="design-choice-list" role="radiogroup" aria-label="조사 방식">${designChoices}</div></section>
     ${r.codebookWarnings.length || unmappedWarn ? `<ul class="warnings">${unmappedWarn}${r.codebookWarnings.map(w => `<li>${levelBadge(w.level)} ${esc(w.msg)}</li>`).join("")}</ul>` : ""}
   </section>
 
@@ -303,9 +315,9 @@ export function render() {
   ${supportPanel}
 
   ${cb.design === "prepost-sheets" ? `
-  <section class="card">
-    <h2>사전·사후 응답자 연결</h2>
-    <div class="row gap wrap">
+  <section class="card prepost-link-card">
+    <div class="prepost-link-head"><div><span class="eyebrow">사전·사후 연결</span><h2>두 시트에서 같은 응답자를 찾습니다</h2><p>사전·사후 시트에 공통으로 있는 ID 열을 고르세요. 이름·전화번호 원문은 저장하지 않고, 연결에 필요한 값만 이 브라우저에서 비교합니다.</p></div><span class="badge ${cb.pairing.idKeys.every(Boolean) ? "ok" : "warn"}">${cb.pairing.idKeys.every(Boolean) ? "ID 열 선택됨" : "ID 열 선택 필요"}</span></div>
+    <div class="prepost-id-grid">
       ${cb.responseSheets.map((si, i) => `<label class="field">${i === 0 ? "사전" : "사후"} 시트 ID 열
         <select class="in" data-change="idkey" data-i="${i}">${option("", "(선택)", !cb.pairing.idKeys[i])}${idCandidates(si).map(c => option(c.key, c.label, cb.pairing.idKeys[i] === c.key)).join("")}</select></label>`).join("")}
     </div>
@@ -396,7 +408,27 @@ export const actions = {
     toast(n ? `같은 보기를 쓰는 문항 ${n}개에 적용했습니다` : "같은 보기를 쓰는 다른 문항이 없습니다", n ? "ok" : "info");
     invalidate(); refresh();
   },
-  design: el => { state.codebook.design = el.value; invalidate(); refresh(); },
+  design: el => {
+    const next = el.value;
+    const separateReady = state.codebook.responseSheets.length === 2
+      && state.codebook.responseSheets.every(si => Array.isArray(state.dataset?.sheets[si]?.rows));
+    if (next === "prepost-sheets" && !separateReady) {
+      toast("사전·사후 시트 분리는 응답 시트 2개가 있는 파일에서만 선택할 수 있습니다.", "info", 6000);
+      refresh();
+      return;
+    }
+    const prev = state.codebook.design;
+    state.codebook.design = next;
+    invalidate();
+    try { compute(); }
+    catch (e) {
+      console.error(e);
+      state.codebook.design = prev;
+      invalidate();
+      toast(`조사 방식을 바꾸지 못했습니다: ${e.message}`, "bad", 6000);
+    }
+    refresh();
+  },
   "data-sheet": async el => {
     const idx = +el.value;
     if (idx === state.codebook.responseSheets[0]) return;

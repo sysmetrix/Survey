@@ -9,21 +9,28 @@ import { matchPrePost } from "./prepost.js";
  * @param {{exclude?: Set<number>}} [opts]  제외할 분석 행 번호(예: 불성실 응답)
  */
 export function buildSurvey(dataset, codebook, opts = {}) {
-  const design = codebook.design;
+  const requestedDesign = codebook.design;
+  const configuredSheets = codebook.responseSheets || [];
+  const hasSeparateSheets = requestedDesign === "prepost-sheets"
+    && configuredSheets.length === 2
+    && configuredSheets.every(si => Array.isArray(dataset.sheets[si]?.rows));
+  // 사전·사후 시트 둘이 준비되지 않은 상태는 단일 시점으로 안전 처리한다.
+  // UI는 해당 선택을 막지만, 예전 프로젝트·직접 조작된 코드북도 분석 화면을 멈추지 않아야 한다.
+  const design = requestedDesign === "prepost-sheets" && !hasSeparateSheets ? "single" : requestedDesign;
   const cols = codebook.columns;
   const byKey = new Map(cols.map(c => [c.key, c]));
   let matching = null;
   let baseSheet, rowMap; // rowMap[k] = {sheetIndex → 원 행 번호}
 
   if (design === "prepost-sheets") {
-    const [preSi, postSi] = codebook.responseSheets;
+    const [preSi, postSi] = configuredSheets;
     matching = matchPrePost(dataset, codebook);
     baseSheet = postSi;
     const preOfPost = new Map(matching.pairs.map(p => [p.post, p.pre]));
     rowMap = dataset.sheets[postSi].rows.map((_, qi) => ({ [postSi]: qi, [preSi]: preOfPost.has(qi) ? preOfPost.get(qi) : null }));
   } else {
-    baseSheet = codebook.responseSheets[0];
-    rowMap = dataset.sheets[baseSheet].rows.map((_, i) => ({ [baseSheet]: i }));
+    baseSheet = configuredSheets.find(si => Array.isArray(dataset.sheets[si]?.rows)) ?? 0;
+    rowMap = (dataset.sheets[baseSheet]?.rows || []).map((_, i) => ({ [baseSheet]: i }));
   }
   const exclude = opts.exclude || new Set();
   const keep = rowMap.map((_, i) => i).filter(i => !exclude.has(i));

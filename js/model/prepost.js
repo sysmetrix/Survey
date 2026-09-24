@@ -15,7 +15,11 @@ export const phoneLast4 = v => { const d = String(v ?? "").replace(/\D/g, ""); r
  */
 export function matchPrePost(dataset, codebook) {
   const [preSi, postSi] = codebook.responseSheets;
-  const preRows = dataset.sheets[preSi].rows, postRows = dataset.sheets[postSi].rows;
+  const preRows = dataset.sheets[preSi]?.rows, postRows = dataset.sheets[postSi]?.rows;
+  // 잘못 저장된 이전 코드북이나 화면 조작이 있어도 'undefined.rows' 예외로 화면 전체가 멈추지 않게 한다.
+  if (!Array.isArray(preRows) || !Array.isArray(postRows)) {
+    return { pairs: [], preOnly: [], postOnly: [], dupPre: 0, dupPost: 0, candidates: [], keyDesc: "사전·사후 응답 시트 2개 필요" };
+  }
   const colOf = key => codebook.columns.find(c => c.key === key);
   const { idKeys = [], compositeKeys = [], confirmed = {} } = codebook.pairing || {};
 

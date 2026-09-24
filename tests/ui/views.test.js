@@ -166,6 +166,20 @@ test("데이터 설정: 응답 시트 후보가 하나뿐이면 고르는 카드
   assert.ok(!setup.render().includes("응답 시트 선택"));
 });
 
+test("데이터 설정: 응답 시트가 하나면 시트 분리 사전·사후를 막고 화면을 유지", () => {
+  loadDataset({
+    fileName: "single.csv", source: "file",
+    sheets: [{ name: "응답", headers: ["번호", "만족도"], rows: [[1, 4], [2, 5]] }],
+  });
+  const before = state.codebook.design;
+  setup.actions.design({ value: "prepost-sheets" });
+  assert.equal(state.codebook.design, before, "응답 시트가 하나면 잘못된 설계로 바꾸지 않음");
+  assert.doesNotThrow(() => compute(), "잘못된 선택 시도 뒤에도 분석은 계속 가능");
+  const html = setup.render();
+  assert.ok(html.includes("응답 시트가 1개") && html.includes("준비 필요"), "시트 분리 조건과 필요한 파일 형태를 화면에서 설명");
+  assert.match(html, /value="prepost-sheets"[^>]*disabled/, "불가능한 조사 방식은 선택할 수 없음");
+});
+
 test("KPI 편집 → 재계산", async () => {
   const f = "2026_진로탐색_사전사후.xlsx";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
