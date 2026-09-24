@@ -29,6 +29,15 @@ function ageBandStage(age) {
   if (age <= 34) return "후기 청년(30~34세)";
   return "기타(35세 이상)";
 }
+// 학교 연계형 사업의 비교용 구간. 실제 재학 여부가 아니라 기준연도-출생연도의 근사 만 나이를 사용한다.
+function ageBandSchool(age) {
+  if (age < 7) return "기타(7세 미만)";
+  if (age <= 12) return "초등(7~12세)";
+  if (age <= 15) return "중등(13~15세)";
+  if (age <= 18) return "고등(16~18세)";
+  if (age <= 34) return "청년(대학생 포함, 19~34세)";
+  return "기타(35세 이상)";
+}
 function tenureBand3(yrs) { return yrs <= 1 ? "1년차" : yrs <= 3 ? "2~3년차" : "4년차 이상"; }
 function tenureBand2(yrs) { return yrs <= 1 ? "신규(1년 이하)" : "기존(2년 이상)"; }
 
@@ -37,6 +46,7 @@ export const YEAR_SCHEMES = {
     { id: "age10", name: "10년 단위 연령대(10대/20대/30대…)", law: false, bucket: ageBand10 },
     { id: "ageLaw", name: "법정 기준(청소년 24세 이하·청년 25~34세·기타)", law: true, bucket: ageBandLaw },
     { id: "ageStage", name: "발달 단계(청소년·청년)", law: false, bucket: ageBandStage, description: "근사 만 나이 기준: 초기 청소년 9~14세, 중기 청소년 15~18세, 후기 청소년·초기 청년 19~24세, 중기 청년 25~29세, 후기 청년 30~34세" },
+    { id: "ageSchool", name: "학교 연계형(초등·중등·고등·청년)", law: false, bucket: ageBandSchool, description: "근사 만 나이 기준: 초등 7~12세, 중등 13~15세, 고등 16~18세, 청년(대학생 포함) 19~34세. 실제 재학 여부·학년·유급·조기입학은 출생연도만으로 알 수 없습니다" },
     { id: "raw", name: "구간 나누지 않음(연도 값 그대로)", law: false, bucket: null },
   ],
   tenure: [

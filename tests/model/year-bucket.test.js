@@ -34,6 +34,19 @@ test("yearToBucket: 출생연도 → 발달 단계(ageStage) 경계값", () => {
   assert.equal(yearToBucket(REF - 35, "birth", "ageStage", REF), "기타(35세 이상)");
 });
 
+test("yearToBucket: 출생연도 → 학교 연계형(ageSchool) 경계값", () => {
+  assert.equal(yearToBucket(REF - 6, "birth", "ageSchool", REF), "기타(7세 미만)");
+  assert.equal(yearToBucket(REF - 7, "birth", "ageSchool", REF), "초등(7~12세)");
+  assert.equal(yearToBucket(REF - 12, "birth", "ageSchool", REF), "초등(7~12세)");
+  assert.equal(yearToBucket(REF - 13, "birth", "ageSchool", REF), "중등(13~15세)");
+  assert.equal(yearToBucket(REF - 15, "birth", "ageSchool", REF), "중등(13~15세)");
+  assert.equal(yearToBucket(REF - 16, "birth", "ageSchool", REF), "고등(16~18세)");
+  assert.equal(yearToBucket(REF - 18, "birth", "ageSchool", REF), "고등(16~18세)");
+  assert.equal(yearToBucket(REF - 19, "birth", "ageSchool", REF), "청년(대학생 포함, 19~34세)");
+  assert.equal(yearToBucket(REF - 34, "birth", "ageSchool", REF), "청년(대학생 포함, 19~34세)");
+  assert.equal(yearToBucket(REF - 35, "birth", "ageSchool", REF), "기타(35세 이상)");
+});
+
 test("yearToBucket: 활동 시작연도 → 년차 구간(tenure3, tenure2) 경계값", () => {
   assert.equal(yearToBucket(REF, "tenure", "tenure3", REF), "1년차");
   assert.equal(yearToBucket(REF - 1, "tenure", "tenure3", REF), "2~3년차");

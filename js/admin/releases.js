@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.26", date: "2026-09-24", title: "학교 연계형 연령 구간 추가",
+    groups: {
+      "응답자 특성 비교": [
+        "출생연도를 초등(7~12세), 중등(13~15세), 고등(16~18세), 청년(대학생 포함, 19~34세)으로 비교하는 학교 연계형 구간을 추가했습니다.",
+        "이 구간은 출생연도로 계산한 근사 만 나이이므로 실제 재학 여부·학년·유급·조기입학을 뜻하지 않는다는 안내를 함께 표시합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.25", date: "2026-09-24", title: "연령 발달단계 기준 정비",
     groups: {
       "응답자 특성 비교": [
