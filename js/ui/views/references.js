@@ -29,6 +29,13 @@ const BENCHMARKS = [
 
 let activeTab = "guide";
 const BENCHMARK_MATRIX = `<div class="reference-matrix"><h3>비교 기준 한눈에 보기</h3><div class="tblwrap"><table class="tbl"><thead><tr><th>비교 항목</th><th>참고 사례의 방식</th><th>우리 서비스 적용</th><th>판단</th></tr></thead><tbody><tr><td>초기 설정</td><td>단계별 안내</td><td>목적 선택 → 추천 지표 → 상세 설정</td><td><span class="badge ok">유지</span></td></tr><tr><td>근거 자료</td><td>원문 중심 제공</td><td>한국어 핵심 요약 후 원문 링크</td><td><span class="badge info">개선</span></td></tr><tr><td>상세 옵션</td><td>필요할 때 확장</td><td>기본 화면은 단순화, 상세 편집은 탭으로 분리</td><td><span class="badge info">적용</span></td></tr><tr><td>운영 점검</td><td>품질·오류를 별도 관리</td><td>관리자 통계의 운영·상세 데이터 탭</td><td><span class="badge info">적용</span></td></tr></tbody></table></div></div>`;
+const SOURCE_DECISIONS = [
+  ["목표·활동·결과를 분리해 성과지표의 위치를 설명하는 데 사용합니다.", "아일랜드 정책의 행정 체계와 평가 주기를 우리 기관 운영에 그대로 이식하지 않습니다."],
+  ["청소년 정책을 참여·형평성·지원체계 관점에서 점검하는 분류 틀로 사용합니다.", "정책 권고를 개별 프로그램의 효과로 해석하거나 단일 점수로 축약하지 않습니다."],
+  ["평가 질문과 근거 자료를 연결하는 매트릭스 설계의 참고로 사용합니다.", "스페인의 제도·대상·기간을 우리 사업의 평가 설계와 동일시하지 않습니다."],
+  ["역량 기반 활동에서 산출·변화·후속 실천을 구분하는 국내 용어와 구조를 참고합니다.", "가이드북의 권장 문항을 모든 기관과 대상에게 일괄 적용하지 않습니다."],
+  ["사전·사후 측정, 척도, 문항 수를 확인하는 측정 품질 점검의 근거로 사용합니다.", "표준 도구의 점수나 문항을 임의로 변형해 기관 간 결과를 직접 비교하지 않습니다."],
+];
 const REFERENCE_TABS = [["guide", "핵심 흐름"], ["sources", "근거 자료"], ["benchmark", "벤치마킹 검토"], ["checklist", "적용 체크리스트"]];
 const sectionTabs = () => `<nav class="tabs reference-tabs" aria-label="레퍼런스 영역">${REFERENCE_TABS.map(([key, label]) => `<button type="button" class="tab${activeTab === key ? " on" : ""}" ${activeTab === key ? 'aria-current="page"' : ""} data-act="reference-tab" data-tab="${key}">${label}</button>`).join("")}</nav>`;
 function renderContent() {
@@ -42,7 +49,11 @@ function renderContent() {
 export function render() {
   let section = -1;
   let html = renderContent();
-  html = html.replace(/(<article class="reference-source">[\s\S]*?<h3>[\s\S]*?<\/h3>)<p>([\s\S]*?)<\/p><\/article>/g, '$1<p><b>핵심 요약</b> $2</p><p class="reference-application"><b>적용 판단</b> 이 자료의 원칙을 서비스의 지표 설계·안내 흐름에 반영합니다.</p><p class="reference-caution"><b>주의점</b> 원문 기준을 그대로 복사하지 않고 기관의 목적·대상·자료 범위에 맞춰 검토합니다.</p></article>');
+  let sourceIndex = 0;
+  html = html.replace(/(<article class="reference-source">[\s\S]*?<h3>[\s\S]*?<\/h3>)<p>([\s\S]*?)<\/p><\/article>/g, (_match, head, summary) => {
+    const [application, caution] = SOURCE_DECISIONS[sourceIndex++] || SOURCE_DECISIONS[0];
+    return `${head}<p><b>핵심 요약</b> ${summary}</p><p class="reference-application"><b>적용 판단</b> ${application}</p><p class="reference-caution"><b>주의점</b> ${caution}</p></article>`;
+  });
   html = html.replace(/(<div class="benchmark-grid">[\s\S]*?<\/div>)/, `$1${BENCHMARK_MATRIX}`);
   html = html.replace(/<section class="card">/g, () => `<section class="card"${++section === REFERENCE_TABS.findIndex(([key]) => key === activeTab) ? "" : " hidden"}>`);
   return sectionTabs() + html;
