@@ -18,7 +18,7 @@ let expanded = null; // 보기 점수 패널이 열린 열
 let expandedPop = null; // 모집단 비율 패널이 열린 열(관리자 미리보기 기능)
 let columnFilter = "all";
 let selectedColumnKey = "";
-let mappingMode = "map";
+let mappingMode = "quick";
 
 /** 열의 문자 응답(숫자 아닌 값)과 응답 수 */
 function textResponses(col) {
@@ -213,8 +213,8 @@ export function render() {
     ["profile", "응답자 특성", "대상별 차이를 보는 문항", c => c.role === "demographic"],
     ["support", "운영·기타", "식별·분류·분석 제외 문항", c => !["likert", "nps", "numeric", "demographic"].includes(c.role)],
   ];
-  const questionMap = `<section class="question-map" aria-label="문항 연결 지도">
-    <div class="question-map-head"><div><span class="eyebrow">문항 연결 지도</span><h3>문항을 선택해 분석 흐름을 확인하세요</h3></div><span class="small muted">노드를 선택하면 아래에서 연결 값만 편집합니다.</span></div>
+  const questionMap = `<section class="question-map" aria-label="문항 연결 구조">
+    <div class="question-map-head"><div><span class="eyebrow">문항 연결 구조</span><h3>문항이 분석에 어떻게 연결되는지 확인하세요</h3></div><span class="small muted">노드를 선택하면 연결 값만 편집합니다.</span></div>
     <div class="column-filter-list question-map-filter" role="group" aria-label="문항 상태 필터">${filters.map(([id, label]) => `<button class="column-filter${columnFilter === id ? " on" : ""}" data-act="column-filter" data-filter="${id}" aria-pressed="${columnFilter === id}">${label}<b>${filterCount(id)}</b></button>`).join("")}</div>
     ${selectedColumn ? `<div class="selected-map-flow" aria-label="선택한 문항의 분석 흐름"><div class="flow-node source"><span>원본 문항</span><b>${esc(selectedColumn.label || selectedColumn.header)}</b></div><span class="flow-link">${icon("right", 16)}</span><div class="flow-node role"><span>분석 역할</span><b>${esc(ROLES[selectedColumn.role] || selectedColumn.role)}</b></div><span class="flow-link">${icon("right", 16)}</span><div class="flow-node target"><span>분석 연결</span><b>${esc(mapDestination(selectedColumn))}</b></div></div>` : `<div class="empty-inline"><div><b>불러온 문항이 없습니다</b><p class="small muted">파일을 다시 불러오면 문항 연결 지도가 표시됩니다.</p></div></div>`}
     <div class="question-map-lanes">${mapLanes.map(([id, title, detail, accepts]) => {
@@ -242,9 +242,11 @@ export function render() {
       + (yearKind && expanded === c.key ? yearBucketPanel(c) : "")
       + (popOn && expandedPop === c.key ? popPanel(c, sv) : "");
   };
-  const bulkWorkspace = `<section class="bulk-settings" aria-label="전체 문항 설정">
-    <div class="bulk-settings-note"><div><b>모든 문항을 빠르게 설정</b><span>문항마다 핵심 옵션을 묶어 보여 줍니다. 필요한 문항만 펼쳐 세부 값을 바꾸세요.</span></div><span class="badge info">${cb.columns.length}개 문항</span></div>
-    <div class="bulk-question-list">${cb.columns.map(c => {
+  const orderedColumns = [...cb.columns].sort((a, b) => Number(needsReview(b)) - Number(needsReview(a)) || a.index - b.index);
+  const reviewCount = orderedColumns.filter(needsReview).length;
+  const bulkWorkspace = `<section class="bulk-settings" aria-label="빠른 설정">
+    <div class="bulk-settings-note"><div><b>빠른 설정</b><span>① 확인 필요 문항부터 보고 ② 이름·역할을 확인한 뒤 ③ 필요한 옵션만 수정하세요.</span></div><span class="badge ${reviewCount ? "warn" : "ok"}">${reviewCount ? `확인 필요 ${reviewCount}개` : "모두 확인됨"}</span></div>
+    <div class="bulk-question-list">${orderedColumns.map(c => {
       const numeric = ["likert", "nps", "numeric"].includes(c.role);
       const scaled = ["likert", "nps"].includes(c.role);
       const unm = scaled ? unmappedValues(c, rawColumn(state.dataset, c)) : [];
@@ -307,9 +309,9 @@ export function render() {
 
   <section class="card">
     <div class="row between wrap"><h2>문항(열) 설정</h2>
-      <span class="small muted">연결을 파악할 때는 지도, 여러 문항을 수정할 때는 빠른 설정을 사용하세요.${isFeatureOn("respondentRepresentativeness") && isAdminPreview("respondentRepresentativeness") ? ' · 응답자 특성 열의 모집단 비율은 <span class="badge muted">관리자 미리보기</span> 기능입니다' : ""}</span></div>
+      <span class="small muted">처음에는 빠른 설정에서 문항 역할을 확인하세요. 문항 간 연결을 검토할 때만 연결 구조를 사용합니다.${isFeatureOn("respondentRepresentativeness") && isAdminPreview("respondentRepresentativeness") ? ' · 응답자 특성 열의 모집단 비율은 <span class="badge muted">관리자 미리보기</span> 기능입니다' : ""}</span></div>
     <datalist id="domainList">${cb.domains.map(d => `<option value="${esc(d.name)}">`).join("")}</datalist>
-    <div class="setup-mode-tabs" role="tablist" aria-label="문항 설정 방식"><button class="setup-mode-tab${mappingMode === "map" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "map"}" data-act="setup-mode" data-mode="map">연결 지도 보기</button><button class="setup-mode-tab${mappingMode === "table" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "table"}" data-act="setup-mode" data-mode="table">모두 빠르게 설정</button></div>
+    <div class="setup-mode-tabs" role="tablist" aria-label="문항 설정 방식"><button class="setup-mode-tab${mappingMode === "quick" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "quick"}" data-act="setup-mode" data-mode="quick">빠른 설정</button><button class="setup-mode-tab${mappingMode === "map" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "map"}" data-act="setup-mode" data-mode="map">문항 연결 구조</button></div>
     ${mappingMode === "map" ? `${questionMap}${columnWorkspace}` : bulkWorkspace}
     <div class="row end gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button></div>
   </section>`;
@@ -319,7 +321,7 @@ const colByKey = key => state.codebook.columns.find(x => x.key === key);
 
 export const actions = {
   ...scoreBasisActions,
-  "setup-mode": el => { if (["map", "table"].includes(el.dataset.mode)) { mappingMode = el.dataset.mode; refresh(); } },
+  "setup-mode": el => { if (["map", "quick"].includes(el.dataset.mode)) { mappingMode = el.dataset.mode; refresh(); } },
   "column-select": el => { if (state.codebook.columns.some(c => c.key === el.dataset.key)) selectedColumnKey = el.dataset.key; refresh(); },
   "column-filter": el => { if (["all", "review", "scale", "profile", "other"].includes(el.dataset.filter)) { columnFilter = el.dataset.filter; selectedColumnKey = ""; refresh(); } },
   "toggle-labels": el => { selectedColumnKey = el.dataset.key; expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },

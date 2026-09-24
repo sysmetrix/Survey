@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.14", date: "2026-09-24", title: "문항 설정의 첫 사용 흐름 정리",
+    groups: {
+      "데이터 설정": [
+        "문항 설정의 첫 탭을 빠른 설정으로 바꾸고, 확인 필요 문항을 먼저 배치했습니다.",
+        "관계 검토 탭은 문항 연결 구조로 이름을 바꿔, 처음 사용하는 사람도 쓰임을 알 수 있게 했습니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.13", date: "2026-09-24", title: "성과지표 행동 영역 안정화",
     groups: {
       "성과지표": [
