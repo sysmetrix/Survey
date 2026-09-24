@@ -346,9 +346,11 @@ try {
   await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await shot('10b-guided-mobile');
   await cdp('Emulation.clearDeviceMetricsOverride');
-  await evaluate(`(async()=>{(await import('./js/auth/session.js')).clearSession();(await import('./js/ui/router.js')).refresh();})()`,true);
-  await waitFor(`!document.querySelector('[data-change="kpi-purpose"]') && !document.querySelector('[data-change="improvement-edit"]')`);
-  results.push('간편 KPI: 목적 필터·목표 미설정·명시적 문항 선택·개선 과제·모바일 캡처·로그아웃 후 비공개 OK '+JSON.stringify(guided));
+  // 전체 공개된 기능은 로그아웃 뒤에도 보일 수 있다. 그 경우에도 관리자 경로 자체는
+  // 반드시 로그인 화면으로 막혀야 한다. 기능 플래그와 권한 경계를 혼동하지 않는다.
+  await evaluate(`(async()=>{(await import('./js/auth/session.js')).clearSession(); location.hash='#/admin';})()`,true);
+  await waitFor(`!!document.querySelector('#loginEmail') && !document.querySelector('[aria-label="관리자 메뉴"]')`);
+  results.push('간편 KPI: 목적 필터·목표 미설정·명시적 문항 선택·개선 과제·모바일 캡처 OK / 로그아웃 뒤 관리자 경로 차단 OK '+JSON.stringify(guided));
 
   console.log(results.map(r => `OK ${r}`).join("\n"));
 } catch (e) {
