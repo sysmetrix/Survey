@@ -18,6 +18,7 @@ let expanded = null; // 보기 점수 패널이 열린 열
 let expandedPop = null; // 모집단 비율 패널이 열린 열(관리자 미리보기 기능)
 let columnFilter = "all";
 let selectedColumnKey = "";
+let mappingMode = "map";
 
 /** 열의 문자 응답(숫자 아닌 값)과 응답 수 */
 function textResponses(col) {
@@ -178,7 +179,7 @@ export function render() {
       <td>${numeric ? `<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time" aria-label="'${esc(c.label)}' 시점">${option("", "-", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select>` : ""}</td>
       <td class="c">${c.role === "likert" && c.time !== "pre" ? `<input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall" aria-label="'${esc(c.label)}'을(를) 전반 만족 문항으로 표시">` : ""}</td>
       <td class="c">${colEdited(cb, c) ? `<button class="icon-btn sm" data-act="col-reset" data-key="${esc(c.key)}" title="자동 판별 값으로 되돌리기" aria-label="'${esc(c.label)}' 자동 판별 값으로 되돌리기">${icon("undo", 14)}</button>` : ""}</td>
-    </tr>`) + (scaled && expanded === c.key ? labelPanel(c, unm) : "") + (yearKind && expanded === c.key ? yearBucketPanel(c) : "") + (popOn && expandedPop === c.key ? popPanel(c, sv) : "");
+    </tr>`);
   }).join("");
   const unmappedWarn = unmappedCols.length ? `<li>${levelBadge("error")} 점수로 바뀌지 않은 응답이 있는 문항 ${unmappedCols.length}개: ${unmappedCols.slice(0, 4).map(u => `${esc(u.c.label)}(${u.n}건)`).join(", ")}${unmappedCols.length > 4 ? " 등" : ""} — 아래 표의 <b>보기 점수</b>에서 문구별 점수를 지정하세요(지정 전에는 무응답으로 처리).</li>` : "";
   const needsReview = c => (c.detected?.confidence ?? 1) < .7 || c.labelAmbiguous || c.pii || (["likert", "nps"].includes(c.role) && unmappedValues(c, rawColumn(state.dataset, c)).length > 0);
@@ -232,13 +233,35 @@ export function render() {
     const popOn = c.role === "demographic" && isFeatureOn("respondentRepresentativeness");
     return `<div class="column-workspace"><aside class="column-node-list"><div class="column-filter-list" role="group" aria-label="문항 상태 필터">${filters.map(([id, label]) => `<button class="column-filter${columnFilter === id ? " on" : ""}" data-act="column-filter" data-filter="${id}" aria-pressed="${columnFilter === id}">${label}<b>${filterCount(id)}</b></button>`).join("")}</div><div class="column-nodes">${visibleColumns.map((col, i) => `<button class="column-node ${nodeState(col)}${c.key === col.key ? " on" : ""}" data-act="column-select" data-key="${esc(col.key)}" aria-pressed="${c.key === col.key}"><span class="column-node-index">${col.index + 1}</span><span class="column-node-copy"><strong>${esc(col.label || col.header)}</strong><small>${esc(ROLES[col.role] || col.role)} · ${esc(sampleValues(col) || "응답 예 없음")}</small></span><span class="badge ${nodeState(col) === "review" ? "warn" : nodeState(col) === "ready" ? "ok" : "muted"}">${nodeBadge(col)}</span></button>`).join("") || `<div class="empty-inline"><div><b>해당 문항이 없습니다</b><p class="small muted">다른 필터를 선택해 주세요.</p></div></div>`}</div></aside><section class="column-editor" aria-label="선택 문항 설정"><header class="column-editor-head"><div><span class="column-editor-index">${c.index + 1}번 열 · ${esc(c.header)}</span><h3>${esc(c.label || c.header)}</h3></div><div class="row gap"><span class="badge ${nodeState(c) === "review" ? "warn" : "info"}">${esc(ROLES[c.role] || c.role)}</span>${colEdited(cb, c) ? `<button class="icon-btn sm" data-act="col-reset" data-key="${esc(c.key)}" title="자동 판별로 되돌리기" aria-label="${esc(c.label)} 자동 판별로 되돌리기">${icon("undo", 14)}</button>` : ""}</div></header><div class="column-node-flow"><span>원본 열</span>${icon("right", 14)}<b>${esc(ROLES[c.role] || c.role)}</b>${numeric ? `${icon("right", 14)}<span>${c.scale?.min ?? "?"}~${c.scale?.max ?? "?"}점</span>` : ""}${c.domain ? `${icon("right", 14)}<span>${esc(domainName(c.domain))}</span>` : ""}${c.time ? `<span class="badge info">${c.time === "pre" ? "사전" : "사후"}</span>` : ""}</div><div class="column-edit-grid"><label class="field">표시 이름<input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label" aria-label="${esc(c.header)} 표시 이름"></label><label class="field">분석 역할<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role" aria-label="${esc(c.label)} 역할">${Object.entries(ROLES).map(([key, value]) => option(key, value, c.role === key)).join("")}</select></label>${numeric ? `<label class="field">척도 범위<span class="inline-inputs"><input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min" aria-label="${esc(c.label)} 척도 최솟값"><i>~</i><input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max" aria-label="${esc(c.label)} 척도 최댓값"></span></label><label class="field">측정 시점<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time" aria-label="${esc(c.label)} 시점">${option("", "시점 없음", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select></label>` : ""}${c.role === "likert" ? `<label class="field">분석 영역<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="영역 없음" data-change="col" data-key="${esc(c.key)}" data-field="domain" aria-label="${esc(c.label)} 영역"></label><label class="node-switch"><input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse"><span><b>역문항</b><small>점수 방향을 반대로 계산</small></span></label>${c.time !== "pre" ? `<label class="node-switch"><input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall"><span><b>전반 만족</b><small>대표 만족도 문항으로 사용</small></span></label>` : ""}` : ""}</div><div class="column-actions">${scaled ? `<button class="btn sm ${unm.length ? "primary" : ""}" data-act="toggle-labels" data-key="${esc(c.key)}">${icon("edit", 15)}보기 점수 설정${unm.length ? ` <span class="badge bad">${unm.reduce((sum, item) => sum + item.n, 0)}건 확인</span>` : ""}</button>` : ""}${yearKind ? `<button class="btn sm" data-act="toggle-yearbucket" data-key="${esc(c.key)}">${icon("grid", 15)}연도 구간${yName ? ` · ${esc(yName)}` : ""}</button>` : ""}${popOn ? `<button class="btn sm" data-act="toggle-poppanel" data-key="${esc(c.key)}">${icon("users", 15)}모집단 비율${c.popPct ? ` · ${Object.keys(c.popPct).length}개` : ""}</button>` : ""}</div>${scaled && expanded === c.key ? labelPanel(c, unm) : ""}${yearKind && expanded === c.key ? yearBucketPanel(c) : ""}${popOn && expandedPop === c.key ? popPanel(c, sv) : ""}</section></div>`;
   })() : `<div class="empty-inline"><div><b>설정할 문항이 없습니다</b><p class="small muted">다른 필터를 선택해 주세요.</p></div></div>`;
-  const supportPanel = `<section class="card setup-support-card"><details>
-    <summary><span><b>분석 설정과 자료 점검</b><small>100점 환산 기준과 불성실 응답 제외 조건을 필요할 때 확인합니다.</small></span><span class="badge muted">선택 설정</span></summary>
+  const detailForBulk = c => {
+    const scaled = ["likert", "nps"].includes(c.role);
+    const unm = scaled ? unmappedValues(c, rawColumn(state.dataset, c)) : [];
+    const yearKind = c.role === "demographic" ? c.detected?.yearKind : null;
+    const popOn = c.role === "demographic" && isFeatureOn("respondentRepresentativeness");
+    return (scaled && expanded === c.key ? labelPanel(c, unm) : "")
+      + (yearKind && expanded === c.key ? yearBucketPanel(c) : "")
+      + (popOn && expandedPop === c.key ? popPanel(c, sv) : "");
+  };
+  const bulkWorkspace = `<section class="bulk-settings" aria-label="전체 문항 설정">
+    <div class="bulk-settings-note"><div><b>모든 문항을 빠르게 설정</b><span>문항마다 핵심 옵션을 묶어 보여 줍니다. 필요한 문항만 펼쳐 세부 값을 바꾸세요.</span></div><span class="badge info">${cb.columns.length}개 문항</span></div>
+    <div class="bulk-question-list">${cb.columns.map(c => {
+      const numeric = ["likert", "nps", "numeric"].includes(c.role);
+      const scaled = ["likert", "nps"].includes(c.role);
+      const unm = scaled ? unmappedValues(c, rawColumn(state.dataset, c)) : [];
+      const yearKind = c.role === "demographic" ? c.detected?.yearKind : null;
+      const yScheme = yearKind ? (c.yearScheme ?? DEFAULT_YEAR_SCHEME[yearKind]) : null;
+      const yName = yearKind ? YEAR_SCHEMES[yearKind].find(s => s.id === yScheme)?.name : "";
+      const popOn = c.role === "demographic" && isFeatureOn("respondentRepresentativeness");
+      return `<article class="bulk-question-card ${nodeState(c)}"><header><div class="bulk-question-id"><span>${c.index + 1}</span><div><b>${esc(c.header)}</b><small>${esc(sampleValues(c) || "응답 예 없음")}</small></div></div><div class="row gap"><span class="badge ${nodeState(c) === "review" ? "warn" : nodeState(c) === "ready" ? "ok" : "muted"}">${nodeBadge(c)}</span>${colEdited(cb, c) ? `<button class="icon-btn sm" data-act="col-reset" data-key="${esc(c.key)}" title="자동 판별로 되돌리기" aria-label="${esc(c.label)} 자동 판별로 되돌리기">${icon("undo", 14)}</button>` : ""}</div></header><div class="bulk-question-fields"><label class="field">표시 이름<input class="in" value="${esc(c.label)}" data-change="col" data-key="${esc(c.key)}" data-field="label" aria-label="${esc(c.header)} 표시 이름"></label><label class="field">분석 역할<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="role" aria-label="${esc(c.label)} 역할">${Object.entries(ROLES).map(([key, value]) => option(key, value, c.role === key)).join("")}</select></label>${numeric ? `<label class="field">척도 범위<span class="inline-inputs"><input class="in num" type="number" value="${c.scale?.min ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="min" aria-label="${esc(c.label)} 척도 최솟값"><i>~</i><input class="in num" type="number" value="${c.scale?.max ?? ""}" data-change="col" data-key="${esc(c.key)}" data-field="max" aria-label="${esc(c.label)} 척도 최댓값"></span></label><label class="field">측정 시점<select class="in" data-change="col" data-key="${esc(c.key)}" data-field="time" aria-label="${esc(c.label)} 시점">${option("", "시점 없음", !c.time)}${option("pre", "사전", c.time === "pre")}${option("post", "사후", c.time === "post")}</select></label>` : ""}${c.role === "likert" ? `<label class="field">분석 영역<input class="in" list="domainList" value="${esc(domainName(c.domain))}" placeholder="영역 없음" data-change="col" data-key="${esc(c.key)}" data-field="domain" aria-label="${esc(c.label)} 영역"></label><label class="node-switch"><input type="checkbox" ${c.reverse ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="reverse"><span><b>역문항</b><small>점수 방향을 반대로 계산</small></span></label>${c.time !== "pre" ? `<label class="node-switch"><input type="checkbox" ${c.isOverall ? "checked" : ""} data-change="col" data-key="${esc(c.key)}" data-field="isOverall"><span><b>전반 만족</b><small>대표 만족도 문항으로 사용</small></span></label>` : ""}` : ""}</div><div class="bulk-question-actions">${scaled ? `<button class="btn sm ${unm.length ? "primary" : ""}" data-act="toggle-labels" data-key="${esc(c.key)}">${icon("edit", 15)}보기 점수 설정${unm.length ? ` <span class="badge bad">${unm.reduce((sum, item) => sum + item.n, 0)}건 확인</span>` : ""}</button>` : ""}${yearKind ? `<button class="btn sm" data-act="toggle-yearbucket" data-key="${esc(c.key)}">${icon("grid", 15)}연도 구간${yName ? ` · ${esc(yName)}` : ""}</button>` : ""}${popOn ? `<button class="btn sm" data-act="toggle-poppanel" data-key="${esc(c.key)}">${icon("users", 15)}모집단 비율${c.popPct ? ` · ${Object.keys(c.popPct).length}개` : ""}</button>` : ""}</div>${detailForBulk(c)}</article>`;
+    }).join("")}</div>
+  </section>`;
+  const supportPanel = `<section class="card setup-support-card">
+    <div class="setup-support-title"><span><b>분석 설정과 자료 점검</b><small>100점 환산 기준과 불성실 응답 제외 조건을 확인합니다.</small></span></div>
     <div class="setup-support-body">
-      ${r.analysis.items.length ? scoreBasisPanel(r.analysis.items, { compact: true, embedded: true }) : ""}
+      ${r.analysis.items.length ? scoreBasisPanel(r.analysis.items, { embedded: true }) : ""}
       <div class="setup-straight-check"><h3>자료 점검</h3><label class="check"><input type="checkbox" ${state.excludeStraight ? "checked" : ""} data-change="exclude-straight"> 모든 척도 문항에 같은 값으로 응답한 사례(불성실 응답 의심) <b>${r.straight}명</b> 분석에서 제외</label></div>
     </div>
-  </details></section>`;
+  </section>`;
 
   return `
   <section class="card setup-overview">
@@ -263,6 +286,8 @@ export function render() {
     </div>
   </section>` : ""}
 
+  ${supportPanel}
+
   ${cb.design === "prepost-sheets" ? `
   <section class="card">
     <h2>사전·사후 응답자 연결</h2>
@@ -282,19 +307,19 @@ export function render() {
 
   <section class="card">
     <div class="row between wrap"><h2>문항(열) 설정</h2>
-      <span class="small muted">왼쪽에서 문항을 선택하면 오른쪽에서 역할·척도·영역·시점을 한 번에 설정합니다. 연결 흐름을 보고 필요한 값만 수정하세요.${isFeatureOn("respondentRepresentativeness") && isAdminPreview("respondentRepresentativeness") ? ' · 응답자 특성 열의 모집단 비율은 <span class="badge muted">관리자 미리보기</span> 기능입니다' : ""}</span></div>
+      <span class="small muted">연결을 파악할 때는 지도, 여러 문항을 수정할 때는 빠른 설정을 사용하세요.${isFeatureOn("respondentRepresentativeness") && isAdminPreview("respondentRepresentativeness") ? ' · 응답자 특성 열의 모집단 비율은 <span class="badge muted">관리자 미리보기</span> 기능입니다' : ""}</span></div>
     <datalist id="domainList">${cb.domains.map(d => `<option value="${esc(d.name)}">`).join("")}</datalist>
-    ${questionMap}
-    ${columnWorkspace}
+    <div class="setup-mode-tabs" role="tablist" aria-label="문항 설정 방식"><button class="setup-mode-tab${mappingMode === "map" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "map"}" data-act="setup-mode" data-mode="map">연결 지도 보기</button><button class="setup-mode-tab${mappingMode === "table" ? " on" : ""}" role="tab" aria-selected="${mappingMode === "table"}" data-act="setup-mode" data-mode="table">모두 빠르게 설정</button></div>
+    ${mappingMode === "map" ? `${questionMap}${columnWorkspace}` : bulkWorkspace}
     <div class="row end gap"><button class="btn" data-act="goto" data-to="business">다음: 성과지표(선택) →</button></div>
-  </section>
-  ${supportPanel}`;
+  </section>`;
 }
 
 const colByKey = key => state.codebook.columns.find(x => x.key === key);
 
 export const actions = {
   ...scoreBasisActions,
+  "setup-mode": el => { if (["map", "table"].includes(el.dataset.mode)) { mappingMode = el.dataset.mode; refresh(); } },
   "column-select": el => { if (state.codebook.columns.some(c => c.key === el.dataset.key)) selectedColumnKey = el.dataset.key; refresh(); },
   "column-filter": el => { if (["all", "review", "scale", "profile", "other"].includes(el.dataset.filter)) { columnFilter = el.dataset.filter; selectedColumnKey = ""; refresh(); } },
   "toggle-labels": el => { selectedColumnKey = el.dataset.key; expanded = expanded === el.dataset.key ? null : el.dataset.key; refresh(); },

@@ -111,6 +111,11 @@ test("데이터 설정: 보기 점수 패널·일괄 적용", async () => {
   assert.ok(!html.includes('<table class="tbl setup">'), "기존 가로 문항 매핑 표를 노출하지 않음");
   setup.actions["column-select"]({ dataset: { key: b.key } });
   assert.match(setup.render(), new RegExp(`data-key="${b.key}" aria-pressed="true"`), "문항 노드를 선택하면 해당 문항만 편집 패널에 표시");
+  setup.actions["setup-mode"]({ dataset: { mode: "table" } });
+  const tableHtml = setup.render();
+  assert.ok(tableHtml.includes("모든 문항을 빠르게 설정") && tableHtml.includes("bulk-question-card"), "빠른 설정 탭은 가로 표 없이 행별 설정 기능을 유지");
+  assert.ok(tableHtml.includes('data-field="reverse"') && tableHtml.includes('data-field="domain"') && tableHtml.includes('data-field="time"'), "역문항·영역·시점 설정을 모두 제공");
+  setup.actions["setup-mode"]({ dataset: { mode: "map" } });
   L.forEach((t, i) => setup.actions.labelmap({ dataset: { key: a.key, raw: t }, value: String(i + 1) }));
   setup.actions["labelmap-apply-all"]({ dataset: { key: a.key } });
   assert.equal(b.role, "likert"); assert.equal(b.labelMap["완전 좋음"], 5);

@@ -137,23 +137,14 @@ test("선택 화면: 데이터 설정은 다른 카드와 어울리게 요약으
     assert.ok(settingsHtml.includes("basis-formula") && settingsHtml.includes("반올림 후(조정)"), "settings: 반올림 전·후 산식이 그림으로 보임(항상 펼침)");
 
     // 데이터 설정은 기본은 요약 한 줄 + '자세히' 버튼만 있고, 산식 그림·긴 설명은 없음
-    const setupCollapsed = setup.render();
-    fullChecks(setupCollapsed, "setup(접힘)", basis);
-    assert.ok(setupCollapsed.includes("산식·예시 보기"), "setup(접힘): 펼치기 버튼");
-    assert.ok(!setupCollapsed.includes("basis-formula") && !setupCollapsed.includes("basis-diagram"), "setup(접힘): 산식 그림은 숨겨짐");
-    assert.ok(!setupCollapsed.includes("최대 ±0.125점"), "setup(접힘): 긴 설명은 숨겨짐");
-
-    // '자세히'를 누르면 데이터 설정도 산식 그림까지 보여줌
-    scoreBasisActions["basis-toggle"]();
-    const setupExpanded = setup.render();
-    fullChecks(setupExpanded, "setup(펼침)", basis);
-    assert.ok(setupExpanded.includes("최대 ±0.125점"), "setup(펼침): 오차 크기 설명");
-    assert.ok(setupExpanded.includes("높아질 수도(올림), 낮아질 수도(내림)"), "setup(펼침): 방향이 다를 수 있다는 설명");
-    assert.ok(setupExpanded.includes("· 올림") && setupExpanded.includes("· 내림") && setupExpanded.includes("예 1.") && setupExpanded.includes("예 2."), "setup(펼침): 올림·내림 예시 두 개(산식 그림)");
-    assert.ok(setupExpanded.includes("basis-formula") && setupExpanded.includes("반올림 후(조정)"), "setup(펼침): 반올림 전·후 산식이 그림으로 보임");
-    assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(setupExpanded), "setup(펼침): 이 파일에서의 영향 수");
-    assert.ok(setupExpanded.includes("간단히"), "setup(펼침): 접기 버튼");
-    scoreBasisActions["basis-toggle"](); // 다음 반복을 위해 다시 접음
+    const setupHtml = setup.render();
+    fullChecks(setupHtml, "setup(상시 표시)", basis);
+    assert.ok(!setupHtml.includes("산식·예시 보기") && !setupHtml.includes("간단히"), "setup: 접기·펼치기 버튼 없음");
+    assert.ok(setupHtml.includes("최대 ±0.125점"), "setup: 오차 크기 설명");
+    assert.ok(setupHtml.includes("높아질 수도(올림), 낮아질 수도(내림)"), "setup: 방향이 다를 수 있다는 설명");
+    assert.ok(setupHtml.includes("· 올림") && setupHtml.includes("· 내림") && setupHtml.includes("예 1.") && setupHtml.includes("예 2."), "setup: 올림·내림 예시 두 개(산식 그림)");
+    assert.ok(setupHtml.includes("basis-formula") && setupHtml.includes("반올림 후(조정)"), "setup: 반올림 전·후 산식이 그림으로 보임");
+    assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(setupHtml), "setup: 이 파일에서의 영향 수");
   }
   state.settings.scoreBasis = "exact"; invalidate();
 });
