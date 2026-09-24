@@ -311,6 +311,8 @@ try {
     return {value:result.actualValue, judgment:result.judgment};
   })()`,true);
   await shot('10-guided-kpi');
+  await evaluate(`document.querySelector('[data-act="kpi-tab"][data-tab="admin"]').click()`);
+  await waitFor(`!!document.querySelector('[data-panel="admin"]')`);
   await evaluate(`document.querySelector('[data-act="improvement-add"]').click()`);
   await waitFor(`!!document.querySelector('[data-change="improvement-edit"]')`);
   await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});

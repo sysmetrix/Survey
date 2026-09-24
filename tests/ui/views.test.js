@@ -588,16 +588,23 @@ test("로컬 설정과 업데이트 내역 화면 렌더링", () => {
 test("성과지표 빠른 추가·사업정보 선택 섹션", async () => {
   const f = "2026_청소년센터_만족도_구글폼.csv";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${f}`)), f, { XLSX, Papa }));
+  business.actions["kpi-tab"]({ dataset: { tab: "quick" } });
   let html = business.render();
-  assert.ok(html.includes("빠른 추가") && html.includes("선택 · 고급") && html.includes("논리모형"), "사업정보·논리모형은 처음부터 펼쳐짐");
+  assert.ok(html.includes("빠른 설정") && html.includes("선택 · 고급") && html.includes("논리모형"), "빠른 설정 탭과 사업정보·논리모형 영역 표시");
   assert.match(html, /class="quick-kpi-help"/, "빠른 추가 설명은 보조 툴팁 영역으로 표시");
   business.actions["kpi-quick"]({ dataset: { id: "sat" } });
   assert.equal(state.kpis.length, 1);
   assert.equal(state.kpis[0].metric, "score100");
   assert.ok(Number.isFinite(compute().evaluation.results[0].rate), "빠른 추가 지표는 바로 계산");
+  _setFlagsForTest({ guidedKpiSetup: true });
   html = business.render();
-  assert.ok(html.includes("측정 방법 안내"));
+  assert.ok(html.includes("빠른 설정") && html.includes("전체 표 편집") && html.includes("측정 가이드"));
+  assert.ok(!html.includes("성과지표 설정 방법 보기") && !html.includes("측정 방법 도움말 보기"), "상위 작업은 펼침 토글 대신 탭으로 표시");
+  business.actions["kpi-tab"]({ dataset: { tab: "guide" } });
+  html = business.render();
+  assert.ok(html.includes("측정 방법 안내") && html.includes("성과지표는 3단계로 설정합니다"));
   assert.equal(bad(html), null);
+  _resetFlagsForTest();
 });
 
 test("성과지표 표 — KPI 목표 적정성·추이 막대(관리자 전용 미리보기 플래그)", async () => {

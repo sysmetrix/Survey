@@ -2,6 +2,16 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.6", date: "2026-09-24", title: "성과지표 상단 작업 탭",
+    groups: {
+      "화면 구조": [
+        "성과지표의 빠른 설정·전체 표 편집·측정 가이드를 펼침 토글 대신 상단 작업 탭으로 분리했습니다.",
+        "관리자에게만 보이는 측정 품질과 고급 검증 기능은 별도의 관리자 검증 탭에 모았습니다.",
+        "탭은 긴 화면을 내려도 상단에 유지되며 모바일에서는 가로 스크롤로 접근할 수 있습니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.5", date: "2026-09-24", title: "성과지표 편집 UI 재설계",
     groups: {
       "사용성": [
