@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.20", date: "2026-09-24", title: "전체 표 편집 압축·상세 편집 개선",
+    groups: {
+      "데이터 설정": [
+        "반복 상태와 빈 칸으로 커지던 표 행을 문항·분석 역할·현재 설정·수정의 압축 행으로 바꿨습니다.",
+        "설정 버튼을 누른 문항만 바로 아래에서 모든 옵션을 펼쳐 편집하므로, 비교 속도와 기능 접근성을 함께 유지합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.19", date: "2026-09-24", title: "전체 표 편집 작업 그리드 개선",
     groups: {
       "데이터 설정": [
