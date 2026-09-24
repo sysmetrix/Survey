@@ -1,6 +1,6 @@
 // 분석 총괄: Survey → AnalysisResult (보고서·대시보드 공통 입력)
 import { itemStats, numericStats, domainStats, npsStats, multiStats, respondentProfile } from "./items.js";
-import { crossAnalysis, demographicAssociations } from "./cross.js";
+import { crossAnalysis, numericCrossAnalysis, demographicAssociations } from "./cross.js";
 import { prepostAnalysis } from "./prepost.js";
 import { textAnalysis } from "./text.js";
 import { pearson } from "../stats/correlation.js";
@@ -53,6 +53,7 @@ export function analyzeSurvey(survey, { textGroupKey = null, scoreBasis = "exact
     nps: survey.nps.map(c => npsStats(survey, c)),
     multi: survey.multis.map(c => multiStats(survey, c)),
     cross: crossAnalysis(survey, items, domainsRes, basis),
+    numericCross: numericCrossAnalysis(survey, survey.numerics, basis),
     associations: demographicAssociations(survey),
     prepost: prepostAnalysis(survey, basis),
     text: survey.texts.map(c => ({ key: c.key, label: c.label, ...textAnalysis(survey.values(c.key), { groups }) })),

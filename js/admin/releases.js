@@ -2,6 +2,15 @@
 // Add every release at the top and keep changes concrete and verifiable.
 export const RELEASES = [
   {
+    version: "5.47.24", date: "2026-09-24", title: "연속형 수치의 응답자 특성별 비교",
+    groups: {
+      "분석·보고서": [
+        "연속형 수치 문항도 성별·연령대 등 응답자 특성별 원점수 평균과 집단 차이 검정을 제공합니다.",
+        "보고서 본문에는 집단별 비교표·유의 차이 그래프를, 부록에는 Holm/BH 보정값을 포함한 전체 검정표를 제공합니다.",
+      ],
+    },
+  },
+  {
     version: "5.47.23", date: "2026-09-24", title: "연속형 수치 분석·연령 발달단계 추가",
     groups: {
       "분석·보고서": [

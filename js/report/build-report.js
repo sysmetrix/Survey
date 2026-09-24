@@ -346,7 +346,8 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
 
   // ───── Ⅵ. 응답자 특성별 비교 ─────
   const crossUse = A.cross.filter(c => c.rows.length);
-  if (crossUse.length) {
+  const numericCrossUse = (A.numericCross || []).filter(c => c.rows.length);
+  if (crossUse.length || numericCrossUse.length) {
     push(H(1, "응답자 특성별 비교"));
     crossUse.forEach(c => {
       push(H(2, `${c.label}에 따른 비교`));
@@ -372,6 +373,27 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       } else cb2.push(B(`cross.${c.key}.nosig`, 1, `모든 문항에서 ${c.label}에 따른 유의한 차이는 확인되지 않음`));
       bullets(cb2);
       if (sigRows.length) push({ type: "figure", caption: `${c.label}에 따른 차이가 있는 문항`, chart: { kind: "groupedHbar", categories: sigRows.slice(0, 6).map(r => r.label), series: c.groups.map((g, gi) => ({ name: g.name, values: sigRows.slice(0, 6).map(r => r.stats[gi]?.score100) })), opts: { max: 100, valueFmt: f2 } } });
+    });
+    numericCrossUse.forEach(c => {
+      push(H(2, `${c.label}에 따른 연속형 수치 비교`));
+      const sigRows = c.rows.filter(r => r.test && r.test.p < 0.05);
+      const others = c.rows.filter(r => !sigRows.includes(r));
+      const shown = [...sigRows, ...others].slice(0, 5);
+      const header = [cellH("구분"), cellH("n"), ...shown.map(r => cellH(r.label))];
+      const rows = [header];
+      c.groups.forEach((g, gi) => rows.push([{ text: g.name, bold: true }, String(g.n), ...shown.map(r => Number.isFinite(r.stats[gi]?.mean) ? f2(r.stats[gi].mean) : "-")]));
+      rows.push([{ text: "검정", bold: true, shade: "total" }, { text: "", shade: "total" }, ...shown.map(r => ({ text: r.test ? `${r.test.statLabel}=${statNum(r.test)}${sigStar(r.test.p)}` : "-", shade: "total" }))]);
+      push({
+        type: "table", caption: `${c.label}에 따른 연속형 수치(원점수)`, unit: "(단위: 원점수)", compact: shown.length > 4,
+        columns: [{ weight: 1.4 }, { weight: 0.7 }, ...shown.map(() => ({ weight: 1.2 }))], rows,
+        notes: [`연속형 수치는 100점 환산 없이 원점수 평균으로 비교합니다. 2집단은 Welch t검정, 3집단 이상은 Welch 분산분석을 사용합니다. * p<.05, ** p<.01, *** p<.001${c.rows.length > shown.length ? ". 나머지 문항은 부록 참고" : ""}`],
+      });
+      const summary = sigRows.map(r => {
+        const stat = r.stats.filter(s => Number.isFinite(s.mean)).sort((a, b) => b.mean - a.mean);
+        return stat.length >= 2 ? `${q(r.label)}(${stat[0].group} ${f2(stat[0].mean)} > ${stat.at(-1).group} ${f2(stat.at(-1).mean)})` : q(r.label);
+      });
+      bullets([B(`numeric.cross.${c.key}`, 1, sigRows.length ? `${c.label}에 따라 차이가 확인된 연속형 수치: ${summary.join(", ")}` : `${c.label}에 따른 연속형 수치의 통계적으로 유의한 차이는 확인되지 않았습니다.`)]);
+      if (sigRows.length) push({ type: "figure", caption: `${c.label}에 따른 연속형 수치 차이`, chart: { kind: "groupedHbar", categories: sigRows.slice(0, 6).map(r => r.label), series: c.groups.map((g, gi) => ({ name: g.name, values: sigRows.slice(0, 6).map(r => r.stats[gi]?.mean) })), opts: { valueFmt: f2 } }, notes: ["집단별 원점수 평균"] });
     });
   }
 
@@ -455,8 +477,9 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   if (A.reliability && A.reliability.alpha < t.lowAlpha) cau.push(B("c.alpha", 1, `척도 신뢰도(α=${f2(A.reliability.alpha)})가 낮아 문항 구성 검토 필요`));
   const hiMiss = A.items.filter(i => i.missing / Math.max(1, i.nTotal) * 100 > t.highMissing);
   if (hiMiss.length) cau.push(B("c.missing", 1, `무응답 비율이 ${t.highMissing}%를 넘는 문항: ${hiMiss.map(i => q(i.label)).join(", ")}`));
-  if (crossUse.reduce((s, c) => s + c.rows.filter(r => r.test).length, 0) >= 4) cau.push(B("c.multi", 1, "응답자 특성별 비교는 여러 검정을 반복한 결과로, 유의확률이 경계 수준인 결과는 신중히 해석 필요(부록에 Holm·BH 보정값 제시)"));
-  if (crossUse.some(c => c.rows.some(r => r.smallGroupN) || c.total?.smallGroupN)) cau.push(B("c.smalln", 1, "응답자 특성별 비교 중 일부는 집단 인원이 10명 미만으로 결과를 신중히 해석할 필요가 있음"));
+  const allCrossUse = [...crossUse, ...numericCrossUse];
+  if (allCrossUse.reduce((s, c) => s + c.rows.filter(r => r.test).length, 0) >= 4) cau.push(B("c.multi", 1, "응답자 특성별 비교는 여러 검정을 반복한 결과로, 유의확률이 경계 수준인 결과는 신중히 해석 필요(부록에 Holm·BH 보정값 제시)"));
+  if (allCrossUse.some(c => c.rows.some(r => r.smallGroupN) || c.total?.smallGroupN)) cau.push(B("c.smalln", 1, "응답자 특성별 비교 중 일부는 집단 인원이 10명 미만으로 결과를 신중히 해석할 필요가 있음"));
   if (texts.length) cau.push(B("c.text", 1, "주관식 분류는 규칙 기반 자동 분류 결과이므로 원문 검토와 병행 필요"));
   if (P?.retrospective) cau.push(B("c.retro", 1, "회고식 사전검사 결과는 응답자의 회상에 의존함"));
   if (cau.length) { push(H(2, "해석 시 유의사항")); bullets(cau); }
@@ -480,6 +503,16 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     crossUse.forEach(c => c.rows.forEach((r, i) => rows.push([i === 0 ? { text: c.label, rowSpan: c.rows.length, bold: true } : null, { text: `${r.label}${r.smallGroupN ? " †" : ""}`, align: "LEFT" }, r.test?.name || "-", r.test ? statNum(r.test) : "-", r.test ? pText(r.test.p).replace(/^p=?/, "") : "-", Number.isFinite(r.pHolm) ? pText(r.pHolm).replace(/^p=?/, "") : "-", Number.isFinite(r.pBH) ? pText(r.pBH).replace(/^p=?/, "") : "-", r.test && Number.isFinite(r.test.effect) ? `${r.test.effectName}=${f2(r.test.effect)}` : "-"].filter(x => x !== null))));
     push({ type: "table", caption: "응답자 특성별 차이 검정 전체 결과", compact: true, columns: [{ weight: 1.2 }, { weight: 2.4, align: "LEFT" }, { weight: 1.1 }, { weight: 0.9 }, { weight: 0.8 }, { weight: 0.9 }, { weight: 0.9 }, { weight: 1 }], rows,
       notes: crossUse.some(c => c.rows.some(r => r.smallGroupN)) ? ["† 집단 인원 10명 미만 포함(신중히 해석)"] : undefined });
+  }
+  if (numericCrossUse.length) {
+    const rows = [["특성", "연속형 수치 문항", "검정", "통계량", "p", "보정 p(Holm)", "보정 p(BH)", "효과크기"].map(cellH)];
+    numericCrossUse.forEach(c => c.rows.forEach((r, i) => rows.push([
+      i === 0 ? { text: c.label, rowSpan: c.rows.length, bold: true } : null,
+      { text: `${r.label}${r.smallGroupN ? " †" : ""}`, align: "LEFT" }, r.test?.name || "-", r.test ? statNum(r.test) : "-", r.test ? pText(r.test.p).replace(/^p=?/, "") : "-",
+      Number.isFinite(r.pHolm) ? pText(r.pHolm).replace(/^p=?/, "") : "-", Number.isFinite(r.pBH) ? pText(r.pBH).replace(/^p=?/, "") : "-", r.test && Number.isFinite(r.test.effect) ? `${r.test.effectName}=${f2(r.test.effect)}` : "-",
+    ].filter(x => x !== null))));
+    push({ type: "table", caption: "응답자 특성별 연속형 수치 차이 검정 전체 결과", unit: "(원점수 기준)", compact: true, columns: [{ weight: 1.2 }, { weight: 2.4, align: "LEFT" }, { weight: 1.1 }, { weight: 0.9 }, { weight: 0.8 }, { weight: 0.9 }, { weight: 0.9 }, { weight: 1 }], rows,
+      notes: numericCrossUse.some(c => c.rows.some(r => r.smallGroupN)) ? ["† 집단 인원 10명 미만 포함(신중히 해석)"] : undefined });
   }
   if (survey && isFeatureOn("representativenessInReport")) {
     const rep = representativenessCheck(survey, CB.columns);

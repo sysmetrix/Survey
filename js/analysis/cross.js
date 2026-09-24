@@ -75,8 +75,21 @@ export function crossAnalysis(survey, items, domainsRes, opts = {}) {
   return out;
 }
 
+/** 응답자 특성 × 연속형 수치 문항 비교. 원점수 평균을 그대로 사용하며 100점 환산은 하지 않는다. */
+export function numericCrossAnalysis(survey, numerics, opts = {}) {
+  const { maxGroups = 12, minGroupN = 2 } = opts;
+  const key = JSON.stringify([maxGroups, minGroupN,
+    survey.demographics.map(c => [c.key, c.label, survey.values(c.key)]),
+    numerics.map(it => [it.key, it.label, survey.values(it.key)])]);
+  if (numericCrossCache.key === key) return structuredClone(numericCrossCache.out);
+  const out = computeCross(survey, numerics, null, { maxGroups, minGroupN });
+  numericCrossCache = { key, out: structuredClone(out) };
+  return out;
+}
+
 let crossCache = { key: null, out: null };
-export const resetCrossCache = () => { crossCache = { key: null, out: null }; };
+let numericCrossCache = { key: null, out: null };
+export const resetCrossCache = () => { crossCache = { key: null, out: null }; numericCrossCache = { key: null, out: null }; };
 
 function computeCross(survey, items, domainsRes, { maxGroups, minGroupN }) {
   const out = [];
