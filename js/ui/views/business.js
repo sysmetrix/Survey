@@ -19,6 +19,7 @@ import { renderMeasurement, measurementActions, clearMeasurementDrafts } from ".
 export function unmount() { clearMeasurementDrafts(); }
 
 const MAX_PLAN_DOC_MB = 20;
+let kpiTab = "basic";
 
 const FIELDS = [["programName", "사업명"], ["period", "사업기간"], ["target", "참여대상"], ["budget", "사업예산"], ["department", "추진부서"]];
 
@@ -185,6 +186,7 @@ export function render() {
       <h2 class="flush">빠른 추가</h2>
       <div class="row gap">${state.businessFound?.kpi ? `<span class="badge ok">엑셀 성과지표 시트 반영됨</span>` : ""}<button class="btn sm" data-act="kpi-add">+ 빈 지표 추가</button></div>
     </div>
+    ${isAdminPreview("measurementQuality") ? `<nav class="tabs admin-preview-tabs" aria-label="성과지표 화면 영역"><button class="tab${kpiTab === "basic" ? " on" : ""}" data-act="kpi-tab" data-tab="basic">기본 설정</button><button class="tab${kpiTab === "admin" ? " on" : ""}" data-act="kpi-tab" data-tab="admin">관리자 미리보기</button></nav>` : ""}
     <div class="quick-kpis">${quick.map(qk => `<div class="quick-kpi-option"><button class="chip-btn" data-act="kpi-quick" data-id="${qk.id}" ${used.has(qk.kpi.metric + "|" + qk.kpi.name) ? "disabled" : ""}>+ ${esc(qk.label)}</button><span class="quick-kpi-help">${esc(quickKpiHelp(qk))}</span></div>`).join("")}</div>
     <datalist id="targetList">${targetOptions().map(t => `<option value="${esc(t)}">`).join("")}</datalist>
     ${state.kpis.length ? guided ? `${kpiCards(state.kpis, r.evaluation?.results || [], [...state.codebook.domains.map(d => ({value:`@domain:${d.id}`,label:`영역: ${d.name}`})), ...state.codebook.columns.filter(c=>["likert","nps"].includes(c.role)).map(c=>({value:`@item:${c.key}`,label:`${c.label} ${c.time ? `(${c.time === "pre" ? "사전" : "사후"})` : ""}`}))])}<details><summary>전체 표로 편집</summary>${kpiTable(r)}</details>` : `<details class="kpi-advanced"><summary>상세 편집 (측정 대상·목표·판정)</summary>${kpiTable(r)}</details>` : `<div class="empty-inline">${icon("chart", 22)}<div><b>아직 성과지표가 없습니다</b><p class="small muted">평가할 지표를 추가한 뒤 측정 대상과 목표를 확인하세요. 목표 없이도 실적을 확인할 수 있습니다.</p></div></div>`}
@@ -243,6 +245,7 @@ export function render() {
 
 export const actions = {
   ...measurementActions,
+  "kpi-tab": el => { kpiTab = el.dataset.tab === "admin" ? "admin" : "basic"; refresh(); },
   "kpi-purpose": el => {
     if (!isFeatureOn("guidedKpiSetup") || !PURPOSES[el.dataset.id]) return;
     const values = new Set(state.codebook.evaluationPurposes || []);

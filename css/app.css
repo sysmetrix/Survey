@@ -527,6 +527,8 @@ details.admin-raw[open] > summary { margin-bottom: 8px; }
 .tbl.mini tr.unmapped td { background: var(--bad-soft); }
 .quick-kpis { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
 .kpi-start-guide { border-left: 4px solid var(--brand); }
+.admin-preview-tabs { margin: 0 0 12px; }
+.admin-stats-tabs { margin: 14px 0 0; }
 .kpi-guide-details > summary, .kpi-advanced > summary, .metric-guide-details > summary { cursor: pointer; color: var(--brand-text); font-size: 13px; font-weight: 700; }
 .kpi-guide-details[open] > summary, .metric-guide-details[open] > summary { margin-bottom: 10px; }
 .kpi-advanced { margin-top: 12px; }

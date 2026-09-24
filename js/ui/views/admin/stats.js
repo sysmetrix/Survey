@@ -163,7 +163,7 @@ export function dailyVisitTrend(curRows, curStartDay) {
 
 // ─────────────────────────── 상태 · 불러오기 ───────────────────────────
 
-let loading = false, error = "", period = 30, customFrom = "", customTo = "", loaded = false;
+let loading = false, error = "", period = 30, customFrom = "", customTo = "", loaded = false, statsTab = "overview";
 let curRows = null, prevRows = null; // usage_daily_counts, 기간별로 나눔
 let orgRows = null, srcRows = null, hourRows = null, logins = null;
 let sampleRows = null, sampleMissing = false;
@@ -376,7 +376,10 @@ export function render() {
     </div>
     <p class="small muted" style="margin:0 0 12px">설문 데이터·IP·리퍼러는 포함되지 않음 · 기준 시각 ${esc(new Date().toLocaleString("ko-KR"))}</p>
     ${tilesHtml(kpiTiles(totals, prevTotals))}
-    ${advancedHtml(curRows, prevRows)}
+    <nav class="tabs admin-stats-tabs" aria-label="관리자 통계 영역">
+      ${[["overview","요약"],["operations","운영"],["data","상세 데이터"]].map(([key,label]) => `<button class="tab${statsTab === key ? " on" : ""}" ${statsTab === key ? 'aria-current="page"' : ""} data-act="admin-stats-tab" data-tab="${key}">${label}</button>`).join("")}
+    </nav>
+    ${statsTab === "operations" ? advancedHtml(curRows, prevRows) : ""}
     ${trendHtml(curRows, curStart)}
     <h3 class="admin-h3">내보내기 형식별 <span class="small muted">— HWPX·PPTX·HTML·PDF 중 실제로 무엇을 받아가는지</span></h3>
     ${exportHtml(totals)}
@@ -408,6 +411,7 @@ export const actions = {
   "admin-stats-reload": () => { loaded = false; curRows = null; load(); },
   "admin-stats-period": el => { period = Number(el.dataset.days) || 30; loaded = false; curRows = null; load(); },
   "admin-stats-custom-date": el => { if (el.dataset.date === "from") customFrom = el.value; else customTo = el.value; if (customPeriodWindow(customFrom, customTo)) { loaded = false; curRows = null; load(); } },
+  "admin-stats-tab": el => { statsTab = el.dataset.tab || "overview"; refresh(); },
   "admin-stats-detail-more": () => { detailShown += DETAIL_PAGE; detailOpen = true; refresh(); },
   "admin-stats-csv": () => {
     const csv = csvForStats(curRows || []);
