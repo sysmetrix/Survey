@@ -32,6 +32,28 @@ test("성과지표 카드가 근거 조건 충족 여부를 즉시 표시한다"
   assert.match(complete, /보고서 반영 가능/);
 });
 
+test("성과지표 빠른 설정은 세로 목록에서 하나의 지표만 선택해 편집한다", () => {
+  const kpis = [
+    { id:"K1", name:"참여 인원", stage:"산출", metric:"manual", actual:80, target:80, requireTarget:true },
+    { id:"K2", name:"순추천지수", stage:"단기성과", metric:"nps", targetRef:"추천 문항", target:30, requireTarget:true },
+  ];
+  const results = [
+    { id:"K1", actualValue:80, targetValue:80, judgment:"달성" },
+    { id:"K2", actualValue:15, targetValue:30, judgment:"미달성" },
+  ];
+  const html = kpiCards(kpis, results, ["추천 문항"], { selectedId:"K2" });
+  assert.match(html, /kpi-master-detail/);
+  assert.equal((html.match(/class="kpi-master-row/g) || []).length, 2);
+  assert.equal((html.match(/class="kpi-editor-card"/g) || []).length, 1);
+  assert.match(html, /data-id="K2" aria-pressed="true"/);
+  assert.match(html, /value="순추천지수"/);
+
+  const missed = kpiCards(kpis, results, ["추천 문항"], { filter:"missed" });
+  assert.equal((missed.match(/class="kpi-master-row/g) || []).length, 1);
+  assert.match(missed, /순추천지수/);
+  assert.doesNotMatch(missed, /value="참여 인원"/);
+});
+
 test("연결된 근거는 분석 보고서에 ID·원칙·원문 URL로 추적된다", () => {
   const oldStorage = globalThis.localStorage;
   globalThis.localStorage = { getItem: () => JSON.stringify({ access_token:"test", expires_at:Date.now()+3600000, role:"admin", user:{id:"test"} }) };
