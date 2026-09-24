@@ -16,6 +16,11 @@ export const METRICS = {
   changePct: { label: "사전 대비 향상률", unit: "%", kind: "prepost", formula: "(사후−사전)÷사전×100" },
   effectSize: { label: "효과크기(Cohen d)", unit: "", kind: "prepost", formula: "평균 변화÷차이점수 표준편차" },
   improvedRate: { label: "향상자 비율", unit: "%", kind: "prepost", formula: "사후 점수가 사전보다 높은 응답자÷매칭 응답자×100" },
+  numericMean: { label: "연속형 수치 평균", unit: "", kind: "survey", formula: "유효 응답값의 산술평균(원점수)" },
+  numericMedian: { label: "연속형 수치 중앙값", unit: "", kind: "survey", formula: "유효 응답값을 크기순으로 놓은 가운데 값(원점수)" },
+  numericSum: { label: "연속형 수치 합계", unit: "", kind: "survey", formula: "유효 응답값의 합계(원점수)" },
+  numericAboveRate: { label: "기준값 이상 비율", unit: "%", kind: "survey", formula: "입력한 기준값 이상 응답자÷유효 응답자×100" },
+  numericPrepostDiff: { label: "사전·사후 수치 변화량", unit: "", kind: "prepost", formula: "사후 평균−사전 평균(원점수)" },
 };
 
 /** 한국어 지표명 → 메트릭 키 (엑셀 성과지표 시트용) */
@@ -23,6 +28,11 @@ export function metricFromText(s) {
   const t = String(s ?? "").replace(/\s/g, "").toLowerCase();
   if (!t || /직접|수동|manual|실적/.test(t)) return "manual";
   if (/응답자수|응답수/.test(t)) return "responseCount";
+  if (/연속형.*중앙|수치.*중앙/.test(t)) return "numericMedian";
+  if (/연속형.*합계|수치.*합계/.test(t)) return "numericSum";
+  if (/기준.*이상.*비율|이상.*비율/.test(t)) return "numericAboveRate";
+  if (/연속형.*변화|수치.*변화/.test(t)) return "numericPrepostDiff";
+  if (/연속형.*평균|수치.*평균/.test(t)) return "numericMean";
   if (/nps|순추천/.test(t)) return "nps";
   if (/top2|긍정응답|긍정비율/.test(t)) return "top2";
   if (/향상자|향상비율|개선자/.test(t)) return "improvedRate";
@@ -37,7 +47,7 @@ export function metricFromText(s) {
 }
 
 export function newKpi(i = 1) {
-  return { id: `K${i}`, name: "", stage: "단기성과", goalId: "", metric: "manual", targetRef: "", target: null, actual: null, prevActual: null, direction: "up", unit: "", note: "" };
+  return { id: `K${i}`, name: "", stage: "단기성과", goalId: "", metric: "manual", targetRef: "", sourceThreshold: null, target: null, actual: null, prevActual: null, direction: "up", unit: "", note: "" };
 }
 
 /** 전년 실적 대비 목표가 지나치게 낮게(하향 지표는 지나치게 느슨하게) 잡혔는지 점검. 전년 실적을 입력하지 않으면 null */
@@ -72,7 +82,7 @@ export function resolveTarget(ref, codebook) {
   const ids = [], missing = [];
   names.forEach(nm => {
     const k = normKey(nm);
-    const cand = codebook.columns.filter(c => ["likert", "nps"].includes(c.role));
+    const cand = codebook.columns.filter(c => ["likert", "nps", "numeric"].includes(c.role));
     let hits = cand.filter(c => normKey(c.label) === k || normKey(c.header) === k || c.pairKey === k);
     if (!hits.length) hits = cand.filter(c => normKey(c.label).includes(k) || c.pairKey?.includes(k));
     const logicalItems = new Set(hits.map(c => c.pairKey || c.key));
@@ -97,6 +107,19 @@ export function kpiActual(kpi, analysis, codebook) {
   if (tgt.missing.length) return { error: `대상 문항을 찾을 수 없음: ${tgt.missing.join(", ")}` };
 
   if (m.kind === "survey") {
+    if (["numericMean", "numericMedian", "numericSum", "numericAboveRate"].includes(kpi.metric)) {
+      if (tgt.type !== "items" || tgt.ids.length !== 1) return { error: "연속형 수치 지표는 숫자 문항 하나를 선택하세요." };
+      const item = (analysis.numerics || []).find(x => x.key === tgt.ids[0]);
+      if (!item) return { error: "선택한 문항은 연속형 수치 문항이 아닙니다." };
+      if (kpi.metric === "numericAboveRate") {
+        if (kpi.sourceThreshold === null || kpi.sourceThreshold === undefined || kpi.sourceThreshold === "") return { error: "계산 기준값을 입력하세요." };
+        const threshold = Number(kpi.sourceThreshold);
+        if (!Number.isFinite(threshold)) return { error: "계산 기준값을 숫자로 입력하세요." };
+        return { value: item.n ? item.values.filter(v => v >= threshold).length / item.n * 100 : NaN, n: item.n, facts: `${item.label} (n=${item.n}, ${threshold} 이상)` };
+      }
+      const map = { numericMean: "mean", numericMedian: "median", numericSum: "total" };
+      return { value: item[map[kpi.metric]], n: item.n, facts: `${item.label} (n=${item.n}, ${m.formula})` };
+    }
     if (kpi.metric === "nps") {
       const list = tgt.type === "items" ? analysis.nps.filter(x => tgt.ids.includes(x.key)) : analysis.nps;
       if (!list.length) return { error: "NPS 문항 없음" };
@@ -119,7 +142,10 @@ export function kpiActual(kpi, analysis, codebook) {
   const blocking = (pp.qualityIssues || []).filter(issue => issue.keys?.some(key => relevantKeys.has(key)));
   if (blocking.length) return { error: `계산 불가: ${blocking.map(issue => issue.msg).join(" · ")}` };
   let src;
-  if (tgt.type === "all") src = pp.domains.find(d => d.id === "ALL") || (pp.items.length === 1 ? pp.items[0] : null);
+  if (kpi.metric === "numericPrepostDiff") {
+    if (tgt.type !== "items" || tgt.ids.length !== 1) return { error: "사전·사후 수치 변화는 연결된 숫자 문항 하나를 선택하세요." };
+    src = (pp.numericItems || []).find(it => tgt.ids.includes(it.pre) || tgt.ids.includes(it.post));
+  } else if (tgt.type === "all") src = pp.domains.find(d => d.id === "ALL") || (pp.items.length === 1 ? pp.items[0] : null);
   else if (tgt.type === "domain") src = pp.domains.find(d => d.id === tgt.ids[0]);
   else {
     const its = pp.items.filter(it => tgt.ids.includes(it.pre) || tgt.ids.includes(it.post));
@@ -128,7 +154,7 @@ export function kpiActual(kpi, analysis, codebook) {
     else if (its.length === 1) src = its[0];
   }
   if (!src) return { error: "대상 사전·사후 문항 없음" };
-  const map = { prepostDiff: "diff", prepostDiff100: "diff100", postScore100: "score100Post", changePct: "changePct", effectSize: "dz", improvedRate: "improvedPct" };
+  const map = { prepostDiff: "diff", prepostDiff100: "diff100", postScore100: "score100Post", changePct: "changePct", effectSize: "dz", improvedRate: "improvedPct", numericPrepostDiff: "diff" };
   const value = src[map[kpi.metric]];
   if (!Number.isFinite(value)) return { error: "산출 불가 (비매칭 자료는 효과크기·향상자 비율 불가)" };
   return { value, n: src.n, facts: `${src.label || src.name} (매칭 n=${src.n}, ${m.formula})`, p: src.primary?.p };

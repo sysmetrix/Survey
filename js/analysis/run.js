@@ -1,5 +1,5 @@
 // 분석 총괄: Survey → AnalysisResult (보고서·대시보드 공통 입력)
-import { itemStats, domainStats, npsStats, multiStats, respondentProfile } from "./items.js";
+import { itemStats, numericStats, domainStats, npsStats, multiStats, respondentProfile } from "./items.js";
 import { crossAnalysis, demographicAssociations } from "./cross.js";
 import { prepostAnalysis } from "./prepost.js";
 import { textAnalysis } from "./text.js";
@@ -49,7 +49,7 @@ export function analyzeSurvey(survey, { textGroupKey = null, scoreBasis = "exact
   return {
     meta: { n: survey.n, scoreBasis, design: survey.design, fileName: survey.dataset.fileName, source: survey.dataset.source, straightLiners: survey.straightLiners.length },
     respondents: survey.demographics.map(c => respondentProfile(survey, c)),
-    items, overallItem, domains: domainsRes.domains, total: domainsRes.total, reliability,
+    items, numerics: survey.numerics.map(c => numericStats(survey, c)), overallItem, domains: domainsRes.domains, total: domainsRes.total, reliability,
     nps: survey.nps.map(c => npsStats(survey, c)),
     multi: survey.multis.map(c => multiStats(survey, c)),
     cross: crossAnalysis(survey, items, domainsRes, basis),

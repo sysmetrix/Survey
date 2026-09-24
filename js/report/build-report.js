@@ -37,7 +37,7 @@ export function levelLabels(col, min, max) {
 
 function fmtKpi(v, metric, unit) {
   if (!Number.isFinite(v)) return "-";
-  if (["mean", "prepostDiff", "effectSize", "score100", "postScore100", "prepostDiff100"].includes(metric)) return f2(v);
+  if (["mean", "prepostDiff", "effectSize", "score100", "postScore100", "prepostDiff100", "numericMean", "numericMedian", "numericPrepostDiff"].includes(metric)) return f2(v);
   if (Number.isInteger(v)) return v.toLocaleString("ko-KR");
   return f1(v);
 }
@@ -121,7 +121,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   const scaleCols = A.items.map(it => colOf(it.key)).filter(Boolean);
   const scaleRange = scaleCols[0]?.scale || P?.items[0]?.scale;
   const parts = [
-    A.items.length && `척도 문항 ${A.items.length}개`, P && `사전·사후 문항 ${P.items.length}쌍`,
+    A.items.length && `척도 문항 ${A.items.length}개`, A.numerics?.length && `연속형 수치 문항 ${A.numerics.length}개`, P && `사전·사후 척도 문항 ${P.items.length}쌍`, P?.numericItems?.length && `사전·사후 연속형 수치 ${P.numericItems.length}쌍`,
     A.nps.length && `추천의향 ${A.nps.length}개`, A.multi.length && `복수응답 ${A.multi.length}개`, A.text.length && `주관식 ${A.text.length}개`,
   ].filter(Boolean);
   const ov = [
@@ -252,6 +252,34 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   }
 
   // ───── Ⅴ. 만족도 분석 ─────
+  if (A.numerics?.length) {
+    push(H(1, "연속형 수치 분석"));
+    const numericRows = [["문항", "유효 응답", "평균", "중앙값", "표준편차", "최솟값", "최댓값", "합계"].map(cellH)];
+    A.numerics.forEach(it => numericRows.push([
+      { text: it.label, align: "LEFT" }, String(it.n), f2(it.mean), f2(it.median), f2(it.sd), f2(it.min), f2(it.max), f2(it.total),
+    ]));
+    push({
+      type: "table", caption: "연속형 수치 문항 요약", unit: "(원점수 기준)",
+      columns: [{ weight: 2.8, align: "LEFT" }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1.2 }], rows: numericRows,
+      notes: ["연속형 수치는 만족도 척도로 환산하지 않습니다. 평균·중앙값·분포와 합계를 원래 단위로 해석합니다."],
+    });
+    push({ type: "figure", caption: "연속형 수치 문항 평균", chart: { kind: "hbar", data: A.numerics.map(it => ({ label: it.label, value: it.mean })), opts: { unit: "", valueFmt: f2 } }, notes: ["문항별 원점수 평균"] });
+  }
+
+  if (P?.numericItems?.length) {
+    push(H(1, "사전·사후 연속형 수치 변화"));
+    const numericPairRows = [["문항", "n", "사전 평균(SD)", "사후 평균(SD)", "변화량", "검정", "p", "효과크기"].map(cellH)];
+    P.numericItems.forEach(it => numericPairRows.push([
+      { text: it.label, align: "LEFT" }, String(it.unpaired ? `${it.nPre}/${it.nPost}` : it.n), `${f2(it.mPre)}(${f2(it.sdPre)})`, `${f2(it.mPost)}(${f2(it.sdPost)})`,
+      { text: signed(it.diff), bold: it.primary.p < 0.05 }, `${it.primary.statLabel}=${statNum(it.primary)}`, `${pText(it.primary.p).replace("p=", "").replace("p", "")}${sigStar(it.primary.p)}`, Number.isFinite(it.primary.effect) ? `${it.primary.effectName}=${f2(it.primary.effect)}` : "-",
+    ]));
+    push({
+      type: "table", caption: "사전·사후 연속형 수치 변화", unit: "(원점수 기준)", compact: true,
+      columns: [{ weight: 2.6, align: "LEFT" }, { weight: 0.7 }, { weight: 1.3 }, { weight: 1.3 }, { weight: 0.9 }, { weight: 1.1 }, { weight: 0.9 }, { weight: 1 }], rows: numericPairRows,
+      notes: ["연속형 수치의 변화량은 사후 평균에서 사전 평균을 뺀 원점수입니다. 100점 환산이나 영역 합성에는 포함하지 않습니다.", P.unpaired ? "사전·사후 응답자가 매칭되지 않아 동일인 변화로 해석할 수 없습니다." : "대응 자료 검정은 표본 수와 차이점수 분포에 따라 대응표본 t검정 또는 Wilcoxon 부호순위 검정을 사용합니다."],
+    });
+  }
+
   if (A.items.length) {
     push(H(1, "만족도 분석"));
     push(H(2, "전반적 만족도"));

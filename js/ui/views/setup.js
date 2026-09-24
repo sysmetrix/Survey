@@ -112,7 +112,7 @@ function yearBucketPanel(c) {
       `<tr><td>${esc(lb)}</td><td class="c">${n}${n < 10 ? ` <span class="small warn-text">10명 미만</span>` : ""}</td></tr>`).join("")}
     </table>
     ${groupList.length > 12 ? `<p class="small bad-text">구간이 ${groupList.length}개로 12개를 넘어 이 방식으로는 특성별 비교에서 제외됩니다. 다른 구간 방식을 선택하세요.</p>` : ""}
-    <p class="small muted">${activeObj?.law
+    <p class="small muted">${activeObj?.description ? `${activeObj.description}. 출생연도만 있으면 생일 전후를 알 수 없어 근사 만 나이로 분류합니다.` : activeObj?.law
       ? "※ 청소년기본법 제3조(9~24세)·청년기본법 제3조(19~34세) 기준을 인용했습니다. 두 법의 적용 연령이 19~24세에서 겹치므로, 이 앱에서는 24세 이하=청소년, 25~34세=청년으로 겹치지 않게 재구성했습니다."
       : "※ 이 구간은 법적·통계적 표준이 아니라 이 앱이 정한 편집 기본값입니다. 필요하면 다른 방식을 선택하세요."}</p>
   </section>`;

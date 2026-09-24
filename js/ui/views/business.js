@@ -50,7 +50,7 @@ function targetOptions() {
   const cb = state.codebook;
   const labels = new Set(["전체"]);
   cb.domains.forEach(d => labels.add(d.name));
-  cb.columns.filter(c => ["likert", "nps"].includes(c.role) && c.time !== "pre").forEach(c => labels.add(c.label));
+  cb.columns.filter(c => ["likert", "nps", "numeric"].includes(c.role) && c.time !== "pre").forEach(c => labels.add(c.label));
   pairsOf(cb).forEach(p => labels.add(p.label));
   return [...labels];
 }
@@ -133,7 +133,7 @@ function kpiTable(r) {
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="stage" aria-label="'${rowTag}' 단계">${KPI_STAGES.map(s => option(s, s, k.stage === s)).join("")}</select></td>
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="goalId" aria-label="'${rowTag}' 연계목표">${option("", "-", !k.goalId)}${goals.map((g, gi) => option(g.id, `목표${gi + 1}`, k.goalId === g.id)).join("")}</select></td>
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="metric" aria-label="'${rowTag}' 측정 방법">${Object.entries(METRICS).map(([key, mm]) => option(key, mm.label, k.metric === key)).join("")}</select></td>
-      <td>${m.kind === "manual" || k.metric === "responseCount" ? `<span class="muted small">-</span>` : `<input class="in" list="targetList" value="${esc(k.targetRef)}" placeholder="전체 / 영역 / 문항" data-change="kpi" data-i="${i}" data-field="targetRef" aria-label="'${rowTag}' 대상">`}</td>
+      <td>${m.kind === "manual" || k.metric === "responseCount" ? `<span class="muted small">-</span>` : `<input class="in" list="targetList" value="${esc(k.targetRef)}" placeholder="전체 / 영역 / 문항" data-change="kpi" data-i="${i}" data-field="targetRef" aria-label="'${rowTag}' 대상">`}${k.metric === "numericAboveRate" ? `<input class="in num" type="number" step="any" value="${k.sourceThreshold ?? ""}" placeholder="기준값 이상" data-change="kpi" data-i="${i}" data-field="sourceThreshold" aria-label="'${rowTag}' 기준값 이상">` : ""}</td>
       <td><input class="in num" type="number" step="any" value="${k.target ?? ""}" data-change="kpi" data-i="${i}" data-field="target" aria-label="'${rowTag}' 목표"></td>
       <td>${m.kind === "manual" ? `<input class="in num" type="number" step="any" value="${k.actual ?? ""}" data-change="kpi" data-i="${i}" data-field="actual" aria-label="'${rowTag}' 실적">` : `<span class="calc">${val(res?.actualValue)}</span>`}</td>
       ${prevColOn ? `<td><input class="in num" type="number" step="any" value="${k.prevActual ?? ""}" placeholder="선택" data-change="kpi" data-i="${i}" data-field="prevActual" aria-label="'${rowTag}' 전년 실적">${adeqOn && res?.targetCaution ? `<div class="small warn-text" title="${esc(res.targetCaution)}">${icon("alert", 12)} 목표 검토</div>` : ""}</td>` : ""}
@@ -165,7 +165,7 @@ export function render() {
   const adminTabOn = isAdminPreview("measurementQuality") || isAdminPreview("surveyVersioning") || isAdminPreview("competencyProfile") || isAdminPreview("standardComparisons");
   const validTabs = new Set(["quick", "table", "guide", ...(adminTabOn ? ["admin"] : [])]);
   if (!validTabs.has(kpiTab)) kpiTab = "quick";
-  const targetChoices = [...state.codebook.domains.map(d => ({value:`@domain:${d.id}`,label:`영역: ${d.name}`})), ...state.codebook.columns.filter(c=>["likert","nps"].includes(c.role)).map(c=>({value:`@item:${c.key}`,label:`${c.label} ${c.time ? `(${c.time === "pre" ? "사전" : "사후"})` : ""}`}))];
+  const targetChoices = [...state.codebook.domains.map(d => ({value:`@domain:${d.id}`,label:`영역: ${d.name}`, kind:"scale"})), ...state.codebook.columns.filter(c=>["likert","nps"].includes(c.role)).map(c=>({value:`@item:${c.key}`,label:`${c.label} ${c.time ? `(${c.time === "pre" ? "사전" : "사후"})` : ""}`, kind:"scale"})), ...state.codebook.columns.filter(c=>c.role === "numeric").map(c=>({value:`@item:${c.key}`,label:`${c.label} · 연속형 수치${c.time ? ` (${c.time === "pre" ? "사전" : "사후"})` : ""}`, kind:"numeric"}))];
   const emptyKpi = `<div class="empty-inline">${icon("chart", 22)}<div><b>아직 성과지표가 없습니다</b><p class="small muted">평가할 지표를 추가한 뒤 측정 대상과 목표를 확인하세요. 목표 없이도 실적을 확인할 수 있습니다.</p></div></div>`;
   const kpiTabs = guided ? `<nav class="tabs kpi-workspace-tabs" aria-label="성과지표 작업 영역"><button class="tab${kpiTab === "quick" ? " on" : ""}" ${kpiTab === "quick" ? 'aria-current="page"' : ""} data-act="kpi-tab" data-tab="quick">빠른 설정</button><button class="tab${kpiTab === "table" ? " on" : ""}" ${kpiTab === "table" ? 'aria-current="page"' : ""} data-act="kpi-tab" data-tab="table">전체 표 편집</button><button class="tab${kpiTab === "guide" ? " on" : ""}" ${kpiTab === "guide" ? 'aria-current="page"' : ""} data-act="kpi-tab" data-tab="guide">측정 가이드</button>${adminTabOn ? `<button class="tab${kpiTab === "admin" ? " on" : ""}" ${kpiTab === "admin" ? 'aria-current="page"' : ""} data-act="kpi-tab" data-tab="admin">관리자 검증</button>` : ""}</nav>` : "";
 
@@ -352,7 +352,7 @@ function formatPlanDocConfirm(preview) {
   return lines.join("\n");
 }
 
-const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "target", "actual", "prevActual", "direction", "unit", "note", "targetBasis", "measurementTime", "requireTarget", "evaluationPurpose", "evidenceRef", "evidenceRationale", "evidenceReviewed"];
+const KPI_FIELDS = ["id", "name", "stage", "goalId", "metric", "targetRef", "sourceThreshold", "target", "actual", "prevActual", "direction", "unit", "note", "targetBasis", "measurementTime", "requireTarget", "evaluationPurpose", "evidenceRef", "evidenceRationale", "evidenceReviewed"];
 function pickKpi(k) {
   const o = {};
   for (const f of KPI_FIELDS) {

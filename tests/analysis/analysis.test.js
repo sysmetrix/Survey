@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { buildCodebook } from "../../js/model/codebook.js";
 import { buildSurvey } from "../../js/model/survey.js";
 import { analyzeSurvey } from "../../js/analysis/run.js";
+import { buildReport } from "../../js/report/build-report.js";
+import { emptyLogicModel } from "../../js/evaluation/logic-model.js";
 import { classify, tokenize, textAnalysis } from "../../js/analysis/text.js";
 import { seededRandom } from "../../js/core/util.js";
 
@@ -56,6 +58,23 @@ test("주관식 분류와 토큰화", () => {
   assert.equal(classify("별로 안 좋았어요"), "negative");
   assert.equal(classify("없음"), "none");
   assert.ok(tokenize("강사님이 친절하셨습니다").includes("강사님"));
+});
+
+test("연속형 숫자 문항은 원점수 요약과 사전·사후 변화로 분리한다", () => {
+  const ds = { fileName: "numeric.xlsx", source: "file", sheets: [{ name: "응답", headers: ["사전_참여 인원", "사후_참여 인원", "만족도"], rows: [[2, 4, 4], [3, 6, 5], [4, 5, 4], [5, 8, 3], [6, 7, 4]] }] };
+  const cb = buildCodebook(ds);
+  cb.columns.filter(c => c.header.includes("참여 인원")).forEach(c => { c.role = "numeric"; c.scale = null; });
+  const result = analyzeSurvey(buildSurvey(ds, cb));
+  assert.equal(result.numerics.length, 2);
+  assert.equal(result.numerics[0].total, 20);
+  assert.equal(result.numerics[0].median, 4);
+  assert.equal(result.prepost.items.length, 0, "연속형 수치는 척도 변화표에 섞지 않음");
+  assert.equal(result.prepost.numericItems.length, 1);
+  assert.equal(result.prepost.numericItems[0].diff, 2);
+  assert.ok(Number.isNaN(result.prepost.numericItems[0].diff100), "연속형 수치는 100점 환산하지 않음");
+  const report = buildReport({ analysis: result, codebook: cb, logicModel: emptyLogicModel(), settings: {} });
+  assert.ok(report.some(b => b.caption === "연속형 수치 문항 요약"));
+  assert.ok(report.some(b => b.caption === "사전·사후 연속형 수치 변화"));
 });
 
 test("주관식 분류 신뢰도 투명성: 미리 정한 8개 주제 중 어디에도 안 걸리는 응답 수를 그대로 보고함", () => {

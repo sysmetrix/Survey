@@ -29,7 +29,7 @@ export function compositeComparison(survey, pairs, options = {}) {
  * 대응 자료 검정 자동 선택
  *  n ≥ 30 → 대응표본 t / n < 30 → 차이점수 Shapiro-Wilk p<.05 이면 Wilcoxon, 아니면 대응표본 t
  */
-export function pairedComparison(pre, post, { min, max }, { scoreBasis = "exact" } = {}) {
+export function pairedComparison(pre, post, scale = null, { scoreBasis = "exact" } = {}) {
   const pt = pairedT(pre, post);
   const wx = wilcoxonSignedRank(pre, post);
   if (!pt) return null;
@@ -37,17 +37,19 @@ export function pairedComparison(pre, post, { min, max }, { scoreBasis = "exact"
   const sw = n >= 3 && n < 30 ? shapiroWilk(pt.diffs) : null;
   const useW = n < 30 && sw && sw.p < 0.05;
   const improved = pt.diffs.filter(d => d > 0).length, same = pt.diffs.filter(d => d === 0).length, worse = pt.diffs.filter(d => d < 0).length;
-  const range = max - min;
+  const { min, max } = scale || {};
+  const hasScale = Number.isFinite(min) && Number.isFinite(max) && max > min;
+  const range = hasScale ? max - min : NaN;
   const hake = mean(pt.diffs.map((d, i) => { return null; }).filter(Boolean)); // placeholder 제거용
   const pairsArr = [];
   for (let i = 0; i < pre.length; i++) if (pre[i] !== null && post[i] !== null) pairsArr.push([pre[i], post[i]]);
-  const gains = pairsArr.filter(([a]) => max - a > 0).map(([a, b]) => (b - a) / (max - a));
+  const gains = hasScale ? pairsArr.filter(([a]) => max - a > 0).map(([a, b]) => (b - a) / (max - a)) : [];
   const primary = useW
     ? { name: "Wilcoxon 부호순위", stat: wx.V, statLabel: "V", z: wx.z, p: wx.p, effect: wx.rb, effectName: "r", effectLabel: rLabel(wx.rb) }
     : { name: "대응표본 t", stat: pt.t, statLabel: "t", df: pt.df, p: pt.p, ci: pt.ci, effect: pt.dz, effectName: "d", effectLabel: dLabel(pt.dz) };
   return {
     n, mPre: pt.mPre, mPost: pt.mPost, sdPre: pt.sdPre, sdPost: pt.sdPost, diff: pt.diff, ci: pt.ci,
-    score100Pre: score100(pt.mPre, min, max, scoreBasis), score100Post: score100(pt.mPost, min, max, scoreBasis), diff100: pt.diff / range * 100,
+    score100Pre: hasScale ? score100(pt.mPre, min, max, scoreBasis) : NaN, score100Post: hasScale ? score100(pt.mPost, min, max, scoreBasis) : NaN, diff100: hasScale ? pt.diff / range * 100 : NaN,
     changePct: pt.mPre ? pt.diff / pt.mPre * 100 : NaN,
     dz: pt.dz, dav: pt.dav, primary, rule: useW ? "n<30 & 차이점수 비정규(Shapiro-Wilk p<.05)" : n < 30 ? "n<30 & 정규성 기각 안 됨" : "n≥30",
     pairedT: { t: pt.t, df: pt.df, p: pt.p }, wilcoxon: { V: wx.V, z: wx.z, p: wx.p, r: wx.r },
@@ -59,15 +61,17 @@ export function pairedComparison(pre, post, { min, max }, { scoreBasis = "exact"
 }
 
 /** 비매칭(독립) 사전·사후 비교 — 동일인 비교 아님 */
-export function unpairedComparison(pre, post, { min, max }, { scoreBasis = "exact" } = {}) {
+export function unpairedComparison(pre, post, scale = null, { scoreBasis = "exact" } = {}) {
   const a = pre.filter(x => x !== null), b = post.filter(x => x !== null);
   const t = welchT(b, a), mw = mannWhitney(b, a);
   if (!t) return null;
-  const range = max - min;
+  const { min, max } = scale || {};
+  const hasScale = Number.isFinite(min) && Number.isFinite(max) && max > min;
+  const range = hasScale ? max - min : NaN;
   return {
     unpaired: true, nPre: a.length, nPost: b.length, n: Math.min(a.length, b.length),
     mPre: t.m2, mPost: t.m1, sdPre: t.sd2, sdPost: t.sd1, diff: t.diff, ci: t.ci,
-    score100Pre: score100(t.m2, min, max, scoreBasis), score100Post: score100(t.m1, min, max, scoreBasis), diff100: t.diff / range * 100,
+    score100Pre: hasScale ? score100(t.m2, min, max, scoreBasis) : NaN, score100Post: hasScale ? score100(t.m1, min, max, scoreBasis) : NaN, diff100: hasScale ? t.diff / range * 100 : NaN,
     changePct: t.m2 ? t.diff / t.m2 * 100 : NaN,
     primary: { name: "Welch t (비매칭)", stat: t.t, statLabel: "t", df: t.df, p: t.p, ci: t.ci, effect: t.g, effectName: "g", effectLabel: dLabel(t.g) },
     mannWhitney: mw && { W: mw.W, p: mw.p, effect: mw.rb, effectName: "r" },
@@ -90,18 +94,26 @@ export function prepostAnalysis(survey, { scoreBasis = "exact" } = {}) {
   // 비매칭용 원자료 전체 (사전 시트 전체 응답)
   const fullValues = key => { const col = colOf(key); return recodeColumn(col, rawColumn(survey.dataset, col)).values; };
 
-  const items = survey.pairs.map(p => {
+  const scalePairs = survey.pairs.filter(p => colOf(p.pre)?.role !== "numeric" && colOf(p.post)?.role !== "numeric");
+  const numericPairs = survey.pairs.filter(p => colOf(p.pre)?.role === "numeric" && colOf(p.post)?.role === "numeric");
+  const items = scalePairs.map(p => {
     const col = colOf(p.post);
     const scale = col.scale || { min: 0, max: 10 };
     const res = useUnpaired ? unpairedComparison(fullValues(p.pre), fullValues(p.post), scale, { scoreBasis }) : pairedComparison(p.preValues, p.postValues, scale, { scoreBasis });
     return res && { pairKey: p.pairKey, label: p.label, domain: p.domain, pre: p.pre, post: p.post, scale, ...res };
   }).filter(Boolean);
 
+  // 연속형 수치는 원점수로 비교한다. 100점 환산·영역 합성에 섞지 않는다.
+  const numericItems = numericPairs.map(p => {
+    const res = useUnpaired ? unpairedComparison(fullValues(p.pre), fullValues(p.post), null, { scoreBasis }) : pairedComparison(p.preValues, p.postValues, null, { scoreBasis });
+    return res && { pairKey: p.pairKey, label: p.label, pre: p.pre, post: p.post, continuous: true, ...res };
+  }).filter(Boolean);
+
   // 영역 점수 (짝 문항의 응답자별 평균, 원척도)
   const domains = [];
-  const domainIds = [...new Set(survey.pairs.map(p => p.domain).filter(Boolean))];
-  const groupDefs = domainIds.map(id => ({ id, name: cb.domains.find(d => d.id === id)?.name || id, pairs: survey.pairs.filter(p => p.domain === id) }));
-  if (survey.pairs.length >= 2 && (!cb.instrument || cb.instrument.allowTotal === true)) groupDefs.push({ id: "ALL", name: "전체", pairs: survey.pairs });
+  const domainIds = [...new Set(scalePairs.map(p => p.domain).filter(Boolean))];
+  const groupDefs = domainIds.map(id => ({ id, name: cb.domains.find(d => d.id === id)?.name || id, pairs: scalePairs.filter(p => p.domain === id) }));
+  if (scalePairs.length >= 2 && (!cb.instrument || cb.instrument.allowTotal === true)) groupDefs.push({ id: "ALL", name: "전체", pairs: scalePairs });
   for (const g of groupDefs) {
     if (useUnpaired || g.pairs.length < 1) continue;
     if (cb.columns.some(c=>scopeKeys.includes(c.key) && invalidKeys.has(c.key) && (g.id === "ALL" || c.domain === g.id))) continue;
@@ -123,10 +135,10 @@ export function prepostAnalysis(survey, { scoreBasis = "exact" } = {}) {
       pairs: survey.matching.pairs.length, preOnly: survey.matching.preOnly.length, postOnly: survey.matching.postOnly.length,
       dupPre: survey.matching.dupPre, dupPost: survey.matching.dupPost, candidates: survey.matching.candidates.length, keyDesc: survey.matching.keyDesc,
     },
-    items, domains,
+    items, numericItems, domains,
     significantItems: items.filter(it => it.primary.p < 0.05 && it.diff > 0).length,
   };
-  Object.defineProperty(result, "composite", { value: keys => useUnpaired ? null : compositeComparison(survey, survey.pairs.filter(p => keys.includes(p.pre) || keys.includes(p.post)), { scoreBasis }) });
+  Object.defineProperty(result, "composite", { value: keys => useUnpaired ? null : compositeComparison(survey, scalePairs.filter(p => keys.includes(p.pre) || keys.includes(p.post)), { scoreBasis }) });
   return result;
 }
 

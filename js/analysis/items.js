@@ -1,5 +1,5 @@
 // 문항·영역·신뢰도·NPS·복수응답·응답자 특성 분석
-import { describe, frequency, mean } from "../stats/descriptive.js";
+import { describe, frequency, mean, sum } from "../stats/descriptive.js";
 import { cronbachAlpha } from "../stats/reliability.js";
 import { round } from "../core/util.js";
 
@@ -29,6 +29,18 @@ export function itemStats(survey, col, { scoreBasis = "exact" } = {}) {
     score100: score100(d.mean, min, max, scoreBasis), top2, bottom2,
     neutral: Number.isInteger(mid) && v.length ? v.filter(x => x === mid).length / v.length * 100 : 0,
     freq, missing, invalid, nTotal: survey.n,
+  };
+}
+
+/** 연속형 수치 문항 1개 요약. 척도 점수나 100점 환산으로 바꾸지 않는다. */
+export function numericStats(survey, col) {
+  const { values, missing, invalid } = survey.column(col.key);
+  const valid = values.filter(x => x !== null);
+  const d = describe(valid);
+  return {
+    key: col.key, label: col.label, header: col.header,
+    ...d, total: sum(valid), values: valid,
+    missing, invalid, nTotal: survey.n,
   };
 }
 

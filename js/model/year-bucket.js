@@ -19,6 +19,17 @@ function ageBandLaw(age) {
   if (age <= 34) return "청년(25~34세)";
   return "기타(35세 이상)";
 }
+// 발달 단계 비교용 기본 구간. 법정 정의가 아니며, 기준연도-출생연도의 근사 만 나이를 사용한다.
+function ageBandStage(age) {
+  if (age < 9) return "기타(9세 미만)";
+  if (age <= 13) return "초기 청소년(9~13세)";
+  if (age <= 18) return "중기 청소년(14~18세)";
+  if (age <= 24) return "후기 청소년(19~24세)";
+  if (age <= 29) return "초기 청년(25~29세)";
+  if (age <= 34) return "중기 청년(30~34세)";
+  if (age <= 39) return "후기 청년(35~39세)";
+  return "기타(40세 이상)";
+}
 function tenureBand3(yrs) { return yrs <= 1 ? "1년차" : yrs <= 3 ? "2~3년차" : "4년차 이상"; }
 function tenureBand2(yrs) { return yrs <= 1 ? "신규(1년 이하)" : "기존(2년 이상)"; }
 
@@ -26,6 +37,7 @@ export const YEAR_SCHEMES = {
   birth: [
     { id: "age10", name: "10년 단위 연령대(10대/20대/30대…)", law: false, bucket: ageBand10 },
     { id: "ageLaw", name: "법정 기준(청소년 24세 이하·청년 25~34세·기타)", law: true, bucket: ageBandLaw },
+    { id: "ageStage", name: "발달 단계(초기·중기·후기 청소년/청년)", law: false, bucket: ageBandStage, description: "근사 만 나이 기준: 초기 청소년 9~13세, 중기 청소년 14~18세, 후기 청소년 19~24세, 초기 청년 25~29세, 중기 청년 30~34세, 후기 청년 35~39세" },
     { id: "raw", name: "구간 나누지 않음(연도 값 그대로)", law: false, bucket: null },
   ],
   tenure: [

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { buildCodebook } from "../../js/model/codebook.js";
 import { buildSurvey } from "../../js/model/survey.js";
 import { analyzeSurvey } from "../../js/analysis/run.js";
-import { achievementRate, evaluateKpis, metricFromText, resolveTarget, targetAdequacy } from "../../js/evaluation/kpi.js";
+import { achievementRate, evaluateKpis, kpiActual, metricFromText, resolveTarget, targetAdequacy } from "../../js/evaluation/kpi.js";
 import { lintEvaluation } from "../../js/evaluation/linkage.js";
 import { parseBusinessSheet, parseKpiSheet } from "../../js/evaluation/business-sheet.js";
 
@@ -16,6 +16,7 @@ test("달성률: 상향·하향·경계", () => {
   assert.equal(achievementRate(12, 10, "down"), 80);
   assert.equal(metricFromText("긍정응답률(Top2)"), "top2");
   assert.equal(metricFromText("사전사후 변화량"), "prepostDiff");
+  assert.equal(metricFromText("연속형 수치 평균"), "numericMean");
   assert.equal(metricFromText("직접입력"), "manual");
 });
 
@@ -67,4 +68,14 @@ test("사업정보·성과지표 시트 파싱", () => {
   assert.equal(kp[0].goalId, "G1"); assert.equal(kp[0].target, 200); assert.equal(kp[1].metric, "prepostDiff");
   assert.equal(kp[0].evidenceRef, "oecd-results-framework"); assert.equal(kp[0].evidenceReviewed, true);
   assert.equal(kp[1].evidenceRef, ""); assert.equal(kp[1].evidenceReviewed, false);
+});
+
+test("연속형 수치 KPI는 숫자 문항만 원점수로 계산한다", () => {
+  const numericCb = { domains: [], columns: [{ key: "count", label: "참여 인원", header: "참여 인원", role: "numeric" }, { key: "pre", label: "참여 인원", header: "사전 참여 인원", role: "numeric", time: "pre" }, { key: "post", label: "참여 인원", header: "사후 참여 인원", role: "numeric", time: "post" }] };
+  const analysis = { meta: { n: 4 }, numerics: [{ key: "count", label: "참여 인원", n: 4, mean: 4.5, median: 4.5, total: 18, values: [2, 4, 5, 7] }], items: [], nps: [], prepost: { scopeKeys: ["pre", "post"], qualityIssues: [], numericItems: [{ pre: "pre", post: "post", label: "참여 인원", n: 4, diff: 1.5, primary: { p: 0.02 } }], items: [], domains: [] } };
+  assert.equal(kpiActual({ metric: "numericMean", targetRef: "@item:count" }, analysis, numericCb).value, 4.5);
+  assert.equal(kpiActual({ metric: "numericSum", targetRef: "@item:count" }, analysis, numericCb).value, 18);
+  assert.equal(kpiActual({ metric: "numericAboveRate", targetRef: "@item:count", sourceThreshold: 5 }, analysis, numericCb).value, 50);
+  assert.equal(kpiActual({ metric: "numericPrepostDiff", targetRef: "@item:post" }, analysis, numericCb).value, 1.5);
+  assert.match(kpiActual({ metric: "numericMean", targetRef: "전체" }, analysis, numericCb).error, /하나/);
 });

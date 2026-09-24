@@ -20,6 +20,17 @@ test("yearToBucket: 출생연도 → 법정 기준(ageLaw) 경계값", () => {
   assert.equal(yearToBucket(REF - 35, "birth", "ageLaw", REF), "기타(35세 이상)");
 });
 
+test("yearToBucket: 출생연도 → 발달 단계(ageStage) 경계값", () => {
+  assert.equal(yearToBucket(REF - 9, "birth", "ageStage", REF), "초기 청소년(9~13세)");
+  assert.equal(yearToBucket(REF - 13, "birth", "ageStage", REF), "초기 청소년(9~13세)");
+  assert.equal(yearToBucket(REF - 14, "birth", "ageStage", REF), "중기 청소년(14~18세)");
+  assert.equal(yearToBucket(REF - 19, "birth", "ageStage", REF), "후기 청소년(19~24세)");
+  assert.equal(yearToBucket(REF - 25, "birth", "ageStage", REF), "초기 청년(25~29세)");
+  assert.equal(yearToBucket(REF - 30, "birth", "ageStage", REF), "중기 청년(30~34세)");
+  assert.equal(yearToBucket(REF - 35, "birth", "ageStage", REF), "후기 청년(35~39세)");
+  assert.equal(yearToBucket(REF - 40, "birth", "ageStage", REF), "기타(40세 이상)");
+});
+
 test("yearToBucket: 활동 시작연도 → 년차 구간(tenure3, tenure2) 경계값", () => {
   assert.equal(yearToBucket(REF, "tenure", "tenure3", REF), "1년차");
   assert.equal(yearToBucket(REF - 1, "tenure", "tenure3", REF), "2~3년차");
