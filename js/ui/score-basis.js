@@ -34,6 +34,8 @@ export function scoreBasisPanel(items = [], { compact = false, embedded = false 
     { dir: "올림", label: imp.up ? imp.up.it.label : null, ex: imp.up ? imp.up.ex : scoreBasisExample(4.366, 1, 5) },
     { dir: "내림", label: imp.down ? imp.down.it.label : null, ex: imp.down ? imp.down.ex : scoreBasisExample(4.164, 1, 5) },
   ];
+  // 분석 전 화면에는 가장 차이가 큰 대표 사례 하나를 항상 보여준다
+  const preview = examples.filter(e => e.label).sort((a, b) => Math.abs(b.ex.rounded - b.ex.exact) - Math.abs(a.ex.rounded - a.ex.exact))[0] || examples[0];
   const who = e => (e.label ? `「${esc(shortLabel(e.label))}」` : "평균이 다른 문항");
   // 산식을 그대로 눈으로 따라갈 수 있도록 두 계산 경로(반올림 전/후)를 나란히 보여주는 그림
   const diagram = (e, i) => {
@@ -56,6 +58,15 @@ export function scoreBasisPanel(items = [], { compact = false, embedded = false 
     </div>`;
   };
   const diagrams = `<div class="basis-diagrams">${examples.map(diagram).join("")}</div>`;
+  const previewDiff = preview.ex.rounded - preview.ex.exact;
+  const basisPreview = `<div class="basis-preview" aria-label="대표 환산 계산 예시">
+      <div class="basis-preview-head"><div><span class="eyebrow">대표 계산 예시</span><b>${who(preview)} · 원자료 평균 <span class="mono">${f4(preview.ex.mean)}</span></b></div><span class="basis-preview-diff">${signed(previewDiff)}점 차이</span></div>
+      <table class="basis-preview-table"><thead><tr><th scope="col">기준</th><th scope="col">사용한 평균</th><th scope="col">환산 점수</th></tr></thead><tbody>
+        <tr><th scope="row">반올림 전 평균</th><td class="mono">${f4(preview.ex.mean)}</td><td><b>${f2(preview.ex.exact)}점</b></td></tr>
+        <tr><th scope="row">반올림 후 평균</th><td class="mono">${f2(preview.ex.shown)}</td><td><b>${f2(preview.ex.rounded)}점</b></td></tr>
+      </tbody></table>
+      <p class="small muted">평균을 반올림하는 시점에 따라 이처럼 환산 점수가 달라질 수 있습니다. ${preview.dir === "올림" ? "이 사례에서는 반올림 후 점수가 높아집니다." : "이 사례에서는 반올림 후 점수가 낮아집니다."}</p>
+    </div>`;
   const fileImpact = imp.total
     ? `<p class="basis-impact">이 파일에서는 척도 문항 ${imp.total}개 중 <b>${imp.changed}개</b>의 환산 점수가 두 기준에서 다르게 표시되고, <b>${imp.levelChanged}개</b>는 수준 판정(예: ‘높은 수준’)이 달라집니다.</p>`
     : "";
@@ -82,7 +93,8 @@ export function scoreBasisPanel(items = [], { compact = false, embedded = false 
       "새 분석·정확도 우선: 원자료 평균을 그대로 계산합니다.",
       "기존 표·엑셀 검산 우선: 표에 적힌 소수 둘째 자리 평균을 사용합니다.",
     ])}
-    <details class="basis-details"><summary>계산 예시와 이 파일의 차이 확인</summary><div>${diagrams}<p class="small muted">반올림 후 기준은 5점 척도에서 최대 ±0.125점 차이가 날 수 있어 환산 점수가 <b>높아질 수도(올림), 낮아질 수도(내림)</b> 있습니다. 목표 기준선 근처에서는 판정이 달라질 수 있습니다.</p></div></details>
+    ${basisPreview}
+    <p class="small muted">반올림 후 기준은 5점 척도에서 최대 ±0.125점 차이가 날 수 있습니다. 목표 기준선 근처에서는 수준 판정이 달라질 수 있습니다.</p>
     <p class="small muted">이 선택은 문항 순위·수준·성과지표 판정·차트·발표 자료에 적용됩니다. 사전·사후 변화량과 통계 검정은 원자료로 계산합니다.</p>`;
   // compact: 다른 카드가 많은 데이터 설정 화면 — 한 줄 요약 + 두 선택지만 두고, 산식·예시는 '자세히'로 접음
   const compactBody = () => `<p class="small muted">평균을 반올림하기 전/후 중 어느 값으로 100점 환산할지 고릅니다${imp.total ? ` — 이 파일은 척도 문항 ${imp.total}개 중 <b>${imp.changed}개</b>가 두 기준에서 값이 다릅니다` : ""}. 지금은 <b>${esc(curBasis.short)}</b> 기준입니다.</p>

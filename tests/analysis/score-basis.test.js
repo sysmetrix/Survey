@@ -114,7 +114,7 @@ test("발표 자료: 기준에 관계없이 슬라이드 구성은 같고 근거
   assert.ok(JSON.stringify(a).includes("반올림 전 평균 기준"));
 });
 
-test("선택 화면: 데이터 설정은 다른 카드와 어울리게 요약으로 접혀 있다가 '자세히'로 펼쳐짐, 로컬 설정은 항상 펼쳐짐", async () => {
+test("선택 화면: 데이터 설정은 영향 수와 대표 예시를 항상 표시하고, 로컬 설정은 전체 산식을 표시함", async () => {
   const file = "2026_청소년센터_만족도_구글폼.csv";
   loadDataset(parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa }));
   const fullChecks = (html, name, basis) => {
@@ -136,14 +136,14 @@ test("선택 화면: 데이터 설정은 다른 카드와 어울리게 요약으
     assert.ok(settingsHtml.includes("최대 ±0.125점"), "settings: 오차 크기 설명(항상 펼침)");
     assert.ok(settingsHtml.includes("basis-formula") && settingsHtml.includes("반올림 후(조정)"), "settings: 반올림 전·후 산식이 그림으로 보임(항상 펼침)");
 
-    // 데이터 설정은 기본은 요약 한 줄 + '자세히' 버튼만 있고, 산식 그림·긴 설명은 없음
+    // 데이터 설정은 실제 영향 수와 대표 계산 예시를 항상 보여준다
     const setupHtml = setup.render();
     fullChecks(setupHtml, "setup(상시 표시)", basis);
-    assert.ok(!setupHtml.includes("산식·예시 보기") && !setupHtml.includes("간단히"), "setup: 접기·펼치기 버튼 없음");
+    assert.ok(!setupHtml.includes("basis-details") && !setupHtml.includes("data-act=\"basis-toggle\""), "setup: 접기·펼치기 요소 없음");
     assert.ok(setupHtml.includes("최대 ±0.125점"), "setup: 오차 크기 설명");
-    assert.ok(setupHtml.includes("높아질 수도(올림), 낮아질 수도(내림)"), "setup: 방향이 다를 수 있다는 설명");
-    assert.ok(setupHtml.includes("· 올림") && setupHtml.includes("· 내림") && setupHtml.includes("예 1.") && setupHtml.includes("예 2."), "setup: 올림·내림 예시 두 개(산식 그림)");
-    assert.ok(setupHtml.includes("basis-formula") && setupHtml.includes("반올림 후(조정)"), "setup: 반올림 전·후 산식이 그림으로 보임");
+    assert.ok(setupHtml.includes("basis-preview") && setupHtml.includes("대표 계산 예시"), "setup: 대표 계산 예시가 항상 보임");
+    assert.ok(setupHtml.includes("basis-preview-table") && setupHtml.includes("사용한 평균") && setupHtml.includes("환산 점수"), "setup: 전·후 결과 비교표");
+    assert.ok(!setupHtml.includes("basis-formula") && !setupHtml.includes("예 1."), "setup: 긴 산식 그림은 표시하지 않음");
     assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(setupHtml), "setup: 이 파일에서의 영향 수");
   }
   state.settings.scoreBasis = "exact"; invalidate();
