@@ -34,8 +34,8 @@ export function scoreBasisPanel(items = [], { compact = false, embedded = false 
     { dir: "올림", label: imp.up ? imp.up.it.label : null, ex: imp.up ? imp.up.ex : scoreBasisExample(4.366, 1, 5) },
     { dir: "내림", label: imp.down ? imp.down.it.label : null, ex: imp.down ? imp.down.ex : scoreBasisExample(4.164, 1, 5) },
   ];
-  // 분석 전 화면에는 가장 차이가 큰 대표 사례 하나를 항상 보여준다
-  const preview = examples.filter(e => e.label).sort((a, b) => Math.abs(b.ex.rounded - b.ex.exact) - Math.abs(a.ex.rounded - a.ex.exact))[0] || examples[0];
+  // 분석 전 화면에는 올림·내림 사례를 모두 보여줘 한쪽 방향만 강조되지 않게 한다
+  const previewExamples = examples.map(e => ({ ...e, source: e.label ? "이 파일의 실제 문항" : "일반 예시" }));
   const who = e => (e.label ? `「${esc(shortLabel(e.label))}」` : "평균이 다른 문항");
   // 산식을 그대로 눈으로 따라갈 수 있도록 두 계산 경로(반올림 전/후)를 나란히 보여주는 그림
   const diagram = (e, i) => {
@@ -58,14 +58,17 @@ export function scoreBasisPanel(items = [], { compact = false, embedded = false 
     </div>`;
   };
   const diagrams = `<div class="basis-diagrams">${examples.map(diagram).join("")}</div>`;
-  const previewDiff = preview.ex.rounded - preview.ex.exact;
   const basisPreview = `<div class="basis-preview" aria-label="대표 환산 계산 예시">
-      <div class="basis-preview-head"><div><span class="eyebrow">대표 계산 예시</span><b>${who(preview)} · 원자료 평균 <span class="mono">${f4(preview.ex.mean)}</span></b></div><span class="basis-preview-diff">${signed(previewDiff)}점 차이</span></div>
-      <table class="basis-preview-table"><thead><tr><th scope="col">기준</th><th scope="col">사용한 평균</th><th scope="col">환산 점수</th></tr></thead><tbody>
-        <tr><th scope="row">반올림 전 평균</th><td class="mono">${f4(preview.ex.mean)}</td><td><b>${f2(preview.ex.exact)}점</b></td></tr>
-        <tr><th scope="row">반올림 후 평균</th><td class="mono">${f2(preview.ex.shown)}</td><td><b>${f2(preview.ex.rounded)}점</b></td></tr>
+      <div class="basis-preview-head"><div><span class="eyebrow">대표 계산 예시</span><b>반올림 후 점수가 올라가거나 내려가는 사례를 모두 표시합니다</b></div></div>
+      <table class="basis-preview-table"><thead><tr><th scope="col">사례</th><th scope="col">평균</th><th scope="col">환산 점수</th><th scope="col">차이</th></tr></thead><tbody>
+        ${previewExamples.map(e => { const diff = e.ex.rounded - e.ex.exact; return `<tr>
+          <th scope="row"><b>${e.dir === "올림" ? "올라간 사례" : "내려간 사례"}</b><small>${e.source} · ${who(e)}</small></th>
+          <td class="mono">${f4(e.ex.mean)} → ${f2(e.ex.shown)}</td>
+          <td><span class="mono">${f2(e.ex.exact)}점 → ${f2(e.ex.rounded)}점</span></td>
+          <td><b>${signed(diff)}점</b></td>
+        </tr>`; }).join("")}
       </tbody></table>
-      <p class="small muted">평균을 반올림하는 시점에 따라 이처럼 환산 점수가 달라질 수 있습니다. ${preview.dir === "올림" ? "이 사례에서는 반올림 후 점수가 높아집니다." : "이 사례에서는 반올림 후 점수가 낮아집니다."}</p>
+      <p class="small muted">실제 파일의 사례가 있으면 실제 문항을, 해당 방향의 사례가 없으면 일반 예시를 표시합니다.</p>
     </div>`;
   const fileImpact = imp.total
     ? `<p class="basis-impact">이 파일에서는 척도 문항 ${imp.total}개 중 <b>${imp.changed}개</b>의 환산 점수가 두 기준에서 다르게 표시되고, <b>${imp.levelChanged}개</b>는 수준 판정(예: ‘높은 수준’)이 달라집니다.</p>`
