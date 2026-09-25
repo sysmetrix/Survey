@@ -140,10 +140,12 @@ test("선택 화면: 데이터 설정은 영향 수와 대표 예시를 항상 �
     const setupHtml = setup.render();
     fullChecks(setupHtml, "setup(상시 표시)", basis);
     assert.ok(!setupHtml.includes("basis-details") && !setupHtml.includes("data-act=\"basis-toggle\""), "setup: 접기·펼치기 요소 없음");
-    assert.ok(setupHtml.includes("최대 ±0.125점"), "setup: 오차 크기 설명");
+    assert.ok(setupHtml.includes("최대 ") && setupHtml.includes("±0.125점"), "setup: 오차 크기 설명");
     assert.ok(setupHtml.includes("basis-preview") && setupHtml.includes("대표 계산 예시"), "setup: 대표 계산 예시가 항상 보임");
     assert.ok(setupHtml.includes("basis-preview-table") && setupHtml.includes("사례") && setupHtml.includes("환산 점수") && setupHtml.includes("차이"), "setup: 전·후 결과 비교표");
     assert.ok(setupHtml.includes("올라간 사례") && setupHtml.includes("내려간 사례"), "setup: 양쪽 방향의 사례를 모두 표시");
+    assert.ok(setupHtml.includes("높아질 수도(올림), 낮아질 수도(내림)"), "setup: 반올림 방향 설명");
+    assert.ok(setupHtml.includes("최대 ") && setupHtml.includes("±0.125점") && setupHtml.includes("목표 기준선 근처에서는 수준 판정이 달라질 수 있습니다"), "setup: 오차 범위와 판정 영향 설명");
     assert.ok(!setupHtml.includes("basis-formula") && !setupHtml.includes("예 1."), "setup: 긴 산식 그림은 표시하지 않음");
     assert.ok(/이 파일에서는 척도 문항 \d+개 중 <b>\d+개<\/b>의 환산 점수/.test(setupHtml), "setup: 이 파일에서의 영향 수");
   }

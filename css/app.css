@@ -372,8 +372,8 @@ body.view-load #main { position: relative; max-width: none; padding: 0; display:
 /* ── 넓은 화면: 한 화면 무대 (스크롤 없음) ── */
 @media (min-width: 700px) { .samples.ld-sample-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1100px) and (min-height: 690px) {
-  body.view-load #main { flex: 1 0 0; }
-  .ld-stage { flex: 1 0 0; padding: clamp(10px, 2.2vh, 26px) max(24px, 2.6vw) clamp(8px, 1.3vh, 14px); gap: clamp(10px, 1.7vh, 18px) clamp(28px, 4vw, 72px);
+  body.view-load #main { flex: 1 0 0; min-height: 0; overflow: hidden; }
+  .ld-stage { flex: 1 0 0; min-height: 0; padding: clamp(10px, 2.2vh, 26px) max(24px, 2.6vw) clamp(8px, 1.3vh, 14px); gap: clamp(10px, 1.7vh, 18px) clamp(28px, 4vw, 72px);
     grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); grid-template-rows: minmax(min-content, 1fr) auto; grid-template-areas: "hero side" "samples samples"; }
   .ld-hero { grid-area: hero; justify-content: center; gap: clamp(14px, 5.2vh, 60px); }
   .drop.ld-drop { min-height: 250px; }

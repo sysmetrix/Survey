@@ -97,7 +97,7 @@ export function scoreBasisPanel(items = [], { compact = false, embedded = false 
       "기존 표·엑셀 검산 우선: 표에 적힌 소수 둘째 자리 평균을 사용합니다.",
     ])}
     ${basisPreview}
-    <p class="small muted">반올림 후 기준은 5점 척도에서 최대 ±0.125점 차이가 날 수 있습니다. 목표 기준선 근처에서는 수준 판정이 달라질 수 있습니다.</p>
+    <p class="basis-example">표에는 평균이 소수 둘째 자리로 반올림되어 적히므로, ‘반올림 후’ 기준의 환산 점수는 반올림 전보다 <b>높아질 수도(올림), 낮아질 수도(내림)</b> 있습니다. 5점 척도에서는 평균을 반올림하는 순간에 따라 최대 <b>±0.125점</b> 차이가 날 수 있고, 목표 기준선 근처에서는 수준 판정이 달라질 수 있습니다.</p>
     <p class="small muted">이 선택은 문항 순위·수준·성과지표 판정·차트·발표 자료에 적용됩니다. 사전·사후 변화량과 통계 검정은 원자료로 계산합니다.</p>`;
   // compact: 다른 카드가 많은 데이터 설정 화면 — 한 줄 요약 + 두 선택지만 두고, 산식·예시는 '자세히'로 접음
   const compactBody = () => `<p class="small muted">평균을 반올림하기 전/후 중 어느 값으로 100점 환산할지 고릅니다${imp.total ? ` — 이 파일은 척도 문항 ${imp.total}개 중 <b>${imp.changed}개</b>가 두 기준에서 값이 다릅니다` : ""}. 지금은 <b>${esc(curBasis.short)}</b> 기준입니다.</p>
