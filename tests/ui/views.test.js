@@ -623,7 +623,7 @@ test("로컬 설정과 업데이트 내역 화면 렌더링", () => {
   assert.ok(col2 < basis && basis < refreshCard, "오른쪽 열 순서");
   assert.ok(settings.includes("'앱 파일 새로고침' 카드 참고") && !settings.includes("아래 '앱 파일 새로고침'"));
   // 입력 예시는 '예: …' 형식으로 통일
-  assert.ok(settings.includes('placeholder="예: 부천여성청소년재단 청소년팀"') && settings.includes('placeholder="예: 홍길동"'));
+  assert.ok(settings.includes('placeholder="예: ○○기관 청소년팀"') && settings.includes('placeholder="예: 홍길동"'));
   const updates = updatesView.render({ sub: "" });
   assert.ok(updates.includes("업데이트 내역") && updates.includes("v5.3.3") && updates.includes("v5.0.0") && updates.includes("v4.3.1") && updates.includes("v2.0.0"));
   assert.equal(bad(updates), null);

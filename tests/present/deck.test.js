@@ -20,7 +20,7 @@ async function deckFor(file) {
   const analysis = analyzeSurvey(buildSurvey(ds, codebook));
   const { logicModel, kpis } = readBusinessFromDataset(ds, codebook);
   const evaluation = kpis?.length ? evaluateKpis(kpis, analysis, codebook) : null;
-  return buildDeck({ analysis, evaluation, logicModel, codebook, settings: { orgName: "부천여성청소년재단", date: "2026. 9. 14." } });
+  return buildDeck({ analysis, evaluation, logicModel, codebook, settings: { orgName: "소속 기관", date: "2026. 9. 14." } });
 }
 const wellFormed = svg => { let err = null; new DOMParser({ onError: (l, m) => { if (l !== "warning") err = m; } }).parseFromString(svg, "image/svg+xml"); return err; };
 

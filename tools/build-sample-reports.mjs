@@ -34,10 +34,10 @@ for (const f of files) {
   const { logicModel, kpis } = readBusinessFromDataset(dataset, codebook);
   const evaluation = kpis?.length ? evaluateKpis(kpis, analysis, codebook) : null;
   const lint = kpis?.length ? lintEvaluation(logicModel, kpis, codebook, analysis) : [];
-  const blocks = finalizeBlocks(buildReport({ analysis, evaluation, lint, logicModel, codebook, settings: { orgName: "부천여성청소년재단", date: "2026. 9. 13." } }));
+  const blocks = finalizeBlocks(buildReport({ analysis, evaluation, lint, logicModel, codebook, settings: { orgName: "소속 기관", date: "2026. 9. 13." } }));
   const base = f.replace(/\.[^.]+$/, "");
   await writeFile(`out/reports/${base}.txt`, blocksToText(blocks), "utf8");
-  const bytes = await renderHwpx(blocks, { parts: TEMPLATE_PARTS, JSZip, rasterize: (svg, w, h) => rasterizeSvg(svg, w, h, 2), title: blocks[0].text, creator: "부천여성청소년재단" });
+  const bytes = await renderHwpx(blocks, { parts: TEMPLATE_PARTS, JSZip, rasterize: (svg, w, h) => rasterizeSvg(svg, w, h, 2), title: blocks[0].text, creator: "소속 기관" });
   const zip = await JSZip.loadAsync(bytes);
   const entries = await Promise.all(Object.values(zip.files).filter(e => !e.dir).map(async e => ({ path: e.name, data: await e.async("uint8array") })));
   const errors = validateHwpx(entries, DOMParser);

@@ -21,7 +21,7 @@ async function deckFor(file) {
   const analysis = analyzeSurvey(buildSurvey(ds, codebook));
   const { logicModel, kpis } = readBusinessFromDataset(ds, codebook);
   const evaluation = kpis?.length ? evaluateKpis(kpis, analysis, codebook) : null;
-  return buildDeck({ analysis, evaluation, logicModel, codebook, settings: { orgName: "부천여성청소년재단", date: "2026. 9. 14." } });
+  return buildDeck({ analysis, evaluation, logicModel, codebook, settings: { orgName: "소속 기관", date: "2026. 9. 14." } });
 }
 
 test("elementsFromAutoSlide: 모든 슬라이드 타입이 화면 안 요소로 변환됨", async () => {

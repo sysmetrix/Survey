@@ -39,7 +39,7 @@ async function deckFor(file) {
   const ds = parseFile(new Uint8Array(await readFile(`samples/${file}`)), file, { XLSX, Papa });
   const codebook = buildCodebook(ds);
   const analysis = analyzeSurvey(buildSurvey(ds, codebook));
-  return buildDeck({ analysis, logicModel: null, evaluation: null, codebook, settings: { orgName: "부천여성청소년재단" } });
+  return buildDeck({ analysis, logicModel: null, evaluation: null, codebook, settings: { orgName: "소속 기관" } });
 }
 
 test("실제 슬라이드 데이터로 만든 PPTX가 구조 검증을 통과함(차트는 래스터화 없이 건너뜀)", async () => {
