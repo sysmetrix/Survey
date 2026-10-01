@@ -37,6 +37,14 @@ if (typeof document !== "undefined") {
   });
 }
 
+/** Esc: 사용법 팝오버를 닫고 연 버튼으로 포커스를 돌려줌 */
+export function onKey(e) {
+  if (e.key !== "Escape" || !planDocHelpOpen) return;
+  e.preventDefault();
+  planDocHelpOpen = false; refresh();
+  document.querySelector("[data-act='toggle-plan-doc-help']")?.focus({ preventScroll: true });
+}
+
 function planDocHelpPanel() {
   return `
     <p><b>찾는 곳</b> — 항목/내용 두 칸짜리 표(엑셀 사업정보 시트와 같은 모양), 또는 Ⅰ./□/1. 같은 제목줄이 있는 문단.</p>
@@ -133,10 +141,10 @@ function kpiTable(r) {
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="stage" aria-label="'${rowTag}' 단계">${KPI_STAGES.map(s => option(s, s, k.stage === s)).join("")}</select></td>
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="goalId" aria-label="'${rowTag}' 연계목표">${option("", "-", !k.goalId)}${goals.map((g, gi) => option(g.id, `목표${gi + 1}`, k.goalId === g.id)).join("")}</select></td>
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="metric" aria-label="'${rowTag}' 측정 방법">${Object.entries(METRICS).map(([key, mm]) => option(key, mm.label, k.metric === key)).join("")}</select></td>
-      <td>${m.kind === "manual" || k.metric === "responseCount" ? `<span class="muted small">-</span>` : `<input class="in" list="targetList" value="${esc(k.targetRef)}" placeholder="전체 / 영역 / 문항" data-change="kpi" data-i="${i}" data-field="targetRef" aria-label="'${rowTag}' 대상">`}${k.metric === "numericAboveRate" ? `<input class="in num" type="number" step="any" value="${k.sourceThreshold ?? ""}" placeholder="기준값 이상" data-change="kpi" data-i="${i}" data-field="sourceThreshold" aria-label="'${rowTag}' 기준값 이상">` : ""}</td>
-      <td><input class="in num" type="number" step="any" value="${k.target ?? ""}" data-change="kpi" data-i="${i}" data-field="target" aria-label="'${rowTag}' 목표"></td>
-      <td>${m.kind === "manual" ? `<input class="in num" type="number" step="any" value="${k.actual ?? ""}" data-change="kpi" data-i="${i}" data-field="actual" aria-label="'${rowTag}' 실적">` : `<span class="calc">${val(res?.actualValue)}</span>`}</td>
-      ${prevColOn ? `<td><input class="in num" type="number" step="any" value="${k.prevActual ?? ""}" placeholder="선택" data-change="kpi" data-i="${i}" data-field="prevActual" aria-label="'${rowTag}' 전년 실적">${adeqOn && res?.targetCaution ? `<div class="small warn-text" title="${esc(res.targetCaution)}">${icon("alert", 12)} 목표 검토</div>` : ""}</td>` : ""}
+      <td>${m.kind === "manual" || k.metric === "responseCount" ? `<span class="muted small">-</span>` : `<input class="in" list="targetList" value="${esc(k.targetRef)}" placeholder="전체 / 영역 / 문항" data-change="kpi" data-i="${i}" data-field="targetRef" aria-label="'${rowTag}' 대상">`}${k.metric === "numericAboveRate" ? `<input class="in num" type="number" step="any" value="${esc(k.sourceThreshold ?? "")}" placeholder="기준값 이상" data-change="kpi" data-i="${i}" data-field="sourceThreshold" aria-label="'${rowTag}' 기준값 이상">` : ""}</td>
+      <td><input class="in num" type="number" step="any" value="${esc(k.target ?? "")}" data-change="kpi" data-i="${i}" data-field="target" aria-label="'${rowTag}' 목표"></td>
+      <td>${m.kind === "manual" ? `<input class="in num" type="number" step="any" value="${esc(k.actual ?? "")}" data-change="kpi" data-i="${i}" data-field="actual" aria-label="'${rowTag}' 실적">` : `<span class="calc">${val(res?.actualValue)}</span>`}</td>
+      ${prevColOn ? `<td><input class="in num" type="number" step="any" value="${esc(k.prevActual ?? "")}" placeholder="선택" data-change="kpi" data-i="${i}" data-field="prevActual" aria-label="'${rowTag}' 전년 실적">${adeqOn && res?.targetCaution ? `<div class="small warn-text" title="${esc(res.targetCaution)}">${icon("alert", 12)} 목표 검토</div>` : ""}</td>` : ""}
       ${trendOn ? `<td>${trendBars(Number(k.prevActual), res?.targetValue, res?.actualValue)}</td>` : ""}
       <td><input class="in xs" value="${esc(k.unit || "")}" placeholder="${esc(m.unit)}" data-change="kpi" data-i="${i}" data-field="unit" aria-label="'${rowTag}' 단위"></td>
       <td><select class="in" data-change="kpi" data-i="${i}" data-field="direction" aria-label="'${rowTag}' 방향">${option("up", "상향", k.direction !== "down")}${option("down", "하향", k.direction === "down")}</select></td>
@@ -189,8 +197,8 @@ export function render() {
       <h2 class="flush">사업정보 · 논리모형 <span class="badge muted">선택 · 고급</span>${hasLm ? ` <span class="badge ok">입력됨</span>` : ""}${state.businessFound?.business ? ` <span class="badge ok">엑셀 시트 반영</span>` : ""}${state.businessFound?.doc ? ` <span class="badge ok">문서에서 초안 반영 · 확인 필요</span>` : ""}</h2>
       <div class="business-actions" role="toolbar" aria-label="사업 정보 도구">
         <button class="btn sm business-action primary" data-act="save-preset" title="사업 정보와 성과지표 설정을 JSON 파일로 저장">${icon("download", 16)}<span>설정 저장</span></button>
-        <label class="btn sm business-action" title="저장한 사업 설정 JSON 파일 가져오기">${icon("upload", 16)}<span>설정 가져오기</span><input type="file" accept=".json" data-change="load-preset" hidden></label>
-        <label class="btn sm business-action" title="HWPX 사업계획서에서 사업 정보·논리모형·성과지표 채우기">${icon("doc", 16)}<span>문서로 채우기</span><input type="file" accept=".hwpx" data-change="load-plan-doc" hidden></label>
+        <label class="btn sm business-action" title="저장한 사업 설정 JSON 파일 가져오기">${icon("upload", 16)}<span>설정 가져오기</span><input type="file" accept=".json" data-change="load-preset" class="sr-only"></label>
+        <label class="btn sm business-action" title="HWPX 사업계획서에서 사업 정보·논리모형·성과지표 채우기">${icon("doc", 16)}<span>문서로 채우기</span><input type="file" accept=".hwpx" data-change="load-plan-doc" class="sr-only"></label>
         <div class="rt-pop-wrap">
           <button class="btn sm ghost business-action business-help" data-act="toggle-plan-doc-help" aria-expanded="${planDocHelpOpen}" aria-haspopup="true" aria-label="문서로 채우기 사용법" title="문서로 채우기 사용법">${icon("help", 16)}<span>사용법</span></button>
           ${planDocHelpOpen ? `<div class="rt-pop wide right" role="dialog" aria-label="문서로 채우기 사용법">${planDocHelpPanel()}</div>` : ""}
@@ -268,7 +276,7 @@ export const actions = {
     toast("지표를 추가했습니다 — 측정 대상과 단위를 확인하세요. 목표는 선택 사항입니다.", "ok");
     refresh();
   },
-  "kpi-del": el => { const [removed] = state.kpis.splice(+el.dataset.i, 1); if (removed?.id === selectedKpiId) selectedKpiId = ""; invalidate(); refresh(); },
+  "kpi-del": el => { const [removed] = state.kpis.splice(+el.dataset.i, 1); if (removed?.id === selectedKpiId) selectedKpiId = ""; invalidate(); refresh(); if (removed) toast(`‘${removed.name || removed.id || "지표"}’ 지표를 삭제했습니다. Ctrl+Z로 되돌릴 수 있습니다.`, "info", 5000); },
   "save-preset": () => {
     const json = JSON.stringify({ app: "survey-v5-business", logicModel: state.logicModel, kpis: state.kpis }, null, 1);
     download(json, `사업정보_${state.logicModel.programName || "성과지표"}.json`, "application/json");
@@ -285,7 +293,10 @@ export const actions = {
     } catch (e) { toast(`불러오기 실패: ${e.message}`, "bad"); }
     el.value = "";
   },
-  "toggle-plan-doc-help": () => { planDocHelpOpen = !planDocHelpOpen; refresh(); },
+  "toggle-plan-doc-help": () => {
+    planDocHelpOpen = !planDocHelpOpen; refresh();
+    if (planDocHelpOpen) { const pop = document.querySelector(".business-actions .rt-pop"); if (pop) { pop.tabIndex = -1; pop.focus({ preventScroll: true }); } } // 안에 버튼이 없는 설명 팝오버 → 팝오버 자체로 포커스
+  },
   "load-plan-doc": async el => {
     const f = el.files?.[0];
     el.value = "";

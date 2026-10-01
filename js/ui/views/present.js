@@ -9,7 +9,7 @@ import { renderPptx } from "../../report/render-pptx.js";
 import { loadJSZip } from "../jszip-loader.js";
 import { svgToPng } from "../../charts/rasterize.js";
 import { esc, busy, download, safeFileName, toast, nextFrame } from "../util.js";
-import { go, refresh, parseHash } from "../router.js";
+import { go, refresh, parseHash, prevView } from "../router.js";
 import { icon } from "../icons.js";
 import { resolvedTheme } from "../theme.js";
 
@@ -20,7 +20,7 @@ const ui = (() => {
   return { stage: ["auto", "light", "dark"].includes(p.stage) ? p.stage : "auto", notes: !!p.notes };
 })();
 const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(ui)); } catch { /* 무시 */ } };
-const view = { overview: false, blank: false, help: false, save: false, printing: false, digits: "", startedAt: 0 };
+const view = { overview: false, blank: false, help: false, save: false, more: false, printing: false, digits: "", startedAt: 0 };
 
 const TONE = { good: ["✓", "양호"], warning: ["△", "주의"], critical: ["✕", "보완 필요"] };
 const STAGE_LABEL = { auto: "화면 테마 따름", light: "밝은 무대", dark: "어두운 무대" };
@@ -90,12 +90,14 @@ export function slideHtml(s, i, total, theme, { editable = false, selectedElId =
 
 const btn = (act, ic, label, extra = "") => `<button class="p-btn" data-act="${act}" aria-label="${esc(label)}" title="${esc(label)}" ${extra}>${icon(ic, 20)}</button>`;
 
+// 좁은 화면(≤760px)에서는 이전·번호·다음·끝내기만 막대에 두고 나머지는 '더보기' 메뉴로(넓은 화면에서는 .p-more 가 display:contents 로 그대로 한 줄)
 function bar(idx, total, fs) {
   return `<nav class="p-bar" aria-label="발표 제어">
     ${btn("p-prev", "left", "이전 (←)", idx === 0 ? "disabled" : "")}
     <button class="p-count" data-act="p-overview" title="슬라이드 개요 (O)"><b>${idx + 1}</b> / ${total}</button>
     ${btn("p-next", "right", "다음 (→)", idx === total - 1 ? "disabled" : "")}
     <span class="p-div" aria-hidden="true"></span>
+    <div class="p-more${view.more ? " open" : ""}" id="pMore">
     ${btn("p-edit", "edit", "슬라이드 편집")}
     ${btn("p-overview", "grid", "슬라이드 개요 (O)", `aria-pressed="${view.overview}"`)}
     ${btn("p-notes", "notes", "발표자 노트 (N)", `aria-pressed="${ui.notes}"`)}
@@ -103,6 +105,8 @@ function bar(idx, total, fs) {
     ${btn("p-save", "download", "발표 자료 내려받기 (P)", `aria-pressed="${view.save}"`)}
     ${btn("p-fullscreen", fs ? "shrink" : "expand", fs ? "전체화면 끝내기 (F)" : "전체화면 (F)")}
     <button class="p-btn p-key" data-act="p-help" aria-label="단축키 (?)" title="단축키 (?)" aria-pressed="${view.help}">?</button>
+    </div>
+    <button class="p-btn p-key p-more-btn" data-act="p-more" aria-label="더보기" title="더보기" aria-expanded="${view.more}" aria-controls="pMore"><span aria-hidden="true">⋯</span></button>
     <span class="p-div" aria-hidden="true"></span>
     ${btn("p-exit", "x", "발표 끝내기 (Esc)")}
   </nav>`;
@@ -170,7 +174,9 @@ export function render({ sub }) {
   </div>`;
 }
 
-const goN = n => go("present", String(n));
+/** 내보내기 시작·실패 알림(main.js 가 사용 통계로 기록 — 화면 이름·종류만) */
+const exportEvent = (type, kind) => document.dispatchEvent(new CustomEvent(`survey:export-${type}`, { detail: { kind } }));
+const goN = n => go("present", String(n), { replace: true }); // 슬라이드 넘기기는 방문 기록을 쌓지 않음(뒤로 가기 = 발표 이전 화면)
 function step(d) {
   const total = visibleSlides().length;
   const cur = Math.min(total, Math.max(1, parseInt(parseHash().sub, 10) || 1));
@@ -183,7 +189,8 @@ function toggleFullscreen() {
 }
 function exit() {
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-  go("dash");
+  const back = prevView();
+  go(back && back !== "present" ? back : "dash"); // 발표를 시작한 화면으로 돌아감(모르면 분석 결과)
 }
 function showJump() {
   const el = document.getElementById("pJump");
@@ -196,15 +203,18 @@ export const actions = {
   "p-prev": () => step(-1),
   "p-next": () => step(1),
   "p-goto": el => { view.overview = false; goN(el.dataset.n); },
-  "p-overview": () => { view.overview = !view.overview; view.help = view.save = false; refresh(); },
+  "p-overview": () => { view.overview = !view.overview; view.help = view.save = view.more = false; refresh(); },
+  // 더보기: 열면 메뉴 첫 버튼으로, 닫으면 더보기 버튼으로 포커스(다시 그리면 발표 화면 전체로 포커스가 돌아가므로)
+  "p-more": () => { view.more = !view.more; refresh(); document.querySelector(view.more ? "#pMore .p-btn" : "[data-act='p-more']")?.focus({ preventScroll: true }); },
   "p-notes": () => { ui.notes = !ui.notes; savePrefs(); refresh(); },
   "p-stage": () => { ui.stage = { auto: "light", light: "dark", dark: "auto" }[ui.stage]; savePrefs(); refresh(); },
-  "p-save": () => { view.save = !view.save; view.help = false; refresh(); },
-  "p-save-pdf": () => { view.save = false; refresh(); document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "present-pdf" } })); window.print(); },
+  "p-save": () => { view.save = !view.save; view.help = view.more = false; refresh(); },
+  "p-save-pdf": () => { view.save = false; refresh(); exportEvent("start", "present-pdf"); document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "present-pdf" } })); window.print(); },
   "p-save-html": async () => {
     view.save = false;
     refresh();
     busy(true, "발표용 HTML 만드는 중…");
+    exportEvent("start", "present-html");
     await nextFrame();
     try {
       const slides = visibleSlides();
@@ -230,12 +240,14 @@ export const actions = {
     } catch (e) {
       console.error(e);
       toast(`HTML 만들기 실패: ${e.message}`, "bad", 7000);
+      exportEvent("error", "present-html");
     } finally { busy(false); }
   },
   "p-save-pptx": async () => {
     view.save = false;
     refresh();
     busy(true, "PPTX 만드는 중…");
+    exportEvent("start", "present-pptx");
     await nextFrame();
     try {
       const slides = visibleSlides();
@@ -255,11 +267,12 @@ export const actions = {
     } catch (e) {
       console.error(e);
       toast(`PPTX 만들기 실패: ${e.message}`, "bad", 7000);
+      exportEvent("error", "present-pptx");
     } finally { busy(false); }
   },
   "p-edit": () => go("presentEdit"),
   "p-fullscreen": () => toggleFullscreen(),
-  "p-help": () => { view.help = !view.help; view.save = false; refresh(); },
+  "p-help": () => { view.help = !view.help; view.save = view.more = false; refresh(); },
   "p-blank": () => { view.blank = !view.blank; refresh(); },
   "p-exit": () => exit(),
   "p-toggle": el => {
@@ -292,7 +305,11 @@ export function onKey(e) {
   else if (e.key === "?") actions["p-help"]();
   else if (e.key === "Escape") {
     if (view.digits) { view.digits = ""; showJump(); }
-    else if (view.overview || view.help || view.save || view.blank) { view.overview = view.help = view.save = view.blank = false; refresh(); }
+    else if (view.overview || view.help || view.save || view.blank || view.more) {
+      const wasMore = view.more;
+      view.overview = view.help = view.save = view.blank = view.more = false; refresh();
+      if (wasMore) document.querySelector("[data-act='p-more']")?.focus({ preventScroll: true });
+    }
     else if (!document.fullscreenElement) exit();
   } else handled = false;
   if (handled) e.preventDefault();
@@ -304,7 +321,7 @@ function poke() {
   if (!root) return;
   root.classList.remove("idle");
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => { if (!view.overview && !view.help && !view.save) document.getElementById("present")?.classList.add("idle"); }, 2800);
+  idleTimer = setTimeout(() => { if (!view.overview && !view.help && !view.save && !view.more) document.getElementById("present")?.classList.add("idle"); }, 2800);
 }
 
 /** 화면에 붙은 뒤 호출: 포커스·타이머·전역 이벤트(한 번만 연결) */
@@ -319,7 +336,8 @@ export function mount() {
   if (bound) return;
   bound = true;
   const active = () => !!document.getElementById("present");
-  document.addEventListener("pointermove", () => { if (active()) poke(); }, { passive: true });
+  // 마우스를 움직이거나 누르거나 키를 누르면 발표 막대를 다시 보여 줌(키보드·터치 사용자도 막대를 찾을 수 있게)
+  for (const t of ["pointermove", "pointerdown", "keydown"]) document.addEventListener(t, () => { if (active()) poke(); }, { passive: true });
   document.addEventListener("fullscreenchange", () => { if (active()) refresh(); });
   addEventListener("beforeprint", () => { if (active() && !view.printing) { view.printing = true; refresh(); } });
   addEventListener("afterprint", () => { if (view.printing) { view.printing = false; if (active()) refresh(); } });
@@ -337,6 +355,6 @@ export function mount() {
 export function unmount() {
   clearInterval(clockTimer);
   clearTimeout(idleTimer);
-  Object.assign(view, { overview: false, blank: false, help: false, save: false, digits: "" });
+  Object.assign(view, { overview: false, blank: false, help: false, save: false, more: false, digits: "" });
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
 }

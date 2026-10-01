@@ -36,9 +36,9 @@ export function render() {
       ${cache.persisted ? "" : `<button class="btn sm" data-act="local-persist">영구 보관 요청</button>`}
     </section>
     <section class="card"><h2>화면</h2>
-      <label class="field">화면 테마
-        <div class="fontpick" role="radiogroup" aria-label="화면 테마">${Object.entries(THEME_LABEL).map(([v, label]) => `<button type="button" class="chip-btn fontpick-chip${themePref() === v ? " on" : ""}" data-act="local-theme" data-value="${v}" role="radio" aria-checked="${themePref() === v}">${icon(THEME_ICON[v], 14)}${esc(label)}</button>`).join("")}</div>
-      </label>
+      <div class="field"><span id="themeGroupLabel">화면 테마</span>
+        <div class="fontpick" role="radiogroup" aria-labelledby="themeGroupLabel">${Object.entries(THEME_LABEL).map(([v, label]) => `<button type="button" class="chip-btn fontpick-chip${themePref() === v ? " on" : ""}" data-act="local-theme" data-value="${v}" role="radio" aria-checked="${themePref() === v}">${icon(THEME_ICON[v], 14)}${esc(label)}</button>`).join("")}</div>
+      </div>
       <p class="small muted">시스템 설정은 Windows 또는 브라우저의 밝은·어두운 화면 설정을 따릅니다.</p>
       <button class="btn sm primary" data-act="tutorial">${icon("play", 15)}화면 가이드 다시 보기</button>
     </section>

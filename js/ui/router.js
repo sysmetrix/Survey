@@ -31,8 +31,10 @@ export const setRenderer = fn => { renderer = fn; };
 /** 현재 화면 다시 그리기 (스크롤 유지) */
 export const refresh = () => renderer && renderer({ keepScroll: true });
 
-export function go(view, sub = "") {
+/** 화면 이동. replace:true 면 방문 기록을 새로 쌓지 않고 현재 항목을 바꿈(발표 슬라이드 넘기기 등 — 뒤로 가기가 슬라이드마다 걸리지 않게) */
+export function go(view, sub = "", { replace = false } = {}) {
   const h = `#/${view}${sub ? `/${encodeURIComponent(sub)}` : ""}`;
   if (location.hash === h) window.dispatchEvent(new HashChangeEvent("hashchange"));
+  else if (replace) { history.replaceState(history.state, "", h); window.dispatchEvent(new HashChangeEvent("hashchange")); } // replaceState 는 hashchange 를 안 일으키므로 직접 알림
   else location.hash = h;
 }

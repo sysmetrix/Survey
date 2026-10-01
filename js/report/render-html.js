@@ -21,7 +21,7 @@ function editableText(it, editable) {
   if (!editable || !key) return `<span class="r-txt">${inlineHtml(text)}</span>`;
   return `<span class="r-txt" contenteditable="true" spellcheck="false" data-edit="${esc(key)}" data-raw="${esc(text)}" data-auto="${esc(auto ?? text)}">${inlineHtml(text)}</span>` +
     (stale ? `<span class="r-stale no-print" data-tip="${esc(`직접 고친 뒤 분석 결과(근거 수치)가 바뀌었습니다. 새 자동 문장: ${stripInlineMarks(auto).replace(/\n/g, " ")}`)}">근거 변경</span>` : "") +
-    `<span class="r-tools">${edited ? `<button class="r-tool" data-act="reset-item" data-key="${esc(key)}" title="자동 문장으로 되돌리기">↺</button>` : ""}<button class="r-tool" data-act="hide-item" data-key="${esc(key)}" title="이 문장 빼기">✕</button></span>`;
+    `<span class="r-tools">${edited ? `<button class="r-tool" data-act="reset-item" data-key="${esc(key)}" title="자동 문장으로 되돌리기" aria-label="자동 문장으로 되돌리기">↺</button>` : ""}<button class="r-tool" data-act="hide-item" data-key="${esc(key)}" title="이 문장 빼기" aria-label="이 문장 빼기">✕</button></span>`;
 }
 
 function cellHtml(cell, tag, columns, c) {

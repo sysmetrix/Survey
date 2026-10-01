@@ -33,6 +33,9 @@ body.presenting .container { max-width: none; padding: 0; }
   box-shadow: 0 8px 30px rgba(0,0,0,.25); transition: opacity .3s ease, transform .3s ease;
 }
 .present.idle .p-bar { opacity: 0; transform: translate(-50%, 8px); pointer-events: none; }
+.present.idle .p-bar:focus-within { opacity: 1; transform: translateX(-50%); pointer-events: auto; } /* 키보드로 막대 안에 있으면 숨기지 않음 */
+.p-more { display: contents; } /* 넓은 화면: 더보기 묶음 없이 한 줄 그대로 */
+.p-more-btn { display: none; }
 .present.idle { cursor: none; }
 .p-btn { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: inherit; display: grid; place-items: center; cursor: pointer; font: inherit; }
 .p-btn:hover:not(:disabled) { background: rgba(255,255,255,.14); }
@@ -168,8 +171,13 @@ body.presenting .container { max-width: none; padding: 0; }
 
 @media (max-width: 760px) {
   .p-stage { padding: 12px 8px 76px; }
-  .p-bar { bottom: 10px; max-width: calc(100vw - 16px); overflow-x: auto; }
+  .p-bar { bottom: 10px; max-width: calc(100vw - 16px); }
   .p-btn { width: 36px; height: 36px; }
+  /* 좁은 화면: 이전·번호·다음·끝내기만 막대에 — 나머지는 '더보기'를 눌러 위로 펼침 */
+  .p-more-btn { display: grid; }
+  .p-more-btn[aria-expanded="true"] { background: rgba(255,255,255,.22); }
+  .p-more { display: none; }
+  .p-more.open { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; position: absolute; right: 0; bottom: calc(100% + 8px); width: max-content; max-width: calc(100vw - 16px); padding: 5px; border-radius: 18px; background: var(--p-chrome); backdrop-filter: blur(12px); box-shadow: 0 8px 30px rgba(0,0,0,.25); }
   .present.notes-on { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
   .p-notes { width: auto; max-height: 40vh; border-left: 0; border-top: 1px solid var(--border); }
 }

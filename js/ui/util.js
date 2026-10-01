@@ -9,10 +9,16 @@ export function toast(msg, kind = "info", ms = 3200) {
   if (typeof document === "undefined") return;
   const el = document.getElementById("toast");
   if (!el) return;
-  el.innerHTML = `${icon(TOAST_ICON[kind] || "info", 17)}<span>${esc(msg)}</span>`;
+  const bad = kind === "bad";
+  // 오류 알림은 저절로 사라지지 않고(읽기 전에 사라지지 않게) 닫기 버튼을 둠 + 화면 낭독기에 즉시 알림(role=alert)
+  el.setAttribute("role", bad ? "alert" : "status");
+  el.setAttribute("aria-live", bad ? "assertive" : "polite");
+  el.innerHTML = `${icon(TOAST_ICON[kind] || "info", 17)}<span>${esc(msg)}</span>${bad ? `<button type="button" class="toast-close" aria-label="알림 닫기">✕</button>` : ""}`;
   el.className = `toast show ${kind}`;
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => { el.className = "toast"; }, ms);
+  const hide = () => { clearTimeout(toast._t); el.className = "toast"; };
+  if (bad) el.querySelector(".toast-close").addEventListener("click", hide);
+  else toast._t = setTimeout(hide, ms);
 }
 
 /** 버튼이 있는 알림 (업데이트 안내 등). 문구는 textContent 로만 삽입 */

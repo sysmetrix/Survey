@@ -303,7 +303,7 @@ function insertBarHtml(slide, custom, canRevertAuto, charts) {
     ${ib("pe-add-text", "text", "텍스트 상자 넣기", { dis, text: "텍스트" })}
     ${ib("pe-add-richtext", "list", "글머리 목록 상자 넣기", { dis, text: "목록" })}
     ${ib("pe-add-table", "table", "표 넣기", { dis, text: "표" })}
-    <label class="rt-btn pe-ib has-text${dis ? " is-disabled" : ""}" title="이미지 넣기">${icon("image", 16)}<span>이미지</span><input type="file" accept="image/*" hidden data-change="pe-add-image"${dis ? " disabled" : ""}></label>
+    <label class="rt-btn pe-ib has-text${dis ? " is-disabled" : ""}" title="이미지 넣기">${icon("image", 16)}<span>이미지</span><input type="file" accept="image/*" class="sr-only" data-change="pe-add-image"${dis ? " disabled" : ""}></label>
     ${menu("shape", "shapes", "도형 넣기", shapeBody, { dis, text: "도형" })}
     ${menu("chart", "chart", "분석 차트 넣기", chartBody, { dis, text: "차트" })}
     <span class="rt-sep" aria-hidden="true"></span>
@@ -401,7 +401,7 @@ function propPanelHtml(el) {
     extra = `${optField("채우기", "fit", el.fit || "cover", [["cover", "꽉 채움"], ["contain", "전체 보임"]])}
       <label class="field compact"><span>모서리(px)</span><input class="in num" type="number" min="0" step="1" value="${Number(el.radius) || 0}" data-change="pe-el-prop" data-prop="radius"></label>
       <label class="field compact"><span>불투명도(0~1)</span><input class="in num" type="number" step="0.1" min="0" max="1" value="${el.opacity ?? 1}" data-change="pe-el-prop" data-prop="opacity"></label>
-      <label class="btn sm block pe-prop-wide">이미지 바꾸기<input type="file" accept="image/*" hidden data-change="pe-el-image"></label>`;
+      <label class="btn sm block pe-prop-wide">이미지 바꾸기<input type="file" accept="image/*" class="sr-only" data-change="pe-el-image"></label>`;
   } else if (el.kind === "shape") {
     extra = optField("모양", "shapeType", el.shapeType || "rect", SHAPES.map(([v, t]) => [v, t]));
     if (el.shapeType === "roundRect") extra += `<label class="field compact"><span>모서리(px)</span><input class="in num" type="number" min="0" step="1" value="${Number(el.radius) || 0}" data-change="pe-el-prop" data-prop="radius"></label>`;
