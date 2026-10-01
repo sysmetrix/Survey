@@ -42,7 +42,7 @@ function storageCard() {
     </div>
     <div class="row gap wrap end">
       <button class="btn sm" data-act="hist-export">${icon("download", 15)}백업 파일 받기</button>
-      <label class="btn sm">${icon("upload", 15)}백업 가져오기<input type="file" accept=".json" data-change="hist-import" hidden></label>
+      <label class="btn sm">${icon("upload", 15)}백업 가져오기<input type="file" accept=".json" data-change="hist-import" class="sr-only"></label>
       <button class="btn sm ghost danger" data-act="hist-clear">모든 내역 삭제</button>
     </div>
     <p class="small muted">원자료는 서버로 전송하지 않고 이 브라우저 전용 키로 암호화(AES-256)해 보관합니다. 브라우저 데이터나 암호화 키를 지우면 복원할 수 없습니다. 직접 저장한 비밀번호 보호 버전은 별도로 유지됩니다. 공용 PC에서는 작업 후 내역을 삭제하세요.</p>

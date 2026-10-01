@@ -38,6 +38,25 @@ if (typeof document !== "undefined") {
   });
 }
 
+// 팝오버(사용법·서식·장 이동): 열 때 안쪽 첫 조작 요소로 포커스, Esc 로 닫으면 연 버튼으로 포커스를 돌려줌
+const POP_TRIGGER = { help: "toggle-help", format: "format-toggle", jump: "toggle-jump" };
+function focusPop(act) {
+  const pop = document.querySelector(`[data-act='${act}'] ~ .rt-pop`);
+  if (!pop) return;
+  const first = pop.querySelector("button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea, [tabindex]:not([tabindex='-1'])");
+  if (first) first.focus({ preventScroll: true });
+  else { pop.tabIndex = -1; pop.focus({ preventScroll: true }); }
+}
+const afterToggle = (open, act) => { if (open) focusPop(act); };
+export function onKey(e) {
+  if (e.key !== "Escape" || (!helpOpen && !formatOpen && !jumpOpen)) return;
+  const act = helpOpen ? POP_TRIGGER.help : formatOpen ? POP_TRIGGER.format : POP_TRIGGER.jump;
+  e.preventDefault();
+  helpOpen = formatOpen = jumpOpen = false;
+  refresh();
+  document.querySelector(`[data-act='${act}']`)?.focus({ preventScroll: true });
+}
+
 const docOptions = () => {
   const s = state.settings;
   return { fontPreset: s.fontPreset, fontBody: s.fontBody, fontHeading: s.fontHeading, baseSize: s.baseSize, lineSpacing: s.lineSpacing, headerBlock: s.headerBlock };
@@ -131,7 +150,7 @@ export function render() {
         <p><b>${esc(docPreset.name)} · ${state.settings.baseSize}pt 버튼</b> — 글꼴 조합·글자 크기·줄 간격과 상단 표제부(붙임 서식) 여부를 바꿉니다.</p>
         <p><b>장 이동</b> — 지금 포함된 장으로 미리보기를 바로 옮깁니다. 어떤 장을 넣고 뺄지는 왼쪽 사이드바 ‘포함할 장’에서 고릅니다.</p>
         <p><b>확대·축소(－ ％ ＋)</b> — 미리보기가 보이는 크기만 바꾸며, 실제 문서·글자 크기에는 영향이 없습니다.</p>
-        <p><b>${icon("download", 13)} ${icon("printer", 13)} ${icon("copy", 13)}</b> — 차례로 한글(HWPX) 내려받기, 인쇄·PDF 저장, 워드·구글문서에 붙여넣을 복사입니다.</p>
+        <p><b>한글 받기 · 인쇄·PDF · 복사</b> — 차례로 한글(HWPX) 내려받기, 인쇄·PDF 저장, 워드·구글문서에 붙여넣을 복사입니다.</p>
         <p class="small muted" style="margin-top:8px">왼쪽 사이드바에서 기관명·제목·작성일을 채우고, 다 쓰면 맨 아래 ‘프로젝트 파일 저장’으로 지금 상태를 남겨 두세요.</p>
       </div>` : ""}
     </div>
@@ -155,9 +174,9 @@ export function render() {
     </div>
     <div class="rt-spacer"></div>
     <div class="rt-io-group" role="group" aria-label="내보내기">
-      <button class="rt-btn primary" data-act="export-hwpx" title="한글(HWPX) 내려받기">${icon("download", 16)}</button>
-      <button class="rt-btn" data-act="print" title="인쇄 / PDF 저장">${icon("printer", 16)}</button>
-      <button class="rt-btn" data-act="copy" title="보고서 복사(워드·구글문서 붙여넣기)">${icon("copy", 16)}</button>
+      <button class="rt-btn primary" data-act="export-hwpx" title="한글(HWPX) 내려받기" aria-label="한글 받기(HWPX 파일 내려받기)">${icon("download", 16)}<span class="rt-lbl">한글 받기</span></button>
+      <button class="rt-btn" data-act="print" title="인쇄 / PDF 저장" aria-label="인쇄·PDF 저장">${icon("printer", 16)}<span class="rt-lbl">인쇄·PDF</span></button>
+      <button class="rt-btn" data-act="copy" title="보고서 복사(워드·구글문서 붙여넣기)" aria-label="복사(워드·구글문서 붙여넣기)">${icon("copy", 16)}<span class="rt-lbl">복사</span></button>
     </div>
   </div>
   <div class="report-layout">
@@ -191,6 +210,9 @@ export function render() {
     </aside>
   </div>`;
 }
+
+/** 내보내기 시작·실패 알림(main.js 가 사용 통계로 기록 — 종류만) */
+const exportEvent = (type, kind) => document.dispatchEvent(new CustomEvent(`survey:export-${type}`, { detail: { kind } }));
 
 async function figureImages(blocks) {
   const map = new Map();
@@ -241,9 +263,9 @@ export const actions = {
       refresh();
     }
   },
-  "format-toggle": () => { formatOpen = !formatOpen; refresh(); },
+  "format-toggle": () => { formatOpen = !formatOpen; helpOpen = jumpOpen = false; refresh(); afterToggle(formatOpen, POP_TRIGGER.format); },
   "save-toggle": () => { saveOpen = !saveOpen; refresh(); },
-  "toggle-help": () => { helpOpen = !helpOpen; refresh(); },
+  "toggle-help": () => { helpOpen = !helpOpen; formatOpen = jumpOpen = false; refresh(); afterToggle(helpOpen, POP_TRIGGER.help); },
   "jump-edit": el => {
     const key = el.dataset.key;
     const target = [...document.querySelectorAll("[data-edit]")].find(n => n.dataset.edit === key);
@@ -252,7 +274,7 @@ export const actions = {
     target.classList.add("jump-flash");
     setTimeout(() => target.classList.remove("jump-flash"), 1600);
   },
-  "toggle-jump": () => { jumpOpen = !jumpOpen; refresh(); },
+  "toggle-jump": () => { jumpOpen = !jumpOpen; helpOpen = formatOpen = false; refresh(); afterToggle(jumpOpen, POP_TRIGGER.jump); },
   "jump-chapter-to": el => {
     const id = el.dataset.id;
     jumpOpen = false;
@@ -281,11 +303,12 @@ export const actions = {
   "reset-all": () => { state.overrides = {}; state.overrideBase = {}; refresh(); },
   "unhide-all": () => { state.hidden = []; refresh(); },
   "include-data": el => { includeData = el.checked; },
-  print: () => { document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "pdf" } })); window.print(); },
+  print: () => { exportEvent("start", "pdf"); document.dispatchEvent(new CustomEvent("survey:exported", { detail: { kind: "pdf" } })); window.print(); },
   "export-hwpx": async () => {
     const blocks = reportBlocks();
     const title = blocks.find(b => b.type === "title")?.text || "보고서";
     busy(true, "HWPX 생성 준비 중…");
+    exportEvent("start", "hwpx");
     await nextFrame();
     let stats = null;
     try {
@@ -303,6 +326,7 @@ export const actions = {
     } catch (e) {
       console.error(e);
       toast(`HWPX 생성 실패: ${e.message}`, "bad", 7000);
+      exportEvent("error", "hwpx");
     } finally { busy(false); }
   },
   copy: async () => {

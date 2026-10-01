@@ -1,7 +1,7 @@
 // 앱 진입점: 화면 전환·이벤트 위임 (인라인 핸들러 없음 — CSP script-src 'self')
 import { state } from "./ui/store.js";
-import { STEPS, NO_DATA_VIEWS, parseHash, go, setRenderer, setPrevView, prevView, refresh } from "./ui/router.js";
-import { toast, esc, busy } from "./ui/util.js";
+import { STEPS, NO_DATA_VIEWS, parseHash, go, setRenderer, setPrevView, prevView, refresh, viewLabel } from "./ui/router.js";
+import { toast, notify, esc, busy } from "./ui/util.js";
 import { icon } from "./ui/icons.js";
 import { cycleTheme, themePref, THEME_LABEL, watchSystemTheme } from "./ui/theme.js";
 import { initPwa, installApp, isUpdateReloading, takeUpdateResume } from "./ui/pwa.js";
@@ -45,13 +45,16 @@ let current = load, currentId = "";
 let versionTaps = 0, versionTapTimer = 0;
 let adminTaps = 0, adminTapTimer = 0;
 const ADMIN_TAP_COUNT = 5;
+const BASE_TITLE = document.title || "설문 분석 · 평가 도구"; // index.html 의 <title> — 화면 이름을 앞에 붙여 씀
+// 단계 표시줄의 체크 표시 = 이번 자료로 실제로 들어가 본 단계(앞 번호라고 자동으로 '완료'로 보이지 않게). 새 자료를 불러오면 비움
+const visited = new Set();
 
 function renderChrome(id) {
-  const curIdx = STEPS.findIndex(s => s.id === id);
-  document.getElementById("steps").innerHTML = STEPS.map((s, i) => {
+  document.getElementById("steps").innerHTML = STEPS.map(s => {
     const disabled = s.id !== "load" && !state.dataset;
-    const on = s.id === id, done = !!state.dataset && i < curIdx;
-    return `<button class="step${on ? " on" : ""}${done ? " done" : ""}" ${disabled ? "disabled" : ""} ${on ? 'aria-current="step"' : ""} data-act="goto" data-to="${s.id}" title="${esc(s.label)}"><i>${done ? icon("check", 14) : s.n}</i><span>${esc(s.label)}</span></button>`;
+    const on = s.id === id, done = !!state.dataset && !on && visited.has(s.id);
+    // 좁은 화면(≤1100px)에서는 단계 이름 글자가 숨으므로 이름을 aria-label 로도 붙임
+    return `<button class="step${on ? " on" : ""}${done ? " done" : ""}" ${disabled ? "disabled" : ""} ${on ? 'aria-current="step"' : ""} data-act="goto" data-to="${s.id}" title="${esc(s.label)}" aria-label="${s.n}단계 ${esc(s.label)}${done ? " (확인함)" : ""}"><i>${done ? icon("check", 14) : s.n}</i><span>${esc(s.label)}</span></button>`;
   }).join(`<span class="step-sep" aria-hidden="true"></span>`);
   const pb = document.getElementById("presentBtn");
   pb.disabled = !state.dataset;
@@ -118,11 +121,67 @@ function render({ keepScroll = false } = {}) {
   });
 }
 
+// ── 다시 그린 뒤 포커스 되살리기 ──
+// 같은 화면을 다시 그리면(#main 통째 교체) 키보드 포커스가 body 로 떨어져 Tab 위치를 잃음 → 그리기 전 포커스 요소를 기억했다가
+// 새로 그린 같은 요소(id 또는 data-* 조합 + 같은 조합 중 몇 번째인지)로 돌려놓음
+const FOCUS_ATTRS = ["data-change", "data-act", "data-key", "data-i", "data-field", "data-to", "data-id", "data-tab", "data-stage", "data-mode", "data-filter", "data-n"];
+const FOCUSABLE = "a[href], button:not(:disabled), input:not(:disabled):not([type='hidden']), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1']), [contenteditable='true']";
+let lastPointer = { at: 0, target: null }, lastTab = { at: 0, back: false };
+// 값을 고친 칸에서 Tab 으로 떠나면 브라우저가 포커스를 비운 채(activeElement=body) change 를 보내므로, 그 칸을 따로 기억
+let changeTarget = null;
+document.addEventListener("pointerdown", e => { lastPointer = { at: Date.now(), target: e.target }; }, true);
+document.addEventListener("keydown", e => { if (e.key === "Tab") lastTab = { at: Date.now(), back: e.shiftKey }; }, true);
+function captureFocus(main) {
+  const active = document.activeElement;
+  const blurred = (!active || active === document.body) && !!changeTarget?.isConnected && main.contains(changeTarget);
+  const el = blurred ? changeTarget : active;
+  if (!el || el === main || !main.contains(el) || el.isContentEditable) return null; // 문장 직접 편집 칸은 자체 처리(편집 상태 전환)가 있어 건드리지 않음
+  let sel = "";
+  if (el.id) sel = `#${CSS.escape(el.id)}`;
+  else if (el.hasAttribute("data-change") || el.hasAttribute("data-act")) sel = FOCUS_ATTRS.filter(a => el.hasAttribute(a)).map(a => `[${a}="${CSS.escape(el.getAttribute(a))}"]`).join("");
+  if (!sel) return null;
+  const nth = [...main.querySelectorAll(sel)].indexOf(el);
+  let range = null;
+  try { if (typeof el.selectionStart === "number") range = [el.selectionStart, el.selectionEnd]; } catch { /* number 등 선택 영역이 없는 입력칸 */ }
+  return { el, sel, nth: Math.max(0, nth), range, blurred };
+}
+/** 다시 그린 뒤 포커스를 잃었을 때만(다른 코드가 이미 포커스를 옮겼으면 그대로) 같은 요소로 되돌림 — 이벤트 처리가 다 끝난 뒤 실행 */
+function restoreFocus(main, saved, id) {
+  setTimeout(() => {
+    if (id !== currentId || saved.el.isConnected) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== main) return;
+    // 사용자가 다른 곳을 눌러서 포커스가 빠진 경우(클릭한 지점이 다시 그려지며 사라짐)는 되돌리지 않음
+    if (Date.now() - lastPointer.at < 1500 && lastPointer.target && !saved.el.contains(lastPointer.target)) return;
+    const list = main.querySelectorAll(saved.sel);
+    const el = list[saved.nth] || list[0];
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    if (saved.range) { try { el.setSelectionRange(...saved.range); } catch { /* 선택 영역을 지원하지 않는 입력칸 */ } }
+    // Tab 으로 칸을 떠나며 값이 바뀐 경우(change → 다시 그리기): 다시 그린 같은 칸에서 Tab 이동을 이어 줌
+    if (saved.blurred && Date.now() - lastTab.at < 1000) {
+      const all = [...document.querySelectorAll(FOCUSABLE)].filter(n => n.getClientRects().length);
+      const next = all[all.indexOf(el) + (lastTab.back ? -1 : 1)];
+      next?.focus({ preventScroll: true });
+    }
+  }, 0);
+}
+/** 화면이 바뀌면 탭 제목을 화면 이름으로 바꾸고, 키보드·화면 낭독기 사용자를 새 화면의 첫 제목으로 안내 */
+function announceView(main, id, first) {
+  document.title = `${viewLabel(id)} · ${BASE_TITLE}`;
+  if (first || main.contains(document.activeElement)) return; // 첫 화면이거나 화면 스스로 포커스를 정한 경우(발표 화면 등)는 그대로
+  const h = main.querySelector("h1, h2");
+  if (!h) return;
+  if (!h.hasAttribute("tabindex")) h.setAttribute("tabindex", "-1");
+  h.focus({ preventScroll: true });
+}
+
 function renderWith(mod, id, sub, keepScroll) {
-  const changed = id !== currentId;
+  const changed = id !== currentId, first = !currentId;
   if (changed && currentId && currentId !== id) setPrevView(currentId);
   if (changed) current.unmount?.();
   current = mod; currentId = id;
+  visited.add(id);
   document.body.classList.toggle("presenting", id === "present");
   const preserveViewport = shouldRestoreViewport({ viewChanged: changed, keepScroll });
   const scrollState = preserveViewport
@@ -130,6 +189,7 @@ function renderWith(mod, id, sub, keepScroll) {
     : null;
   renderChrome(id);
   const main = document.getElementById("main");
+  const savedFocus = changed ? null : captureFocus(main);
   try {
     main.innerHTML = current.render({ sub });
     current.mount?.();
@@ -138,6 +198,8 @@ function renderWith(mod, id, sub, keepScroll) {
     main.innerHTML = `<section class="card"><h2>화면을 표시하지 못했습니다</h2><p class="bad-text">${esc(e.message)}</p><p class="muted small">데이터 설정(열 역할·척도)을 확인하거나 파일을 다시 불러오세요. 직전 상태로 돌아가려면 <b>되돌리기(Ctrl+Z)</b> 또는 <b>작업 내역</b>을 이용하세요.</p><div class="row gap"><button class="btn" data-act="goto" data-to="setup">데이터 설정으로</button><button class="btn" data-act="goto" data-to="history">작업 내역</button></div></section>`;
   }
   syncGuide();
+  if (savedFocus) restoreFocus(main, savedFocus, id);
+  if (changed) announceView(main, id, first);
   if (changed) trackEvent(id, "view_enter");
   if (scrollState) restoreViewport({ ...scrollState, root: main });
   else if (changed) window.scrollTo(0, 0);
@@ -192,14 +254,31 @@ document.addEventListener("change", e => {
   const el = e.target.closest("[data-change]");
   if (!el) return;
   const fn = handler(el.dataset.change);
-  if (fn) Promise.resolve(fn(el, e)).then(afterAction, err => { console.error(err); toast(err.message, "bad"); });
+  changeTarget = e.target;
+  try {
+    if (fn) Promise.resolve(fn(el, e)).then(afterAction, err => { console.error(err); toast(err.message, "bad"); });
+  } finally { changeTarget = null; }
 });
 // 드래그 앤 드롭
-document.addEventListener("dragover", e => { const z = e.target.closest("[data-drop]"); if (z) { e.preventDefault(); z.classList.add("over"); } });
-document.addEventListener("dragleave", e => { const z = e.target.closest("[data-drop]"); if (z) z.classList.remove("over"); });
+const isFileDrag = e => [...(e.dataTransfer?.types || [])].includes("Files");
+document.addEventListener("dragover", e => {
+  const z = e.target.closest?.("[data-drop]");
+  if (z) { e.preventDefault(); z.classList.add("over"); }
+  else if (isFileDrag(e)) e.preventDefault(); // 놓는 칸 밖에 파일을 떨어뜨려도 브라우저가 그 파일을 열며 작업 화면을 떠나지 않게
+});
+document.addEventListener("dragleave", e => { const z = e.target.closest?.("[data-drop]"); if (z) z.classList.remove("over"); });
 document.addEventListener("drop", e => {
-  const z = e.target.closest("[data-drop]");
-  if (!z) return;
+  const z = e.target.closest?.("[data-drop]");
+  if (!z) {
+    if (!isFileDrag(e)) return; // 슬라이드 순서 바꾸기 등 화면 안 끌기는 각자 처리
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (!f) return;
+    const fn = currentId === "load" ? handler("drop-data") : null;
+    if (fn) { Promise.resolve(fn(f)).catch(err => { console.error(err); toast(err.message, "bad"); }); return; } // 첫 화면이면 놓는 칸 밖이어도 그대로 불러옴
+    notify("파일은 ‘불러오기’ 화면의 파일 놓는 칸에 끌어다 놓아 주세요.", { action: "불러오기 화면으로", onAction: () => go("load") });
+    return;
+  }
   e.preventDefault(); z.classList.remove("over");
   const f = e.dataTransfer.files?.[0];
   const fn = handler(`drop-${z.dataset.drop}`);
@@ -290,10 +369,12 @@ document.addEventListener("keydown", e => {
   }
   current.onKey?.(e);
 });
-window.addEventListener("beforeunload", e => { if (!isUpdateReloading() && state.dataset &&(Object.keys(state.overrides).length || state.kpis.length)) { e.preventDefault(); e.returnValue = ""; } });
+// 자료를 불러온 뒤 문장 수정·성과지표·되돌릴 수 있는 변경이 있으면 창을 닫기 전에 확인
+window.addEventListener("beforeunload", e => { if (!isUpdateReloading() && state.dataset && (Object.keys(state.overrides).length || state.kpis.length || canUndo())) { e.preventDefault(); e.returnValue = ""; } });
 
 // 작업 내역 연동
 document.addEventListener("survey:loaded", () => {
+  visited.clear(); visited.add("load"); if (currentId) visited.add(currentId);
   resetTracking();
   saveSnapshot("load", { includeData: true, localData: true }).catch(err => console.warn("원자료 로컬 저장 실패:", err));
   renderChrome(currentId);

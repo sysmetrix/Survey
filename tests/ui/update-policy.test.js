@@ -177,18 +177,26 @@ test("unsafeReason: 입력·끌기·처리·발표·안내·저장·저장불가
   assert.equal(unsafeReason(base({ persistOk: false, hasWork: false })), null, "잃을 작업이 없으면 저장 가능 여부는 상관없음");
 });
 
-test("canAutoApply: 작업 중에는 마지막 조작 뒤 10초 조용해야 적용", () => {
-  const at = ms => canAutoApply(base({ now: T0 + ms }));
+test("canAutoApply: 작업이 있으면 시간이 지나도 자동 적용 안 함('지금 업데이트'를 직접 눌러야 함)", () => {
+  for (const ms of [0, 10_000, 600_000]) {
+    const d = canAutoApply(base({ now: T0 + ms }));
+    assert.deepEqual([d.ok, d.reason], [false, "has-work"], String(ms));
+  }
+  assert.equal(canAutoApply(base({ now: T0 + 600_000, typing: true })).reason, "has-work", "입력 중이어도 '입력을 마치면 적용' 안내 대신 작업 중 안내");
+});
+
+test("canAutoApply: (옵션) 작업 중 자동 적용을 켜면 마지막 조작 뒤 10초 조용해야 적용", () => {
+  const at = ms => canAutoApply(base({ now: T0 + ms }), { autoApplyWithWork: true });
   assert.deepEqual(at(0), { ok: false, reason: "wait", remainingMs: 10_000 });
   assert.deepEqual(at(9_999), { ok: false, reason: "wait", remainingMs: 1 });
   assert.deepEqual(at(10_000), { ok: true, reason: null, remainingMs: 0 });
 });
 
 test("canAutoApply: 조작하면 카운트다운이 처음부터", () => {
-  const s = base({ now: T0 + 9_000, lastInteractionAt: T0 + 8_500 });
+  const s = base({ now: T0 + 1_000, lastInteractionAt: T0 + 500, hasWork: false });
   assert.equal(canAutoApply(s).ok, false);
-  assert.equal(canAutoApply(s).remainingMs, 9_500);
-  assert.equal(canAutoApply({ ...s, now: T0 + 18_500 }).ok, true);
+  assert.equal(canAutoApply(s).remainingMs, 1_000);
+  assert.equal(canAutoApply({ ...s, now: T0 + 2_000 }).ok, true);
 });
 
 test("canAutoApply: 작업이 없으면(불러온 데이터 없음) 1.5초 만에 적용", () => {
@@ -199,11 +207,11 @@ test("canAutoApply: 작업이 없으면(불러온 데이터 없음) 1.5초 만�
 test("canAutoApply: 글 입력·끌기·처리 중·발표 중이면 시간이 지나도 적용 안 함", () => {
   const late = T0 + 600_000;
   for (const flag of ["typing", "dragging", "busy", "presenting", "tutorial", "saving"]) {
-    const d = canAutoApply(base({ now: late, [flag]: true }));
+    const d = canAutoApply(base({ now: late, hasWork: false, [flag]: true }));
     assert.equal(d.ok, false, flag);
     assert.equal(d.reason, flag);
   }
-  assert.equal(canAutoApply(base({ now: late })).ok, true, "다 끝나면 곧바로 적용");
+  assert.equal(canAutoApply(base({ now: late, hasWork: false })).ok, true, "다 끝나면 곧바로 적용");
 });
 
 test("canAutoApply: 작업 저장 불가 환경은 자동 적용 안 함(직접 누르는 것만)", () => {
@@ -219,12 +227,13 @@ test("canAutoApply: 미루는 중·반복 방지·업데이트 없음", () => {
 
 test("canAutoApply: 미루기가 끝난 뒤에는 새 카운트다운(shownAt 갱신)으로 다시 진행", () => {
   const snoozeEnd = T0 + 300_000;
-  const s = base({ shownAt: snoozeEnd, now: snoozeEnd + 3_000, snoozedUntil: snoozeEnd });
-  assert.deepEqual([canAutoApply(s).ok, canAutoApply(s).remainingMs], [false, 7_000]);
+  const s = base({ shownAt: snoozeEnd, now: snoozeEnd + 1_000, snoozedUntil: snoozeEnd, hasWork: false });
+  assert.deepEqual([canAutoApply(s).ok, canAutoApply(s).remainingMs], [false, 500]);
 });
 
 test("canAutoApply: 시험용으로 대기 시간 조정 가능", () => {
-  assert.equal(canAutoApply(base({ now: T0 + 2_000 }), { idleMs: 2_000 }).ok, true);
+  assert.equal(canAutoApply(base({ now: T0 + 2_000 }), { idleMs: 2_000, autoApplyWithWork: true }).ok, true);
+  assert.equal(canAutoApply(base({ now: T0 + 500, hasWork: false }), { idleMsNoWork: 500 }).ok, true);
 });
 
 // ───────────── 안내 문구 ─────────────
@@ -244,6 +253,12 @@ test("bannerCopy: 입력 중이면 마치면 적용된다고 안내, 작업 없�
   const c = bannerCopy({ phase: "available", version: "5.30.0", hasWork: false, persistOk: false, reason: "typing" });
   assert.doesNotMatch(c.text, /저장/);
   assert.match(c.hint, /입력을 마치면/);
+});
+
+test("bannerCopy: 작업 중에는 직접 눌러야 적용된다고 안내", () => {
+  const c = bannerCopy({ phase: "available", version: "5.30.0", hasWork: true, persistOk: true, reason: "has-work" });
+  assert.match(c.text, /작업 내용은 자동 저장됩니다/);
+  assert.match(c.hint, /지금 업데이트/);
 });
 
 test("bannerCopy: 저장 불가 환경에서는 다시 올려야 한다고 경고", () => {

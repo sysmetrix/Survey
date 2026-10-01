@@ -2,8 +2,10 @@
 // 새 배포를 얼마나 빨리 알아채고(감지) 언제 화면을 다시 불러와도 안전한지(적용) 정한다. 실제 배선은 pwa.js.
 
 export const DEFAULTS = Object.freeze({
-  /** 작업 중일 때: 마지막 조작 뒤 이만큼 가만히 있으면 자동 적용 */
+  /** 작업 중일 때: 마지막 조작 뒤 이만큼 가만히 있으면 자동 적용 (autoApplyWithWork 를 켠 경우에만 — 기본은 작업 중 자동 적용 안 함) */
   idleMs: 10_000,
+  /** 불러온 작업이 있어도 자동 적용할지. 기본 false: 작업 중에는 안내 띠의 '지금 업데이트'를 직접 눌러야만 적용 */
+  autoApplyWithWork: false,
   /** 불러온 데이터가 없을 때(잃을 작업 없음): 거의 바로 적용 */
   idleMsNoWork: 1_500,
   /** '나중에' 를 누르면 이 시간 동안 조용히 */
@@ -139,10 +141,11 @@ export function unsafeReason(s) {
  * 자동 적용 판단.
  * @param {{available:boolean, now:number, shownAt:number, lastInteractionAt:number, snoozedUntil?:number, autoAllowed?:boolean,
  *   hasWork:boolean, persistOk:boolean, typing?:boolean, dragging?:boolean, busy?:boolean, presenting?:boolean, tutorial?:boolean, saving?:boolean}} s
- * @param {{idleMs?:number, idleMsNoWork?:number}} [opt]
- * @returns {{ok:boolean, reason:string|null, remainingMs:number}} reason: none|snoozed|loop-guard|<unsafeReason>|wait
+ * 불러온 작업이 있으면(hasWork) 기본적으로 자동 적용하지 않음(reason "has-work") — 사용자가 '지금 업데이트'를 누를 때만.
+ * @param {{idleMs?:number, idleMsNoWork?:number, autoApplyWithWork?:boolean}} [opt]
+ * @returns {{ok:boolean, reason:string|null, remainingMs:number}} reason: none|snoozed|loop-guard|has-work|<unsafeReason>|wait
  */
-export function canAutoApply(s, { idleMs = DEFAULTS.idleMs, idleMsNoWork = DEFAULTS.idleMsNoWork } = {}) {
+export function canAutoApply(s, { idleMs = DEFAULTS.idleMs, idleMsNoWork = DEFAULTS.idleMsNoWork, autoApplyWithWork = DEFAULTS.autoApplyWithWork } = {}) {
   const idle = s.hasWork ? idleMs : idleMsNoWork;
   const base = Math.max(s.shownAt || 0, s.lastInteractionAt || 0);
   const remainingMs = Math.max(0, base + idle - s.now);
@@ -150,6 +153,8 @@ export function canAutoApply(s, { idleMs = DEFAULTS.idleMs, idleMsNoWork = DEFAU
   if (isSnoozed(s.snoozedUntil, s.now)) return { ok: false, reason: "snoozed", remainingMs };
   if (s.autoAllowed === false) return { ok: false, reason: "loop-guard", remainingMs };
   const bad = unsafeReason(s);
+  // 작업 중에는 자동으로 새로고침하지 않음(저장 불가 경고는 그대로 우선 안내)
+  if (s.hasWork && !autoApplyWithWork && bad !== "no-persist") return { ok: false, reason: "has-work", remainingMs };
   if (bad) return { ok: false, reason: bad, remainingMs };
   if (remainingMs > 0) return { ok: false, reason: "wait", remainingMs };
   return { ok: true, reason: null, remainingMs: 0 };
@@ -161,6 +166,7 @@ const WHY_WAIT = {
   busy: "처리가 끝나면 자동으로 적용됩니다.",
   tutorial: "안내를 마치면 자동으로 적용됩니다.",
   saving: "저장이 끝나면 자동으로 적용됩니다.",
+  "has-work": "작업 중에는 저절로 바뀌지 않습니다. 편할 때 ‘지금 업데이트’를 누르세요.",
   "no-persist": "",
   "loop-guard": "",
   presenting: "",

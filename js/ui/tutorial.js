@@ -11,7 +11,7 @@ const STEPS = [
   { view: "load", target: "[data-drop='data']", title: "① 설문 파일 불러오기", text: "엑셀·CSV 파일을 이 자리에 끌어다 놓거나 눌러서 고르면 됩니다.\n구글폼·네이버폼에서 내려받은 원본 파일도 그대로 쓸 수 있습니다." },
   { view: "load", target: `[data-act='sample'][data-file='${SAMPLE}']`, title: "샘플 설문으로 따라 하기", text: "가장 단순한 만족도 조사 샘플을 자동으로 불러오겠습니다.", before: openSampleTray, run: el => el.click(), wait: true },
   { view: "setup", target: ".facts", title: "② 자동 인식 결과 확인", text: "응답자 수와 조사 설계를 먼저 확인하세요.\n대부분은 자동으로 판별되며, 경고가 표시된 항목만 고치면 됩니다." },
-  { view: "setup", target: ".tblwrap", title: "문항 설정 확인", text: "문항 역할과 척도 범위, 역문항을 확인합니다.\n문자로 된 보기는 보기별 점수를 정해 주면 숫자로 분석됩니다." },
+  { view: "setup", target: ".setup-workspace, .column-workspace, .setup-table-workspace", title: "문항 설정 확인", text: "문항 역할과 척도 범위, 역문항을 확인합니다.\n문자로 된 보기는 보기별 점수를 정해 주면 숫자로 분석됩니다." },
   { view: "setup", target: "[data-act='goto'][data-to='business']", title: "다음 단계로 이동", text: "문항 설정을 마쳤으니 다음 단계로 넘어가겠습니다.", run: el => el.click(), wait: true },
   { view: "business", target: ".quick-kpis", title: "③ 성과지표는 선택 사항", text: "목표 달성 여부를 보고서에 넣고 싶을 때만 빠른 추가를 사용하세요.\n단순 만족도 분석이라면 입력하지 않아도 됩니다." },
   { view: "business", target: "label:has(input[data-change='load-plan-doc'])", title: "사업계획서로 초안 채우기", text: "HWPX 사업 운영계획서를 올리면 사업정보·논리모형·성과지표 초안을 자동으로 채워 줍니다.\n자동 인식 결과이니 목표값과 내용은 꼭 확인하세요." },
@@ -121,10 +121,6 @@ function showStep() {
   awaitApp = false;
   step.before?.();
   const target = document.querySelector(step.target);
-  if (!target) return;
-  clearHighlight();
-  target.classList.add("tutorial-focus");
-  target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
   const bar = document.getElementById("tutorialBar");
   bar.hidden = false;
   document.getElementById("tutorialTitle").textContent = step.title;
@@ -133,6 +129,11 @@ function showStep() {
   const next = bar.querySelector("[data-tutorial='next']");
   next.textContent = step.done ? "완료" : step.run ? "지금 실행" : "다음";
   document.getElementById("tutorialPrev").disabled = index === 0;
+  clearHighlight();
+  // 강조할 대상이 아직 없어도 자막은 이 단계로 바꿔 둠(이전 단계 문구가 남지 않게) — 대상은 다음 틱에 다시 찾음
+  if (!target) return;
+  target.classList.add("tutorial-focus");
+  target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
   shown = index;
 }
 
