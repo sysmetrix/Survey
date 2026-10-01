@@ -8,6 +8,7 @@ import { rawColumn } from "../model/codebook.js";
 import { recodeColumn } from "../model/recode.js";
 import { score100 } from "./items.js";
 import { pairQuality } from "../evaluation/pair-quality.js";
+import { holm } from "../stats/adjust.js";
 
 export function compositeComparison(survey, pairs, options = {}) {
   if (!pairs.length) return null;
@@ -40,7 +41,6 @@ export function pairedComparison(pre, post, scale = null, { scoreBasis = "exact"
   const { min, max } = scale || {};
   const hasScale = Number.isFinite(min) && Number.isFinite(max) && max > min;
   const range = hasScale ? max - min : NaN;
-  const hake = mean(pt.diffs.map((d, i) => { return null; }).filter(Boolean)); // placeholder 제거용
   const pairsArr = [];
   for (let i = 0; i < pre.length; i++) if (pre[i] !== null && post[i] !== null) pairsArr.push([pre[i], post[i]]);
   const gains = hasScale ? pairsArr.filter(([a]) => max - a > 0).map(([a, b]) => (b - a) / (max - a)) : [];
@@ -56,7 +56,6 @@ export function pairedComparison(pre, post, scale = null, { scoreBasis = "exact"
     shapiro: sw ? { W: sw.W, p: sw.p } : null,
     improved, same, worse, improvedPct: improved / n * 100, worsePct: worse / n * 100,
     hakeG: gains.length ? mean(gains) : NaN,
-    unused: hake,
   };
 }
 
@@ -126,6 +125,12 @@ export function prepostAnalysis(survey, { scoreBasis = "exact" } = {}) {
     if (res) domains.push({ id: g.id, name: g.name, nItems: g.pairs.length, scale, ...res });
   }
 
+  // 다중비교 보정: 척도 문항·연속형 수치·영역을 각각 한 묶음으로 Holm 보정(본문 유의성 판단 기준). 전체(ALL) 합성점수는 단일 검정이라 원래 p 그대로
+  adjustFamily(items);
+  adjustFamily(numericItems);
+  adjustFamily(domains.filter(d => d.id !== "ALL"));
+  domains.filter(d => d.id === "ALL").forEach(d => { d.primary.pAdj = d.primary.p; });
+
   const result = {
     scopeKeys,
     qualityIssues,
@@ -136,10 +141,16 @@ export function prepostAnalysis(survey, { scoreBasis = "exact" } = {}) {
       dupPre: survey.matching.dupPre, dupPost: survey.matching.dupPost, candidates: survey.matching.candidates.length, keyDesc: survey.matching.keyDesc,
     },
     items, numericItems, domains,
-    significantItems: items.filter(it => it.primary.p < 0.05 && it.diff > 0).length,
+    significantItems: items.filter(it => it.primary.pAdj < 0.05 && it.diff > 0).length,
   };
   Object.defineProperty(result, "composite", { value: keys => useUnpaired ? null : compositeComparison(survey, scalePairs.filter(p => keys.includes(p.pre) || keys.includes(p.post)), { scoreBasis }) });
   return result;
+}
+
+/** 한 묶음 검정 결과의 primary 에 Holm 보정 p(pAdj)를 붙인다. p 가 없는 검정은 1로 두고 보정함 */
+function adjustFamily(list) {
+  const adj = holm(list.map(x => (Number.isFinite(x.primary.p) ? x.primary.p : 1)));
+  list.forEach((x, i) => { x.primary.pAdj = Number.isFinite(x.primary.p) ? adj[i] : NaN; });
 }
 
 export { describe };

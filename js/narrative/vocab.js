@@ -61,6 +61,19 @@ export function statParen(test) {
 
 export const sigPhrase = p => (Number.isFinite(p) && p < 0.05 ? "통계적으로 유의함" : "통계적으로 유의한 차이는 확인되지 않음");
 
+/**
+ * 본문 유의성 판단에 쓸 유의확률 — 여러 검정을 반복한 결과(문항·영역·집단 비교)는 Holm 보정값,
+ * 보정값이 없으면(단일 검정) 원래 p.  x 는 사전·사후 결과의 primary({p, pAdj}) 또는 교차분석 행({test:{p}, pHolm})
+ */
+export function sigP(x) {
+  if (!x) return NaN;
+  const adj = x.pAdj ?? x.pHolm;
+  if (Number.isFinite(adj)) return adj;
+  return x.p ?? x.test?.p ?? NaN;
+}
+/** Holm 보정 기준 유의 여부 */
+export const isSig = (x, alpha = 0.05) => { const p = sigP(x); return Number.isFinite(p) && p < alpha; };
+
 /** 판정 라벨 */
 export function judgeWord(rate, t = DEFAULT_THRESHOLDS) {
   if (!Number.isFinite(rate)) return "측정 불가";

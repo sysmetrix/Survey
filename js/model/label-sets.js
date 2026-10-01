@@ -7,7 +7,7 @@ export const LABEL_SETS = [
     id: "agree5", family: "agree", name: "동의(5점)", min: 1, max: 5, levels: [
       ["전혀그렇지않다", "전혀아니다", "전혀그렇지않음", "매우그렇지않다", "전혀동의하지않는다", "전혀동의하지않음", "전혀동의안함", "매우아니다", "매우반대", "전혀아님"],
       ["그렇지않다", "아니다", "그렇지않음", "그렇지않은편이다", "동의하지않는다", "동의하지않음", "동의안함", "별로그렇지않다", "반대", "아님", "그렇지않은편"],
-      ["보통이다", "보통", "그저그렇다", "중간", "잘모르겠다", "보통임", "중립", "잘모르겠음", "중간이다"],
+      ["보통이다", "보통", "그저그렇다", "중간", "보통임", "중립", "중간이다"],
       ["그렇다", "그런편이다", "그렇음", "동의한다", "대체로그렇다", "동의함", "동의", "그런편"],
       ["매우그렇다", "매우그렇음", "아주그렇다", "매우동의한다", "정말그렇다", "매우동의함", "매우동의", "적극동의", "전적으로동의"],
     ],
@@ -65,7 +65,7 @@ export const LABEL_SETS = [
     id: "agree5_en", family: "agree_en", name: "동의(5점, 영문)", min: 1, max: 5, levels: [
       ["stronglydisagree", "totallydisagree", "completelydisagree"],
       ["disagree", "somewhatdisagree", "tendtodisagree"],
-      ["neitheragreenordisagree", "neitheragreeordisagree", "neutral", "undecided", "notsure"],
+      ["neitheragreenordisagree", "neitheragreeordisagree", "neutral", "undecided"],
       ["agree", "somewhatagree", "tendtoagree"],
       ["stronglyagree", "totallyagree", "completelyagree"],
     ],
@@ -88,6 +88,16 @@ export const LABEL_SETS = [
     ],
   },
 ];
+
+/**
+ * 점수가 아닌 응답(모름·해당 없음) — '보통'(중간 점수)으로 채점하지 않고 결측으로 다룰 후보 (normLabel 형태)
+ * 라벨 세트 일치율 계산에서 빼고, 자동 판별 결과의 결측 코드 후보(suggestMissing)로 돌려준다.
+ */
+export const MISSING_LABELS = new Set([
+  "잘모르겠다", "잘모르겠음", "모르겠다", "모르겠음", "잘모름", "모름", "해당없음", "해당없다", "해당사항없음", "무응답", "응답안함", "응답하지않음",
+  "notsure", "dontknow", "idontknow", "na", "notapplicable",
+]);
+export const isMissingLabel = v => MISSING_LABELS.has(normLabel(v));
 
 const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩";
 
@@ -129,11 +139,14 @@ export function mapWithSet(values, set) {
 /**
  * 값 목록에 가장 잘 맞는 라벨 세트
  *  1) 일치율 높은 순 2) 관측 보기 수가 세트 단계 수와 딱 맞는 세트(예: '보통' 없는 4단계 → 4점) 3) 사전 순서(5점 우선)
- * @returns {{set, map: Map<string, number>, coverage: number, distinct: number, ambiguous: boolean} | null}
+ * @returns {{set, map: Map<string, number>, coverage: number, distinct: number, ambiguous: boolean, missing: string[]} | null}
  *   ambiguous: 5점으로 판정했으나 중간(보통) 응답이 없어 4점일 가능성도 있음
+ *   missing: 모름·해당 없음 등 결측 후보 원문(일치율 계산에서 제외)
  */
 export function matchLabelSet(values, minCoverage = 0.8, sets = LABEL_SETS) {
-  const vals = values.filter(v => v !== null && v !== undefined && String(v).trim() !== "").map(v => String(v).trim());
+  const all = values.filter(v => v !== null && v !== undefined && String(v).trim() !== "").map(v => String(v).trim());
+  const missing = [...new Set(all.filter(isMissingLabel))];
+  const vals = all.filter(v => !isMissingLabel(v));
   if (!vals.length) return null;
   const cands = [];
   sets.forEach((set, order) => {
@@ -150,5 +163,6 @@ export function matchLabelSet(values, minCoverage = 0.8, sets = LABEL_SETS) {
   const mid = Number.isInteger((k - 1) / 2) ? best.set.min + (k - 1) / 2 : null;
   const midSeen = mid !== null && [...best.map.values()].includes(mid);
   best.ambiguous = mid !== null && !midSeen && cands.some(c => c !== best && c.set.family === best.set.family && c.set.levels.length !== k && c.coverage === best.coverage);
+  best.missing = missing;
   return best;
 }

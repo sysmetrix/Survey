@@ -59,8 +59,8 @@ function textTab(r) {
   const tx = A.text.find(t => t.key === textFilter.col) || A.text[0];
   const list = tx.responses.filter(x => (!textFilter.type || x.type === textFilter.type) && (!textFilter.q || x.text.includes(textFilter.q)));
   return `<div class="row gap wrap">
-      <select class="in" data-change="tx-col">${A.text.map(t => option(t.key, t.label, t.key === tx.key)).join("")}</select>
-      <input class="in" placeholder="검색어" value="${esc(textFilter.q)}" data-change="tx-q">
+      <select class="in" data-change="tx-col" aria-label="주관식 문항 선택">${A.text.map(t => option(t.key, t.label, t.key === tx.key)).join("")}</select>
+      <input class="in" placeholder="검색어" value="${esc(textFilter.q)}" data-change="tx-q" aria-label="${esc(tx.label)} 응답 검색">
     </div>
     <div class="seg-filter" role="group" aria-label="응답 유형 필터">
       <button class="seg-btn${textFilter.type ? "" : " on"}" data-act="tx-type-set" data-type="">전체<span class="n">${tx.responses.length}</span></button>
@@ -119,7 +119,7 @@ export function render({ sub }) {
     <div><h1>분석 결과</h1><p class="small muted">${esc(state.dataset.fileName)} · 계산 ${r.ms}ms · 그래프에 마우스를 올리면 값이 보입니다</p></div>
     <div class="row gap wrap"><button class="btn" data-act="goto" data-to="present" data-sub="1">${icon("play", 16)}발표 모드</button><button class="btn primary" data-act="goto" data-to="report">보고서 편집·내보내기${icon("right", 16)}</button></div>
   </div>
-  ${isFeatureOn("statsTrustBadge") ? `<p class="small muted row gap" style="margin-top:-6px;align-items:center">${icon("shield", 13)} 통계 방법: R 기준값 대비 검증 · 다중비교 Holm/BH 보정 · 효과크기(95% 신뢰구간) 병기 <button class="btn sm ghost" data-act="goto" data-to="dash" data-sub="${esc("[부록] 세부 분석표")}">산식·전체 검정 결과 보기</button>${isAdminPreview("statsTrustBadge") ? '<span class="badge muted">관리자 미리보기</span>' : ""}</p>` : ""}
+  ${isFeatureOn("statsTrustBadge") ? `<p class="small muted row gap" style="margin-top:-6px;align-items:center">${icon("shield", 13)} 통계 방법: R 기준값 대비 검증 · 다중비교 Holm 보정(본문 유의성 판단 기준) · 효과크기 병기 <button class="btn sm ghost" data-act="goto" data-to="dash" data-sub="${esc("[부록] 세부 분석표")}">산식·전체 검정 결과 보기</button>${isAdminPreview("statsTrustBadge") ? '<span class="badge muted">관리자 미리보기</span>' : ""}</p>` : ""}
   ${cards(r)}
   <section class="card">
     <nav class="tabs" aria-label="분석 장">${tabs.map(t => `<button class="tab${t.key === cur.key ? " on" : ""}" ${t.key === cur.key ? 'aria-current="page"' : ""} data-act="goto" data-to="dash" data-sub="${esc(t.key)}">${esc(t.title)}</button>`).join("")}</nav>

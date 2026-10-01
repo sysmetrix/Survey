@@ -1,5 +1,5 @@
 // 분석 결과 → 보고서 블록 (규칙 기반 개조식 서술)
-import { levelWord, f1, f2, f2b, signed, pText, statParen, statNum, sigPhrase, sigStar, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
+import { levelWord, f1, f2, f2b, signed, pText, statParen, statNum, sigPhrase, sigStar, sigP, isSig, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { josa } from "../narrative/josa.js";
 import { DESIGN_LABELS } from "../model/codebook.js";
 import { hasLogicModel, hasProgramInfo, LOGIC_STAGES } from "../evaluation/logic-model.js";
@@ -144,7 +144,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       : `신뢰도는 ${phrase}임(${evidence})`));
   }
   if (A.meta.straightLiners && !S.excludedCount) ov.push(B("s.clean", 1, `자료 점검: 모든 척도 문항에 같은 값으로 응답한 사례 ${A.meta.straightLiners}명 확인(분석에 포함)`, true));
-  ov.push(B("s.method", 1, "분석 방법: 기술통계, 집단 간 차이 검정(Welch t검정·분산분석), 사전·사후 차이 검정(대응표본 t검정 또는 Wilcoxon 부호순위 검정), 유의수준 .05(다층모형·요인분석 등 고급 분석은 별도 통계 패키지 사용을 권장)", true));
+  ov.push(B("s.method", 1, "분석 방법: 기술통계, 집단 간 차이 검정(Welch t검정·분산분석), 사전·사후 차이 검정(대응표본 t검정 또는 Wilcoxon 부호순위 검정), 유의수준 .05, 여러 문항·집단을 반복 비교한 결과는 Holm 보정 유의확률로 판단(다층모형·요인분석 등 고급 분석은 별도 통계 패키지 사용을 권장)", true));
   bullets(ov);
 
   if (A.respondents.length) {
@@ -216,35 +216,39 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       if (Number.isFinite(ALLP.improvedPct)) pb.push(B("pp.all.improved", 2, `참여자의 ${f1(ALLP.improvedPct)}%(${ALLP.improved}명)가 사전보다 점수가 향상됨`));
       if (Number.isFinite(ALLP.primary.effect)) pb.push(B("pp.all.effect", 2, `효과크기 ${ALLP.primary.effectName} = ${f2(ALLP.primary.effect)}(${ALLP.primary.effectLabel})`));
     }
-    P.domains.filter(d => d.id !== "ALL").forEach(d => pb.push(B(`pp.dom.${d.id}`, 1, `${q(d.name)} 영역: ${f2(d.mPre)}점 → ${f2(d.mPost)}점(${signed(d.diff)}점), ${sigPhrase(d.primary.p)}${sigStar(d.primary.p)}`)));
-    const sigUp = P.items.filter(i => i.primary.p < 0.05 && i.diff > 0), nonSig = P.items.filter(i => !(i.primary.p < 0.05));
-    const sigDown = P.items.filter(i => i.primary.p < 0.05 && i.diff < 0);
+    // 영역·문항별 판단은 여러 검정을 반복한 결과이므로 Holm 보정 p(primary.pAdj) 기준
+    P.domains.filter(d => d.id !== "ALL").forEach(d => pb.push(B(`pp.dom.${d.id}`, 1, `${q(d.name)} 영역: ${f2(d.mPre)}점 → ${f2(d.mPost)}점(${signed(d.diff)}점), ${sigPhrase(sigP(d.primary))}${sigStar(sigP(d.primary))}`)));
+    const sigUp = P.items.filter(i => isSig(i.primary) && i.diff > 0), nonSig = P.items.filter(i => !isSig(i.primary));
+    const sigDown = P.items.filter(i => isSig(i.primary) && i.diff < 0);
     if (sigUp.length) pb.push(B("pp.sigup", 1, `유의한 향상을 보인 문항(${sigUp.length}개): ${sigUp.map(i => `${q(i.label)}(${signed(i.diff)}점)`).join(", ")}`));
     if (nonSig.length) pb.push(B("pp.nonsig", 1, `유의한 변화가 확인되지 않은 문항(${nonSig.length}개): ${nonSig.map(i => q(i.label)).join(", ")}`));
     if (sigDown.length) pb.push(B("pp.sigdown", 1, `유의하게 감소한 문항(원인 점검 필요): ${sigDown.map(i => `${q(i.label)}(${signed(i.diff)}점)`).join(", ")}`));
     bullets(pb);
-    const rows = [["구분", "n", "사전 M(SD)", "사후 M(SD)", "변화량", "검정", "p", "효과크기"].map(cellH)];
+    const rows = [["구분", "n", "사전 M(SD)", "사후 M(SD)", "변화량", "검정", "p", "보정 p", "효과크기"].map(cellH)];
+    const pCell = p => pText(p).replace("p=", "").replace("p", "");
     const row = (r, isDom) => [
       { text: isDom ? `[${r.name}]` : r.label, align: "LEFT", bold: isDom, shade: isDom ? "sub" : null },
       { text: String(r.unpaired ? `${r.nPre}/${r.nPost}` : r.n), shade: isDom ? "sub" : null },
       { text: `${f2(r.mPre)}(${f2(r.sdPre)})`, shade: isDom ? "sub" : null }, { text: `${f2(r.mPost)}(${f2(r.sdPost)})`, shade: isDom ? "sub" : null },
-      { text: signed(r.diff), bold: r.primary.p < 0.05, shade: isDom ? "sub" : null },
+      { text: signed(r.diff), bold: isSig(r.primary), shade: isDom ? "sub" : null },
       { text: `${r.primary.statLabel}=${statNum(r.primary)}`, shade: isDom ? "sub" : null },
-      { text: `${pText(r.primary.p).replace("p=", "").replace("p", "")}${sigStar(r.primary.p)}`, shade: isDom ? "sub" : null },
+      { text: pCell(r.primary.p), shade: isDom ? "sub" : null },
+      { text: `${pCell(sigP(r.primary))}${sigStar(sigP(r.primary))}`, shade: isDom ? "sub" : null },
       { text: Number.isFinite(r.primary.effect) ? `${r.primary.effectName}=${f2(r.primary.effect)}` : "-", shade: isDom ? "sub" : null },
     ];
     P.domains.forEach(d => rows.push(row(d, true)));
     P.items.forEach(i => rows.push(row(i, false)));
     push({
       type: "table", caption: "사전·사후 점수 변화", unit: "(단위: 점)", compact: true,
-      columns: [{ weight: 2.6, align: "LEFT" }, { weight: 0.7 }, { weight: 1.3 }, { weight: 1.3 }, { weight: 0.9 }, { weight: 1.1 }, { weight: 0.9 }, { weight: 1 }], rows,
+      columns: [{ weight: 2.5, align: "LEFT" }, { weight: 0.6 }, { weight: 1.2 }, { weight: 1.2 }, { weight: 0.9 }, { weight: 1 }, { weight: 0.8 }, { weight: 0.9 }, { weight: 1 }], rows,
       notes: [
         P.unpaired ? "주: 사전·사후 응답자가 매칭되지 않아 독립표본 Welch t검정 적용(n=사전/사후)" : "주: 매칭 n≥30은 대응표본 t검정, n<30이고 차이점수가 정규분포를 따르지 않으면(Shapiro-Wilk p<.05) Wilcoxon 부호순위 검정(V, 효과크기 r) 적용",
+        "보정 p는 영역끼리, 문항끼리 각각 Holm 방법으로 다중비교를 보정한 유의확률(전체 평균은 단일 검정이라 p와 같음). 유의 표시(*)와 굵은 변화량은 Holm 보정 유의확률 기준임",
         "효과크기 d = 평균 변화 ÷ 차이점수 표준편차(0.2 작음, 0.5 중간, 0.8 큼), * p<.05, ** p<.01, *** p<.001",
       ],
     });
     const sc = P.items[0].scale;
-    push({ type: "figure", caption: "사전·사후 점수 비교", chart: { kind: "dumbbell", data: P.items.slice(0, 15).map(i => ({ label: i.label, pre: i.mPre, post: i.mPost, sig: i.primary.p < 0.05 })), opts: { min: sc.min, max: sc.max } }, notes: ["○ 사전 ● 사후, * p<.05"] });
+    push({ type: "figure", caption: "사전·사후 점수 비교", chart: { kind: "dumbbell", data: P.items.slice(0, 15).map(i => ({ label: i.label, pre: i.mPre, post: i.mPost, sig: isSig(i.primary) })), opts: { min: sc.min, max: sc.max } }, notes: ["○ 사전 ● 사후, * Holm 보정 p<.05"] });
     const note = (key, text) => push({ type: "paragraph", style: "note", key, text });
     if (P.retrospective) note("pp.c.retro", "※ 회고식 사전검사(사후 시점에 참여 이전 상태를 회상하여 응답)로, 회상에 따른 응답 편향 가능성이 있음");
     if (P.unpaired) note("pp.c.unpaired", "※ 동일 응답자 비교가 아니므로 개인의 변화로 단정할 수 없음");
@@ -261,22 +265,23 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     push({
       type: "table", caption: "연속형 수치 문항 요약", unit: "(원점수 기준)",
       columns: [{ weight: 2.8, align: "LEFT" }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1 }, { weight: 1.2 }], rows: numericRows,
-      notes: ["연속형 수치는 만족도 척도로 환산하지 않습니다. 평균·중앙값·분포와 합계를 원래 단위로 해석합니다."],
+      notes: ["주: 연속형 수치는 만족도 척도로 환산하지 않고, 평균·중앙값·분포와 합계를 원래 단위로 해석함"],
     });
     push({ type: "figure", caption: "연속형 수치 문항 평균", chart: { kind: "hbar", data: A.numerics.map(it => ({ label: it.label, value: it.mean })), opts: { unit: "", valueFmt: f2 } }, notes: ["문항별 원점수 평균"] });
   }
 
   if (P?.numericItems?.length) {
     push(H(1, "사전·사후 연속형 수치 변화"));
-    const numericPairRows = [["문항", "n", "사전 평균(SD)", "사후 평균(SD)", "변화량", "검정", "p", "효과크기"].map(cellH)];
+    const numericPairRows = [["문항", "n", "사전 평균(SD)", "사후 평균(SD)", "변화량", "검정", "p", "보정 p", "효과크기"].map(cellH)];
+    const pCell = p => pText(p).replace("p=", "").replace("p", "");
     P.numericItems.forEach(it => numericPairRows.push([
       { text: it.label, align: "LEFT" }, String(it.unpaired ? `${it.nPre}/${it.nPost}` : it.n), `${f2(it.mPre)}(${f2(it.sdPre)})`, `${f2(it.mPost)}(${f2(it.sdPost)})`,
-      { text: signed(it.diff), bold: it.primary.p < 0.05 }, `${it.primary.statLabel}=${statNum(it.primary)}`, `${pText(it.primary.p).replace("p=", "").replace("p", "")}${sigStar(it.primary.p)}`, Number.isFinite(it.primary.effect) ? `${it.primary.effectName}=${f2(it.primary.effect)}` : "-",
+      { text: signed(it.diff), bold: isSig(it.primary) }, `${it.primary.statLabel}=${statNum(it.primary)}`, pCell(it.primary.p), `${pCell(sigP(it.primary))}${sigStar(sigP(it.primary))}`, Number.isFinite(it.primary.effect) ? `${it.primary.effectName}=${f2(it.primary.effect)}` : "-",
     ]));
     push({
       type: "table", caption: "사전·사후 연속형 수치 변화", unit: "(원점수 기준)", compact: true,
-      columns: [{ weight: 2.6, align: "LEFT" }, { weight: 0.7 }, { weight: 1.3 }, { weight: 1.3 }, { weight: 0.9 }, { weight: 1.1 }, { weight: 0.9 }, { weight: 1 }], rows: numericPairRows,
-      notes: ["연속형 수치의 변화량은 사후 평균에서 사전 평균을 뺀 원점수입니다. 100점 환산이나 영역 합성에는 포함하지 않습니다.", P.unpaired ? "사전·사후 응답자가 매칭되지 않아 동일인 변화로 해석할 수 없습니다." : "대응 자료 검정은 표본 수와 차이점수 분포에 따라 대응표본 t검정 또는 Wilcoxon 부호순위 검정을 사용합니다."],
+      columns: [{ weight: 2.5, align: "LEFT" }, { weight: 0.6 }, { weight: 1.2 }, { weight: 1.2 }, { weight: 0.9 }, { weight: 1 }, { weight: 0.8 }, { weight: 0.9 }, { weight: 1 }], rows: numericPairRows,
+      notes: ["주: 연속형 수치의 변화량은 사후 평균에서 사전 평균을 뺀 원점수이며, 100점 환산이나 영역 합성에는 포함하지 않음", P.unpaired ? "사전·사후 응답자가 매칭되지 않아 동일인 변화로 해석할 수 없음" : "대응 자료 검정은 표본 수와 차이점수 분포에 따라 대응표본 t검정 또는 Wilcoxon 부호순위 검정을 사용함", "보정 p는 연속형 수치 문항끼리 Holm 방법으로 다중비교를 보정한 유의확률이며, 유의 표시(*)는 Holm 보정 유의확률 기준임"],
     });
   }
 
@@ -351,7 +356,8 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     push(H(1, "응답자 특성별 비교"));
     crossUse.forEach(c => {
       push(H(2, `${c.label}에 따른 비교`));
-      const sigRows = c.rows.filter(r => r.test && r.test.p < 0.05);
+      // 문항별 집단 차이는 같은 특성 안에서 여러 문항을 반복 검정하므로 Holm 보정 p(r.pHolm) 기준, 문항 평균(c.total)은 단일 검정이라 원래 p
+      const sigRows = c.rows.filter(r => r.test && isSig(r));
       const others = c.rows.filter(r => !sigRows.includes(r));
       const shown = [...sigRows, ...others].slice(0, 5);
       const cols = [...(c.total ? [{ label: "문항 평균", r: c.total, isTotal: true }] : []), ...shown.map(r => ({ label: r.label, r }))];
@@ -360,9 +366,9 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
       c.groups.forEach((g, gi) => {
         rows.push([{ text: g.name, bold: true }, String(g.n), ...cols.map(cl => { const st = cl.r.stats[gi]; const v = cl.isTotal ? st?.mean : st?.score100; return Number.isFinite(v) ? f2(v) : "-"; })]);
       });
-      rows.push([{ text: "검정", bold: true, shade: "total" }, { text: "", shade: "total" }, ...cols.map(cl => ({ text: cl.r.test ? `${cl.r.test.statLabel}=${statNum(cl.r.test)}${sigStar(cl.r.test.p)}` : "-", shade: "total" }))]);
+      rows.push([{ text: "검정", bold: true, shade: "total" }, { text: "", shade: "total" }, ...cols.map(cl => ({ text: cl.r.test ? `${cl.r.test.statLabel}=${statNum(cl.r.test)}${sigStar(cl.isTotal ? cl.r.test.p : sigP(cl.r))}` : "-", shade: "total" }))]);
       push({ type: "table", caption: `${c.label}에 따른 만족도(100점 환산)`, unit: "(단위: 명, 점)", compact: cols.length > 4, columns: [{ weight: 1.4 }, { weight: 0.7 }, ...cols.map(() => ({ weight: 1.2 }))], rows,
-        notes: [`주: 2집단은 Welch t검정, 3집단 이상은 Welch 분산분석(F). * p<.05, ** p<.01, *** p<.001${c.rows.length > shown.length ? ". 나머지 문항은 부록 참조" : ""}`] });
+        notes: [`주: 2집단은 Welch t검정, 3집단 이상은 Welch 분산분석(F). * p<.05, ** p<.01, *** p<.001${c.rows.length > shown.length ? ". 나머지 문항은 부록 참조" : ""}`, `유의 표시(*)는 문항끼리 Holm 방법으로 다중비교를 보정한 유의확률 기준임${c.total ? "(문항 평균은 단일 검정이라 보정 전 유의확률 기준)" : ""}`] });
       const cb2 = [];
       if (c.total?.test) {
         const st = c.total.stats.filter(s => Number.isFinite(s.mean)).sort((a, b) => b.mean - a.mean);
@@ -376,23 +382,23 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     });
     numericCrossUse.forEach(c => {
       push(H(2, `${c.label}에 따른 연속형 수치 비교`));
-      const sigRows = c.rows.filter(r => r.test && r.test.p < 0.05);
+      const sigRows = c.rows.filter(r => r.test && isSig(r));
       const others = c.rows.filter(r => !sigRows.includes(r));
       const shown = [...sigRows, ...others].slice(0, 5);
       const header = [cellH("구분"), cellH("n"), ...shown.map(r => cellH(r.label))];
       const rows = [header];
       c.groups.forEach((g, gi) => rows.push([{ text: g.name, bold: true }, String(g.n), ...shown.map(r => Number.isFinite(r.stats[gi]?.mean) ? f2(r.stats[gi].mean) : "-")]));
-      rows.push([{ text: "검정", bold: true, shade: "total" }, { text: "", shade: "total" }, ...shown.map(r => ({ text: r.test ? `${r.test.statLabel}=${statNum(r.test)}${sigStar(r.test.p)}` : "-", shade: "total" }))]);
+      rows.push([{ text: "검정", bold: true, shade: "total" }, { text: "", shade: "total" }, ...shown.map(r => ({ text: r.test ? `${r.test.statLabel}=${statNum(r.test)}${sigStar(sigP(r))}` : "-", shade: "total" }))]);
       push({
         type: "table", caption: `${c.label}에 따른 연속형 수치(원점수)`, unit: "(단위: 원점수)", compact: shown.length > 4,
         columns: [{ weight: 1.4 }, { weight: 0.7 }, ...shown.map(() => ({ weight: 1.2 }))], rows,
-        notes: [`연속형 수치는 100점 환산 없이 원점수 평균으로 비교합니다. 2집단은 Welch t검정, 3집단 이상은 Welch 분산분석을 사용합니다. * p<.05, ** p<.01, *** p<.001${c.rows.length > shown.length ? ". 나머지 문항은 부록 참고" : ""}`],
+        notes: [`주: 연속형 수치는 100점 환산 없이 원점수 평균으로 비교함. 2집단은 Welch t검정, 3집단 이상은 Welch 분산분석을 사용함. * p<.05, ** p<.01, *** p<.001${c.rows.length > shown.length ? ". 나머지 문항은 부록 참고" : ""}`, "유의 표시(*)는 문항끼리 Holm 방법으로 다중비교를 보정한 유의확률 기준임"],
       });
       const summary = sigRows.map(r => {
         const stat = r.stats.filter(s => Number.isFinite(s.mean)).sort((a, b) => b.mean - a.mean);
         return stat.length >= 2 ? `${q(r.label)}(${stat[0].group} ${f2(stat[0].mean)} > ${stat.at(-1).group} ${f2(stat.at(-1).mean)})` : q(r.label);
       });
-      bullets([B(`numeric.cross.${c.key}`, 1, sigRows.length ? `${c.label}에 따라 차이가 확인된 연속형 수치: ${summary.join(", ")}` : `${c.label}에 따른 연속형 수치의 통계적으로 유의한 차이는 확인되지 않았습니다.`)]);
+      bullets([B(`numeric.cross.${c.key}`, 1, sigRows.length ? `${c.label}에 따라 차이가 확인된 연속형 수치: ${summary.join(", ")}` : `${c.label}에 따른 연속형 수치의 통계적으로 유의한 차이는 확인되지 않음`)]);
       if (sigRows.length) push({ type: "figure", caption: `${c.label}에 따른 연속형 수치 차이`, chart: { kind: "groupedHbar", categories: sigRows.slice(0, 6).map(r => r.label), series: c.groups.map((g, gi) => ({ name: g.name, values: sigRows.slice(0, 6).map(r => r.stats[gi]?.mean) })), opts: { valueFmt: f2 } }, notes: ["집단별 원점수 평균"] });
     });
   }
@@ -453,7 +459,7 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
     const qt = tx.themeQuotes?.[th.id]?.[0];
     if (qt) imp.push(B(`imp.text.${tx.key}.${th.id}.q`, 3, `“${qt}”`));
   }));
-  if (P) P.items.filter(i => !(i.primary.p < 0.05)).slice(0, 3).forEach(i => imp.push(B(`imp.pp.${i.pairKey}`, 1, `${q(i.label)}: 사전·사후 변화가 유의하지 않아 관련 활동 내용 보강 검토`)));
+  if (P) P.items.filter(i => !isSig(i.primary)).slice(0, 3).forEach(i => imp.push(B(`imp.pp.${i.pairKey}`, 1, `${q(i.label)}: 사전·사후 변화가 유의하지 않아 관련 활동 내용 보강 검토`)));
   if (!imp.length) imp.push(B("imp.none", 1, "전반적으로 양호한 수준으로, 현행 운영 방식을 유지하고 우수 요소를 타 사업에 확산하는 방안 검토"));
   bullets(imp);
 
@@ -478,7 +484,9 @@ export function buildReport({ analysis: A, evaluation: E = null, lint = [], logi
   const hiMiss = A.items.filter(i => i.missing / Math.max(1, i.nTotal) * 100 > t.highMissing);
   if (hiMiss.length) cau.push(B("c.missing", 1, `무응답 비율이 ${t.highMissing}%를 넘는 문항: ${hiMiss.map(i => q(i.label)).join(", ")}`));
   const allCrossUse = [...crossUse, ...numericCrossUse];
-  if (allCrossUse.reduce((s, c) => s + c.rows.filter(r => r.test).length, 0) >= 4) cau.push(B("c.multi", 1, "응답자 특성별 비교는 여러 검정을 반복한 결과로, 유의확률이 경계 수준인 결과는 신중히 해석 필요(부록에 Holm·BH 보정값 제시)"));
+  const crossMulti = allCrossUse.some(c => c.rows.filter(r => r.test).length >= 2);
+  const ppMulti = P && (P.items.length >= 2 || P.numericItems?.length >= 2 || P.domains.filter(d => d.id !== "ALL").length >= 2);
+  if (crossMulti || ppMulti) cau.push(B("c.multi", 1, `${[ppMulti && "사전·사후 문항·영역별 변화", crossMulti && "응답자 특성별 비교"].filter(Boolean).join("와 ")}는 여러 검정을 반복한 결과이므로, 우연히 유의하게 나타날 가능성을 줄이기 위해 본문의 유의성 판단과 * 표시는 Holm 보정 유의확률 기준임${crossMulti ? "(부록에 보정 전 p와 Holm·BH 보정값 함께 제시)" : ""}`));
   if (allCrossUse.some(c => c.rows.some(r => r.smallGroupN) || c.total?.smallGroupN)) cau.push(B("c.smalln", 1, "응답자 특성별 비교 중 일부는 집단 인원이 10명 미만으로 결과를 신중히 해석할 필요가 있음"));
   if (texts.length) cau.push(B("c.text", 1, "주관식 분류는 규칙 기반 자동 분류 결과이므로 원문 검토와 병행 필요"));
   if (P?.retrospective) cau.push(B("c.retro", 1, "회고식 사전검사 결과는 응답자의 회상에 의존함"));
