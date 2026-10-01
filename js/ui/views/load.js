@@ -52,6 +52,36 @@ function recentRow(list) {
     </div>`;
 }
 
+// 샘플 트레이: 기본은 접힘. 다시 그려도(작업 내역 갱신·테마 변경) 펼침 상태를 잃지 않도록 모듈 변수로 둔다.
+let samplesOpen = false;
+let samplesSeen = false;   // 이번 방문에서 한 번이라도 펼쳤으면 첫 방문 유도(맥동)를 멈춘다
+const TUTORIAL_DONE_KEY = "survey-v5-tutorial-complete";   // tutorial.js 와 같은 키
+
+/** 처음 온 사람에게만 바의 아이콘을 은은히 맥동시킨다 — 화면 가이드를 끝냈거나 작업 내역이 있으면(재방문) 정적 */
+function samplesNudge(recentCount) {
+  if (samplesSeen || recentCount) return false;
+  try { return !localStorage.getItem(TUTORIAL_DONE_KEY); } catch { return true; }
+}
+
+let openingTimer = 0;
+function setSamples(open) {
+  const was = samplesOpen;
+  samplesOpen = open;
+  if (open) samplesSeen = true;
+  const sec = document.querySelector(".ld-samples");
+  if (!sec) return;
+  sec.classList.toggle("open", open);
+  if (open) sec.classList.remove("nudge");
+  // 펼치는 순간에만 타일·그래프가 차례로 나타난다. .opening 은 그 연출이 끝나면 떼야 한다 —
+  // 계속 붙어 있으면 타일에서 마우스를 뗄 때마다 호버용 그래프 애니메이션이 이 애니메이션으로 되돌아가 다시 재생된다.
+  if (open && !was) {
+    clearTimeout(openingTimer);
+    sec.classList.add("opening");
+    openingTimer = setTimeout(() => sec.classList.remove("opening"), 1400);
+  } else if (!open) { clearTimeout(openingTimer); sec.classList.remove("opening"); }
+  sec.querySelector(".ld-samples-bar")?.setAttribute("aria-expanded", String(open));
+}
+
 export function render() {
   const recent = historyCache.projects.slice(0, 2);
   return `<div class="ld-stage">
@@ -103,12 +133,15 @@ export function render() {
       <p class="ld-tpl-note small muted" data-tip="${esc("처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다(선택).")}">처음이라면 템플릿에 맞춰 입력하세요. 사업정보·성과지표 시트를 채우면 보고서에 논리모형과 달성표가 자동으로 들어갑니다(선택).</p>
     </section>
 
-    <section class="ld-samples" aria-labelledby="ld-samples-h">
-      <hr class="ld-divider" aria-hidden="true">
-      <h2 id="ld-samples-h" class="ld-lbl">샘플로 체험하기</h2>
-      <div class="samples ld-sample-row">
-        ${SAMPLES.map((s, i) => `<button class="sample" style="--i:${i}" data-act="sample" data-file="${esc(s.file)}" data-tip="${esc(`${s.title} — ${s.desc}`)}">${glyphMarkup(s.file)}<b>${esc(s.title)}${s.file.includes("청소년센터") ? ` <span class="badge info">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 16, "go")}</button>`).join("")}
-      </div>
+    <section class="ld-samples${samplesOpen ? " open" : ""}${samplesNudge(recent.length) ? " nudge" : ""}" aria-label="샘플로 체험하기">
+      <button type="button" class="ld-samples-bar" data-act="samples-toggle" aria-expanded="${samplesOpen}" aria-controls="ld-samples-tray">
+        <span class="sb-ic">${icon("sparkle", 16)}</span><b class="sb-t">샘플로 체험하기</b><span class="sb-d">파일이 없다면 예시 6종으로 먼저 둘러보세요</span><span class="sb-chev">${icon("chevronDown", 16)}</span>
+      </button>
+      <div class="ld-tray" id="ld-samples-tray" role="group" aria-label="샘플 6종"><div class="ld-tray-in">
+        <div class="samples ld-sample-row">
+          ${SAMPLES.map((s, i) => `<button class="sample" style="--i:${i}" data-act="sample" data-file="${esc(s.file)}" data-tip="${esc(`${s.title} — ${s.desc}`)}">${glyphMarkup(s.file)}<b>${esc(s.title)}${s.file.includes("청소년센터") ? ` <span class="badge info">처음 추천</span>` : ""}</b><span class="desc">${esc(s.desc)}</span>${icon("right", 16, "go")}</button>`).join("")}
+        </div>
+      </div></div>
     </section>
   </div>
   <div class="ld-foot no-print"><span class="ld-priv" data-tip="R/Python 실행 환경 없이 브라우저에서 바로 분석하고, 별도 설치가 필요하지 않기 때문에 JavaScript를 사용합니다.">${icon("shield", 14)}현재 통계 분석은 브라우저에서 JavaScript로 수행됩니다.</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy"><a href="legacy/v4.html">이전 버전(v4.3)</a></span></div>`;
@@ -118,25 +151,40 @@ export function render() {
 let enteredAt = 0;   // 이번 방문에서 처음 그린 시각 — 다시 그려도(작업 내역 갱신·테마 변경) 진입 모션을 처음부터 다시 틀지 않는다
 let stopMotion = null;
 
+// 트레이 바깥을 누르면 닫는다 (바·타일 안의 클릭은 제외)
+const onOutside = e => { if (samplesOpen && !e.target.closest?.(".ld-samples")) setSamples(false); };
+// 화면 가이드가 샘플 타일을 강조하기 전에 트레이를 열어 달라고 보내는 신호(data-act 클릭은 가이드가 '사용자 조작'으로 보고 끝내 버린다)
+const onSamplesEvent = e => setSamples(!!e.detail?.open);
+
 export function mount() {
   document.body.classList.add("view-load"); // 이 화면만 한 줄 푸터·여백 없는 무대(css/app.css .view-load)
   stopMotion?.();
   const now = Date.now();
   if (!enteredAt) enteredAt = now;
   stopMotion = startLoadMotion(document.getElementById("main"), { elapsed: now - enteredAt, entranceMs: ENTRANCE_MS });
+  document.addEventListener("click", onOutside);
+  document.addEventListener("survey:samples", onSamplesEvent);
 }
 
 export function unmount() {
   stopMotion?.(); stopMotion = null;
   enteredAt = 0;
+  samplesOpen = false;   // 다른 화면에 다녀오면 다시 접힌 채로 시작
+  document.removeEventListener("click", onOutside);
+  document.removeEventListener("survey:samples", onSamplesEvent);
   document.body.classList.remove("view-load");
 }
 
-/** 파일 선택 영역: Enter·Space 로도 열기 */
+/** 파일 선택 영역: Enter·Space 로도 열기 · 샘플 트레이: Esc 로 닫기 */
 export function onKey(e) {
   if ((e.key === "Enter" || e.key === " ") && e.target.matches?.(".drop")) {
     e.preventDefault();
     e.target.querySelector("input[type=file]")?.click();
+  }
+  if (e.key === "Escape" && samplesOpen) {
+    const inside = e.target.closest?.(".ld-tray");
+    setSamples(false);
+    if (inside) document.querySelector(".ld-samples-bar")?.focus();   // 타일에 있던 포커스가 숨겨진 요소에 갇히지 않게 바로 되돌림
   }
 }
 
@@ -182,6 +230,7 @@ export const actions = {
     } catch (e) { toast(`프로젝트 파일 오류: ${e.message}`, "bad"); }
     finally { el.value = ""; }
   },
+  "samples-toggle": () => setSamples(!samplesOpen),
   sample: async el => {
     busy(true, "샘플을 불러오는 중…");
     try {

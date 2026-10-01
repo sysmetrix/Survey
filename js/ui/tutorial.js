@@ -4,10 +4,12 @@ import { icon } from "./icons.js";
 
 const DONE_KEY = "survey-v5-tutorial-complete";
 const SAMPLE = "2026_청소년센터_만족도_구글폼.csv";
+/** 첫 화면의 샘플 트레이는 접혀 있으므로 타일을 강조하기 전에 펼친다 — data-act 클릭이 아니라 이벤트로 알려야 가이드가 '사용자 조작'으로 오해해 끝나지 않는다 */
+function openSampleTray() { document.dispatchEvent(new CustomEvent("survey:samples", { detail: { open: true } })); }
 const STEPS = [
   { view: "load", target: ".ld-h1", title: "처음 사용자를 위한 화면 가이드", text: "실제 화면을 따라가며 샘플 설문을 분석하고 한글 보고서까지 만드는 과정을 보여 드립니다.\n샘플만 사용하므로 내 파일과 작업 내역은 바뀌지 않습니다." },
   { view: "load", target: "[data-drop='data']", title: "① 설문 파일 불러오기", text: "엑셀·CSV 파일을 이 자리에 끌어다 놓거나 눌러서 고르면 됩니다.\n구글폼·네이버폼에서 내려받은 원본 파일도 그대로 쓸 수 있습니다." },
-  { view: "load", target: `[data-act='sample'][data-file='${SAMPLE}']`, title: "샘플 설문으로 따라 하기", text: "가장 단순한 만족도 조사 샘플을 자동으로 불러오겠습니다.", run: el => el.click(), wait: true },
+  { view: "load", target: `[data-act='sample'][data-file='${SAMPLE}']`, title: "샘플 설문으로 따라 하기", text: "가장 단순한 만족도 조사 샘플을 자동으로 불러오겠습니다.", before: openSampleTray, run: el => el.click(), wait: true },
   { view: "setup", target: ".facts", title: "② 자동 인식 결과 확인", text: "응답자 수와 조사 설계를 먼저 확인하세요.\n대부분은 자동으로 판별되며, 경고가 표시된 항목만 고치면 됩니다." },
   { view: "setup", target: ".tblwrap", title: "문항 설정 확인", text: "문항 역할과 척도 범위, 역문항을 확인합니다.\n문자로 된 보기는 보기별 점수를 정해 주면 숫자로 분석됩니다." },
   { view: "setup", target: "[data-act='goto'][data-to='business']", title: "다음 단계로 이동", text: "문항 설정을 마쳤으니 다음 단계로 넘어가겠습니다.", run: el => el.click(), wait: true },
@@ -117,6 +119,7 @@ function showStep() {
     return;
   }
   awaitApp = false;
+  step.before?.();
   const target = document.querySelector(step.target);
   if (!target) return;
   clearHighlight();

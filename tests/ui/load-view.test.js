@@ -53,6 +53,21 @@ test("불러오기: 모든 동작 훅이 남아 있다 (내역 없음)", () => {
   assert.match(html, /<span class="rw">분석부터<\/span><span class="rw" data-alt>보고서까지<\/span><span class="rw" data-alt>발표까지<\/span>/);
 });
 
+test("불러오기: 샘플은 접힌 바 + 트레이 — 기본 접힘, 타일 6개는 DOM에 그대로", () => {
+  const html = withState({}, () => load.render());
+  // 바 버튼: 접힘 상태 · 트레이와 연결
+  assert.match(html, /<button type="button" class="ld-samples-bar" data-act="samples-toggle" aria-expanded="false" aria-controls="ld-samples-tray">/);
+  assert.match(html, /<div class="ld-tray" id="ld-samples-tray" role="group" aria-label="샘플 6종">/);
+  assert.doesNotMatch(html, /class="ld-samples open/);
+  // 타일 6개가 트레이 안에 있다(접혀도 e2e·화면 가이드가 타일을 찾을 수 있어야 함)
+  const tray = /id="ld-samples-tray"[\s\S]*?<\/section>/.exec(html)[0];
+  assert.equal(count(tray, /data-act="sample"/g), 6);
+  // 처음 온 사람(내역 없음·가이드 미완료)에게만 유도 표시(.nudge), 내역이 있으면(재방문) 없다
+  assert.match(html, /class="ld-samples nudge"/);
+  const returning = withState({ projects: [proj(1)] }, () => load.render());
+  assert.doesNotMatch(returning, /class="ld-samples[^"]*\bnudge\b/);
+});
+
 test("불러오기: 샘플 타일의 접근 가능한 이름은 그대로(그래프는 aria-hidden)", () => {
   const html = withState({}, () => load.render());
   const tiles = html.match(/<button class="sample"[\s\S]*?<\/button>/g);
@@ -213,11 +228,17 @@ test("불러오기 움직임: 줄이기(reduce)이면 아무것도 켜지 않고
 test("불러오기 mount/unmount: 본문 표시 클래스를 붙였다 떼고, 몇 번을 다시 그려도 안전", () => {
   const cls = new Set();
   const savedDoc = globalThis.document;
-  globalThis.document = { body: { classList: { add: c => cls.add(c), remove: c => cls.delete(c) } }, getElementById: () => null };
+  const listeners = new Set();   // (이벤트, 함수) 쌍 — 브라우저처럼 같은 함수를 여러 번 걸어도 한 번만 남는다
+  globalThis.document = {
+    body: { classList: { add: c => cls.add(c), remove: c => cls.delete(c) } }, getElementById: () => null, querySelector: () => null,
+    addEventListener: (t, fn) => listeners.add(`${t}:${fn.name}`), removeEventListener: (t, fn) => listeners.delete(`${t}:${fn.name}`),
+  };
   try {
     load.mount(); load.mount(); load.mount();      // 다시 그릴 때마다 mount 가 호출된다
     assert.ok(cls.has("view-load"));
+    assert.deepEqual([...listeners].sort(), ["click:onOutside", "survey:samples:onSamplesEvent"], "샘플 트레이용 리스너가 한 벌씩만");
     load.unmount(); load.unmount();
     assert.ok(!cls.has("view-load"));
+    assert.equal(listeners.size, 0, "화면을 떠나면 리스너를 모두 해제");
   } finally { globalThis.document = savedDoc; }
 });
