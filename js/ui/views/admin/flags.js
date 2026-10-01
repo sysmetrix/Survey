@@ -81,7 +81,7 @@ const LABELS = {
     title: "통계 방법 신뢰 배지",
     desc: "검증된 통계 방법(R 기준값·다중비교 보정·효과크기)을 요약해 보여줍니다.",
     where: "④ 분석 결과 화면 — 맨 위 페이지 제목 바로 아래",
-    example: `<p class="small muted row gap" style="align-items:center;margin:0">${icon("shield", 13)} 통계 방법: R 기준값 대비 검증 · 다중비교 Holm/BH 보정 · 효과크기(95% 신뢰구간) 병기</p>`,
+    example: `<p class="small muted row gap" style="align-items:center;margin:0">${icon("shield", 13)} 통계 방법: R 기준값 대비 검증 · 다중비교 Holm 보정(본문 유의성 판단 기준) · 효과크기 병기</p>`,
   },
 };
 
