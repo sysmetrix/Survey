@@ -33,7 +33,8 @@ test("불러오기: 모든 동작 훅이 남아 있다 (내역 없음)", () => {
   assert.doesNotMatch(html, /data-act="tutorial"/);
   assert.match(html, /<label class="drop ld-drop" data-drop="data" role="button" tabindex="0" aria-label="설문 파일 선택">/);
   assert.match(html, /<input type="file" id="fileInput" accept="\.xlsx,\.xls,\.csv,\.tsv" data-change="pick-file" hidden>/);
-  assert.match(html, /프로젝트 파일 열기<input type="file" accept="\.json" data-change="pick-project" hidden>/);
+  // 프로젝트 파일 입력은 hidden 대신 sr-only — 키보드(Tab)로 닿고 label.btn:focus-within 으로 초점 표시
+  assert.match(html, /프로젝트 파일 열기<input type="file" class="sr-only" accept="\.json" data-change="pick-project"><\/label>/);
   // 샘플 6개 + 템플릿 2개
   assert.equal(count(html, /data-act="sample"/g), 6);
   for (const s of load.SAMPLES) assert.ok(html.includes(`data-file="${s.file}"`), s.file);
@@ -42,10 +43,10 @@ test("불러오기: 모든 동작 훅이 남아 있다 (내역 없음)", () => {
   // '처음 추천' 배지는 청소년센터 샘플에만
   assert.equal(count(html, /처음 추천/g), 1);
   assert.match(html, /data-file="2026_청소년센터_만족도_구글폼\.csv"[^>]*>.*?처음 추천/s);
-  // 진행 순서 5단계 (이름과 전체 설명) · 이전 버전 링크
+  // 진행 순서 5단계 (이름과 전체 설명) · 이전 버전(legacy) 링크는 삭제됨
   assert.equal(count(html, /<li style="--i:\d"/g), 5);
   for (const s of load.FLOW) { assert.ok(html.includes(`<b>${s.name}</b>`), s.name); assert.ok(html.includes(`title="${s.desc}"`), s.desc); }
-  assert.match(html, /<a href="legacy\/v4\.html">이전 버전\(v4\.3\)<\/a>/);
+  assert.doesNotMatch(html, /legacy\/v4\.html|이전 버전\(v4\.3\)/);
   // 내역이 없으면 최근 작업 행이 없다 · 데이터가 없으면 '현재 데이터 계속'도 없다
   assert.doesNotMatch(html, /class="ld-recent"|resume-project/);
   assert.doesNotMatch(html, /현재 데이터 계속/);

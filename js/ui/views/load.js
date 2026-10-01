@@ -1,5 +1,5 @@
 // ① 불러오기 화면 — 분할 무대(왼쪽 키네틱 헤드라인·진행 순서 / 오른쪽 끌어놓기 영역) + 샘플 6타일 + 최근 작업 한 줄
-import { state, loadDataset, applyProject } from "../store.js";
+import { state, loadDataset, applyProject, compute } from "../store.js";
 import { parseFile, isWorkbookExt } from "../../io/parse.js";
 import { makeTemplate } from "../../io/template-xlsx.js";
 import { loadXlsx } from "../xlsx-loader.js";
@@ -121,7 +121,7 @@ export function render() {
       </label>
       <div class="ld-side-row">
         <div class="ld-open">
-          <label class="btn" data-tip="${esc("지난번 '프로젝트 파일 저장'으로 내려받은 설정 파일(.json)을 열면 문항 설정·성과지표·문장 수정이 이어집니다. 처음 쓰신다면 몰라도 됩니다 — 아래에서 설문 데이터부터 올리세요.")}">${icon("folder", 17)}프로젝트 파일 열기<input type="file" accept=".json" data-change="pick-project" hidden></label>
+          <label class="btn" data-tip="${esc("지난번 '프로젝트 파일 저장'으로 내려받은 설정 파일(.json)을 열면 문항 설정·성과지표·문장 수정이 이어집니다. 처음 쓰신다면 몰라도 됩니다 — 아래에서 설문 데이터부터 올리세요.")}">${icon("folder", 17)}프로젝트 파일 열기<input type="file" class="sr-only" accept=".json" data-change="pick-project"></label>
           ${state.dataset ? `<button class="btn primary" data-act="goto" data-to="setup">현재 데이터 계속 (${esc(state.dataset.fileName)}) ${icon("right", 16)}</button>` : ""}
         </div>
         <div class="ld-tpl"><b>입력 템플릿</b>
@@ -144,7 +144,7 @@ export function render() {
       </div></div>
     </section>
   </div>
-  <div class="ld-foot no-print"><span class="ld-priv" data-tip="R/Python 실행 환경 없이 브라우저에서 바로 분석하고, 별도 설치가 필요하지 않기 때문에 JavaScript를 사용합니다.">${icon("shield", 14)}현재 통계 분석은 브라우저에서 JavaScript로 수행됩니다.</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span><span class="ld-dot" aria-hidden="true">·</span><span class="ld-legacy"><a href="legacy/v4.html">이전 버전(v4.3)</a></span></div>`;
+  <div class="ld-foot no-print"><span class="ld-priv" data-tip="R/Python 실행 환경 없이 브라우저에서 바로 분석하고, 별도 설치가 필요하지 않기 때문에 JavaScript를 사용합니다.">${icon("shield", 14)}현재 통계 분석은 브라우저에서 JavaScript로 수행됩니다.</span><span class="ld-dot" aria-hidden="true">·</span><span data-act="admin-entry">by Sysmetrix</span></div>`;
 }
 
 // ── 화면 표시·정리 (main.js 가 렌더 뒤 mount, 다른 화면으로 옮길 때 unmount 호출) ──
@@ -194,8 +194,22 @@ const tooBig = f => {
   return true;
 };
 
+/** 고른·끌어놓은 파일: 바이트를 읽는 동안부터 진행 표시를 띄운다 */
+async function openFile(f) {
+  if (tooBig(f)) return;
+  busy(true, "파일 읽는 중…");
+  let bytes;
+  try { bytes = await readFileBytes(f); } catch (e) {
+    busy(false);
+    trackEvent("load", "file_load_error", { code: e?.code || "read_error" });
+    toast(`파일을 읽지 못했습니다: ${e.message}`, "bad", 6000);
+    return;
+  }
+  await openBytes(bytes, f.name);
+}
+
 async function openBytes(bytes, fileName) {
-  busy(true, "파일을 읽는 중…");
+  busy(true, "파일 읽는 중…");
   await nextFrame();
   try {
     const XLSX = isWorkbookExt(fileName) ? await loadXlsx() : undefined;
@@ -207,6 +221,10 @@ async function openBytes(bytes, fileName) {
     trackEvent("load", "file_load");
     toast(`${fileName}: 응답 시트 ${cb.responseSheets.length}개, 열 ${cb.columns.length}개 인식${note ? ` · ${note}` : ""}${state.businessFound?.business || state.businessFound?.kpi ? " · 사업정보/성과지표 시트 반영" : ""}`, "ok", 3000);
     document.dispatchEvent(new CustomEvent("survey:loaded", { detail: { fileName } }));
+    // 무거운 동기 분석 계산을 진행 표시가 덮은 채로 미리 끝내 둔다 (계산 오류는 분석 화면에서 다시 드러나므로 여기서는 기록만)
+    busy(true, "분석 계산 중…");
+    await nextFrame();
+    try { compute(); } catch (err) { console.error(err); }
     go("setup");
   } catch (e) {
     console.error(e);
@@ -216,8 +234,8 @@ async function openBytes(bytes, fileName) {
 }
 
 export const actions = {
-  "pick-file": async el => { const f = el.files?.[0]; if (f && !tooBig(f)) await openBytes(await readFileBytes(f), f.name); el.value = ""; },
-  "drop-data": async file => { if (!tooBig(file)) await openBytes(await readFileBytes(file), file.name); },
+  "pick-file": async el => { const f = el.files?.[0]; el.value = ""; if (f) await openFile(f); },
+  "drop-data": async file => openFile(file),
   "pick-project": async el => {
     const f = el.files?.[0]; if (!f) return;
     try {

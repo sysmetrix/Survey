@@ -158,6 +158,9 @@ const KEYS = [
   ["F", "전체화면"], ["B", "화면 가리기"], ["T", "무대 밝기"], ["P", "PDF 인쇄"], ["Esc", "패널 닫기"],
 ];
 
+/** 내보낸 파일의 CSP — 외부 요청 없이 파일 안의 스타일·스크립트·data: 이미지/글꼴만 허용 (슬라이드에 섞인 외부 주소가 열람 기록을 새지 않도록) */
+export const EXPORT_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src data:";
+
 /** 아이콘 이름: 내보내기에 필요한 것만 */
 export const EXPORT_ICONS = ["left", "right", "grid", "notes", "sun", "moon", "printer", "expand", "shrink", "clock"];
 
@@ -188,6 +191,7 @@ export function buildPresentHtml({ title = "발표 자료", css = "", icons = {}
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${EXPORT_CSP}">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
