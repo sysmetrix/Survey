@@ -206,7 +206,7 @@ self.addEventListener("fetch", event => {
   else event.respondWith(shellFirst(req));
 });
 
-/** 앱 화면(index)은 사전 캐시본으로 즉시 표시, 그 밖의 페이지(legacy 등)는 네트워크 우선 */
+/** 앱 화면(index)은 사전 캐시본으로 즉시 표시, 그 밖의 페이지는 네트워크 우선 */
 async function page(req, url) {
   const isApp = url.pathname === SCOPE.pathname || url.pathname === new URL(INDEX).pathname;
   if (isApp) {

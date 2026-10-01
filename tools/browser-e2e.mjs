@@ -43,12 +43,14 @@ await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 let seq = 0;
 const pending = new Map(), problems = [];
 let offlinePhase = false;
+// 익명 이용 통계(Supabase)는 E2E 실행이 실제 운영 통계에 섞이지 않도록 탐색 전에 차단한다 — 차단으로 생긴 네트워크 오류 로그는 문제로 세지 않음
+const BLOCKED_URLS = ["*supabase.co*"], BLOCKED_RE = /supabase\.co/i;
 ws.onmessage = ev => {
   const msg = JSON.parse(ev.data);
   if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id); return; }
   if (msg.method === "Runtime.exceptionThrown") problems.push(`예외: ${msg.params.exceptionDetails.exception?.description || msg.params.exceptionDetails.text}`);
   if (msg.method === "Runtime.consoleAPICalled" && ["error", "warning"].includes(msg.params.type)) problems.push(`console.${msg.params.type}: ${msg.params.args.map(a => a.value ?? a.description).join(" ")}`);
-  if (msg.method === "Log.entryAdded" && msg.params.entry.level === "error" && !offlinePhase) problems.push(`로그: ${msg.params.entry.text} ${msg.params.entry.url || ""}`);
+  if (msg.method === "Log.entryAdded" && msg.params.entry.level === "error" && !offlinePhase && !BLOCKED_RE.test(msg.params.entry.url || "")) problems.push(`로그: ${msg.params.entry.text} ${msg.params.entry.url || ""}`);
 };
 const cdp = (method, params = {}, ms = 60000) => new Promise((res, rej) => {
   const id = ++seq;
@@ -88,6 +90,7 @@ const results = [];
 
 try {
   await cdp("Runtime.enable"); await cdp("Page.enable"); await cdp("Log.enable");
+  await cdp("Network.enable"); await cdp("Network.setBlockedURLs", { urls: BLOCKED_URLS });
   await cdp("Emulation.setFocusEmulationEnabled", { enabled: true }); // 헤드리스에서도 focus/blur 이벤트 발생
   await cdp("Emulation.setDeviceMetricsOverride", { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false });
   await cdp("Page.navigate", { url: `${BASE}?sw=1#/load` });
@@ -338,7 +341,6 @@ try {
   })()`, true);
   if (!pwa.active || !pwa.shell || pwa.n < 50) throw new Error(`서비스워커 준비 안 됨: ${JSON.stringify(pwa)}`);
   offlinePhase = true;
-  await cdp("Network.enable");
   await cdp("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await cdp("Page.navigate", { url: `${BASE}?sw=1#/load` }, 20000).catch(e => { throw new Error(`오프라인 이동 실패: ${e.message}`); });
   await sleep(1000);

@@ -98,6 +98,17 @@ test("이미지: 예전과 같은 스타일(fit·radius·opacity), 잘못된 값
   assert.match(html({ kind: "image", src: "data:image/png;base64,AAAA", fit: "contain", radius: 10, opacity: 0.5 }), /style="object-fit:contain;border-radius:10px;opacity:0\.5"/);
   assert.match(html({ kind: "image", src: "data:image/png;base64,AAAA" }), /style="object-fit:cover;border-radius:0px;opacity:1"/);
   assert.equal(/NaN/.test(html({ kind: "image", src: "x", radius: "abc", opacity: "zzz" })), false);
+  assert.equal(/NaN/.test(html({ kind: "image", src: "data:image/png;base64,AAAA", radius: "abc", opacity: "zzz" })), false);
+});
+
+test("이미지: data:image/ 주소만 그림 (대소문자 무관), https:·javascript:·data:text 는 빈 자리", () => {
+  assert.match(html({ kind: "image", src: "DATA:IMAGE/PNG;base64,AAAA" }), /<img class="s-el-img" src="DATA:IMAGE\/PNG;base64,AAAA"/);
+  for (const src of ["https://example.com/a.png", "javascript:alert(1)", " JavaScript:alert(1)", "data:text/html,<b>x</b>", "//evil.test/a.png", "", undefined]) {
+    const h = html({ kind: "image", src });
+    assert.equal(/<img/i.test(h), false, String(src));
+    assert.equal(/example\.com|javascript:|evil\.test|data:text/i.test(h), false, String(src));
+    assert.match(h, /s-el-img-missing/);
+  }
 });
 
 test("어떤 요소에서도 'undefined'·'NaN'·'null' 이 마크업에 나오지 않음", () => {

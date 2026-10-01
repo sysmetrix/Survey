@@ -154,6 +154,10 @@ export function applyProject(p) {
   return null;
 }
 
+/** analysis_complete 이용 통계 중복 방지용 자료 식별값 */
+let lastAnalysisKey = null;
+const analysisDataKey = () => JSON.stringify([state.dataset?.fileName ?? "", state.codebook?.headersHash ?? "", (state.dataset?.sheets || []).map(s => s.rows?.length ?? 0)]);
+
 /** 분석 파이프라인 (변경 시에만 재계산) */
 export function compute() {
     if (!state.dataset || !state.codebook) return null;
@@ -175,7 +179,9 @@ export function compute() {
   const lint = kpis.length || state.logicModel.goals.length ? lintEvaluation(state.logicModel, kpis, cb, analysis, state.settings.thresholds) : [];
   const blocksRaw = buildReport({ analysis, evaluation, lint, logicModel: state.logicModel, codebook: cb, settings: { ...state.settings, excludedCount }, survey });
   state.results = { survey, analysis, evaluation, lint, blocksRaw, straight, excludedCount, codebookWarnings: lintCodebook(cb), ms: Math.round(performance.now() - t0) };
-  trackEvent("dash", "analysis_complete");
+  // 재계산(설정 변경·화면 이동)마다 보내지 않고, 불러온 자료(파일명·헤더 해시·행 수)마다 한 번만
+  const dataKey = analysisDataKey();
+  if (dataKey !== lastAnalysisKey) { lastAnalysisKey = dataKey; trackEvent("dash", "analysis_complete"); }
     state.results.visibilityKey = visibilityKey;
     state.dirty = false;
   return state.results;

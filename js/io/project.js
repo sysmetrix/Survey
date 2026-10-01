@@ -30,6 +30,14 @@ export function safeJsonParse(text, maxChars = MAX_PROJECT_CHARS) {
   return JSON.parse(text, (k, v) => (BAD_KEYS.has(k) ? undefined : v));
 }
 
+const KPI_NUM_KEYS = ["target", "actual", "prevActual", "sourceThreshold"];
+/** 유한 숫자·숫자 문자열·null·"" 만 남기고 그 밖의 값(객체·배열·불리언·글자)은 null 로 */
+const kpiNum = v => (v === null || v === "" || (typeof v === "number" && Number.isFinite(v)) || (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) ? v : null);
+function sanitizeKpiNumbers(k) {
+  for (const key of KPI_NUM_KEYS) if (key in k) k[key] = kpiNum(k[key]);
+  return k;
+}
+
 export function parseProject(text) {
   const obj = safeJsonParse(text);
   if (!obj || typeof obj !== "object" || obj.app !== PROJECT_APP) throw new Error("설문 분석 도구 v5 프로젝트 파일이 아닙니다");
@@ -39,6 +47,7 @@ export function parseProject(text) {
   if (obj.settings !== undefined && !isObj(obj.settings)) throw new Error("프로젝트 파일 형식 오류(settings)");
   if (obj.codebook !== undefined && obj.codebook !== null && !(isObj(obj.codebook) && Array.isArray(obj.codebook.columns))) throw new Error("프로젝트 파일 형식 오류(codebook)");
   if (obj.kpis !== undefined && !Array.isArray(obj.kpis)) throw new Error("프로젝트 파일 형식 오류(kpis)");
+  if (obj.kpis) obj.kpis = obj.kpis.filter(isObj).map(sanitizeKpiNumbers);
   if (obj.report !== undefined && !isObj(obj.report)) throw new Error("프로젝트 파일 형식 오류(report)");
   if (obj.present !== undefined && !isObj(obj.present)) throw new Error("프로젝트 파일 형식 오류(present)");
   if (obj.dataset !== undefined && !(isObj(obj.dataset) && Array.isArray(obj.dataset.sheets))) throw new Error("프로젝트 파일 형식 오류(dataset)");

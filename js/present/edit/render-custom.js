@@ -117,6 +117,8 @@ function elInner(slideId, el, theme, editable) {
     case "table":
       return tableInner(slideId, el, editable);
     case "image": {
+      // 파일 안에 담긴 data:image/ 만 그린다 — 외부 주소(https:·javascript: 등)는 요청·실행되지 않도록 빈 자리로
+      if (!/^data:image\//i.test(String(el.src ?? "").trim())) return `<div class="s-el-img s-el-img-missing" role="img" aria-label="표시할 수 없는 이미지"></div>`;
       const opacity = Math.min(1, Math.max(0, numOr(el.opacity, 1)));
       return `<img class="s-el-img" src="${esc(el.src)}" alt="" style="object-fit:${esc(el.fit || "cover")};border-radius:${numOr(el.radius, 0)}px;opacity:${opacity}">`;
     }

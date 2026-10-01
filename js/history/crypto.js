@@ -34,14 +34,67 @@ export async function decryptJson(box, passphrase) {
   }
 }
 
-/** 이 브라우저에서만 자동 복원할 수 있는 AES 키. 키와 암호문은 모두 로컬에만 남는다. */
-async function deviceKey() {
-  let raw = localStorage.getItem(DEVICE_KEY);
+// 기기 키 보관소 (IndexedDB) — CryptoKey 를 구조화 복제로 그대로 저장해 원시 키 바이트가 스크립트에 노출되지 않게 한다
+const KEY_DB = "survey-v5-keys", KEY_STORE = "keys";
+const importRaw = raw => crypto.subtle.importKey("raw", unb64(raw), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+const lsGet = () => { try { return globalThis.localStorage?.getItem(DEVICE_KEY) || null; } catch { return null; } };
+
+function keyDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(KEY_DB, 1);
+    req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains(KEY_STORE)) req.result.createObjectStore(KEY_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error("키 저장소를 열 수 없습니다"));
+  });
+}
+/** 한 트랜잭션 안에서 읽고, 없으면 key 를 넣는다 (여러 창이 동시에 만들어도 먼저 저장된 키 하나만 남음) */
+async function getOrPutKey(key) {
+  const db = await keyDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const t = db.transaction(KEY_STORE, key ? "readwrite" : "readonly"), st = t.objectStore(KEY_STORE);
+      let out = null;
+      const g = st.get(DEVICE_KEY);
+      g.onsuccess = () => { out = g.result || null; if (!out && key) { st.put(key, DEVICE_KEY); out = key; } };
+      t.oncomplete = () => resolve(out);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error("키 저장이 취소되었습니다"));
+    });
+  } finally { db.close(); }
+}
+
+/** IndexedDB 를 쓸 수 없을 때(Node 테스트·일부 사생활 보호 모드): 예전처럼 localStorage 원시 키 */
+async function localStorageKey() {
+  let raw = lsGet();
   if (!raw) {
     raw = b64(crypto.getRandomValues(new Uint8Array(32)));
     localStorage.setItem(DEVICE_KEY, raw);
   }
-  return crypto.subtle.importKey("raw", unb64(raw), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+  return importRaw(raw);
+}
+
+async function loadDeviceKey() {
+  if (typeof indexedDB === "undefined") return localStorageKey();
+  try {
+    const stored = await getOrPutKey(null);
+    if (stored) return stored;
+    // 예전 localStorage 원시 키가 있으면 추출 불가 키로 옮긴 뒤 원본을 지운다 (기존 v2 상자는 같은 키로 계속 복호화됨)
+    const raw = lsGet();
+    const fresh = raw ? await importRaw(raw) : await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    const key = await getOrPutKey(fresh);
+    if (raw && key === fresh) { try { localStorage.removeItem(DEVICE_KEY); } catch { /* 지우지 못해도 동작에는 지장 없음 */ } }
+    return key;
+  } catch {
+    return localStorageKey();
+  }
+}
+
+/** 이 브라우저에서만 자동 복원할 수 있는 AES 키(추출 불가). 키와 암호문은 모두 로컬에만 남는다. */
+let keyPromise = null;
+function deviceKey() {
+  if (!keyPromise) keyPromise = loadDeviceKey().catch(e => { keyPromise = null; throw e; });
+  return keyPromise;
 }
 
 export async function encryptLocalJson(obj) {
@@ -52,10 +105,13 @@ export async function encryptLocalJson(obj) {
 
 export async function decryptLocalJson(box) {
   if (!box || box.v !== 2 || box.key !== "device" || !box.data) throw new Error("이 브라우저용 암호화 자료가 아닙니다");
+  const open = async key => JSON.parse(td.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, key, unb64(box.data))));
   try {
-    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, await deviceKey(), unb64(box.data));
-    return JSON.parse(td.decode(pt));
+    return await open(await deviceKey());
   } catch {
-    throw new Error("브라우저 암호화 키가 없거나 자료가 손상되었습니다");
+    // IndexedDB 장애로 잠시 localStorage 키를 썼던 상자: 남아 있는 원시 키로 한 번 더 시도
+    const raw = lsGet();
+    if (raw) { try { return await open(await importRaw(raw)); } catch { /* 아래 공통 오류 */ } }
   }
+  throw new Error("브라우저 암호화 키가 없거나 자료가 손상되었습니다");
 }
