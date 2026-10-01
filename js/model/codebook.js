@@ -83,13 +83,15 @@ export function buildCodebook(dataset, { dataSheetIndex = null } = {}) {
       const vals = sheet.rows.map(r => r[ci]);
       const det = detectColumn(header, vals);
       const t = sheetTime ? { time: sheetTime, retrospective: false, pairKey: normKey(header) } : parseTime(header);
-      const nums = vals.map(Number).filter(Number.isFinite);
+      const nums = vals.map(Number).filter(Number.isFinite).filter(v => !det.suggestMissing?.includes(String(v)));
       columns.push({
         key: `s${si}c${ci}`, sheet: si, index: ci, header: String(header), label: shortLabel(header),
         role: det.role, scale: det.scale || null, labelMap: det.labelMap || null, labelSetId: det.labelSetId || null, labelAmbiguous: !!det.labelAmbiguous,
         options: det.options || null, delimiter: det.delimiter || null,
         // 헤더에 역문항 표시가 있으면 역채점 (예: "…지루했다(역문항)", "(R)")
         reverse: det.role === "likert" && /역\s*문항|역\s*채점|\(R\)|\[R\]/i.test(header), missingCodes: [], valueLabels: null,
+        // 자동 판별이 찾은 결측 코드 후보(99·'잘 모르겠다' 등) — 자동 적용하지 않고 데이터 설정 화면에서 지정을 제안
+        missingSuggest: det.suggestMissing?.length ? [...det.suggestMissing] : null,
         domain: gridParent(header), competency: null,
         time: ["likert", "nps", "numeric"].includes(det.role) && t ? t.time : null,
         pairKey: ["likert", "nps", "numeric"].includes(det.role) && t ? t.pairKey : null,

@@ -163,12 +163,8 @@ export function kpiActual(kpi, analysis, codebook) {
 /** 달성률 */
 export function achievementRate(actual, target, direction = "up") {
   if (!Number.isFinite(actual) || !Number.isFinite(target)) return NaN;
-  if (target <= 0) return NaN;
-  if (direction === "down") {
-    if (target === 0) return actual <= 0 ? 100 : 0;
-    return 100 - (actual - target) * 100 / Math.abs(target);
-  }
-  if (target === 0) return actual >= 0 ? 100 : 0;
+  if (target <= 0) return NaN; // 0·음수 목표는 달성률 없이 기준 충족 여부만 판정(evaluateKpis 의 criterion)
+  if (direction === "down") return 100 - (actual - target) * 100 / Math.abs(target);
   return actual * 100 / target;
 }
 

@@ -1,7 +1,7 @@
 // 발표 슬라이드 구성 (순수 모듈): 분석 결과 → 슬라이드 배열
 // 원칙(데이터 스토리텔링): 슬라이드당 하나의 메시지, 결론을 말하는 제목(행동형 제목), 핵심 수치 1개 강조,
 //   차트는 메시지에 맞는 형태 1개, 근거(n·검정)는 각주·발표자 노트로
-import { levelWord, f1, f2, signed, pText, statParen, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
+import { levelWord, f1, f2, signed, pText, statParen, isSig, DEFAULT_THRESHOLDS } from "../narrative/vocab.js";
 import { josa } from "../narrative/josa.js";
 import { DESIGN_LABELS } from "../model/codebook.js";
 import { levelLabels } from "../report/build-report.js";
@@ -70,9 +70,10 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
 
   // 4. 사전·사후 (핵심 수치 + 영역/문항 덤벨)
   if (ALLP) {
-    const sig = ALLP.primary.p < 0.05;
+    const sig = ALLP.primary.p < 0.05; // 전체 평균은 단일 검정 — 원래 p
     const doms = P.domains.filter(d => d.id !== "ALL");
-    const rowsFrom = list => list.slice(0, 8).map(d => ({ label: d.name || d.label, pre: d.mPre, post: d.mPost, sig: d.primary.p < 0.05 }));
+    // 영역·문항별 표시는 여러 검정을 반복한 결과이므로 Holm 보정 p 기준
+    const rowsFrom = list => list.slice(0, 8).map(d => ({ label: d.name || d.label, pre: d.mPre, post: d.mPost, sig: isSig(d.primary) }));
     const scale = P.items[0].scale;
     // 발표용: 변화가 보이도록 가로축을 값 범위(정수 단위)로 확대 — 각주에 명시
     const zoom = rows => {
@@ -89,18 +90,18 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       },
       chart: { kind: "dumbbell", data: rowsFrom(doms.length >= 2 ? doms : P.items), opts: { ...zoom(rowsFrom(doms.length >= 2 ? doms : P.items)), width: 620, labelWidth: 130 } },
       notes: [...P.domains.map(d => `${d.name}: ${f2(d.mPre)} → ${f2(d.mPost)} ${statParen(d.primary)}`), P.retrospective ? "회고식 사전검사(회상 응답)임을 함께 설명" : "", P.matchedN < t.minN ? `매칭 ${P.matchedN}명으로 표본이 작음` : ""].filter(Boolean),
-      source: `매칭 n=${P.matchedN} · * p<.05 · 가로축은 값이 있는 구간만 확대`,
+      source: `매칭 n=${P.matchedN} · * Holm 보정 p<.05 · 가로축은 값이 있는 구간만 확대`,
     });
     if (doms.length >= 2 && P.items.length >= 2) {
-      const up = P.items.filter(i => i.primary.p < 0.05 && i.diff > 0).sort((a, b) => b.diff - a.diff);
-      const flat = P.items.filter(i => !(i.primary.p < 0.05));
+      const up = P.items.filter(i => isSig(i.primary) && i.diff > 0).sort((a, b) => b.diff - a.diff);
+      const flat = P.items.filter(i => !isSig(i.primary));
       add({ id: "prepost-items",
         type: "chart", section: "성과 변화",
         title: up.length ? `${q(short(up[0].label, 20))} 문항이 가장 크게 올랐습니다(${signed(up[0].diff)}점)` : "문항별 변화가 크지 않습니다",
         subtitle: flat.length ? `변화가 유의하지 않은 문항 ${flat.length}개` : "모든 문항에서 유의한 향상",
         chart: { kind: "dumbbell", data: rowsFrom(P.items.slice(0, 10)), opts: { ...zoom(rowsFrom(P.items.slice(0, 10))), width: 900, labelWidth: 280 } },
         notes: P.items.map(i => `${i.label}: ${f2(i.mPre)} → ${f2(i.mPost)} ${statParen(i.primary)}`),
-        source: `매칭 n=${P.matchedN} · * p<.05 · 가로축은 값이 있는 구간만 확대`,
+        source: `매칭 n=${P.matchedN} · * Holm 보정 p<.05 · 가로축은 값이 있는 구간만 확대`,
       });
     }
   }
@@ -166,8 +167,9 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   }
 
   // 9. 집단 차이 (유의한 경우만, 최대 2장)
-  A.cross.filter(c => c.rows.some(r => r.test && r.test.p < 0.05)).slice(0, 2).forEach(c => {
-    const sigRows = c.rows.filter(r => r.test && r.test.p < 0.05).slice(0, 5);
+  // 같은 특성 안의 문항별 비교는 Holm 보정 p(r.pHolm) 기준
+  A.cross.filter(c => c.rows.some(r => r.test && isSig(r))).slice(0, 2).forEach(c => {
+    const sigRows = c.rows.filter(r => r.test && isSig(r)).slice(0, 5);
     const r0 = sigRows[0];
     const st = r0.stats.filter(s => Number.isFinite(s.score100)).sort((a, b) => b.score100 - a.score100);
     add({ id: `cross-${c.label}`,
@@ -176,7 +178,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
       subtitle: `통계적으로 유의한 차이가 있는 문항 ${sigRows.length}개`,
       chart: { kind: "groupedHbar", categories: sigRows.map(r => r.label), series: c.groups.slice(0, 4).map((g, gi) => ({ name: g.name, values: sigRows.map(r => r.stats[gi]?.score100) })), opts: { max: 100, width: 900, labelWidth: 240, valueFmt: f2 } },
       notes: sigRows.map(r => `${r.label}: ${statParen(r.test)}`),
-      source: `100점 환산 · ${c.groups.map(g => `${g.name} n=${g.n}`).join(", ")}`,
+      source: `100점 환산 · ${c.groups.map(g => `${g.name} n=${g.n}`).join(", ")} · 유의 판단은 Holm 보정 p<.05 기준`,
     });
   });
 
@@ -206,7 +208,7 @@ export function buildDeck({ analysis: A, evaluation: E = null, logicModel: LM = 
   if (E) E.results.filter(r => r.judgment === "미달성").slice(0, 2).forEach(r => { improve.push(`${r.name} 미달성${Number.isFinite(r.rate) ? `(${f1(r.rate)}%)` : "(기준 미충족)"}`); next.push(`${r.name}: 원인 검토·운영 방식 보완`); });
   (A.ipa?.points || []).filter(p => p.quadrant === "집중 개선").slice(0, 2).forEach(p => { improve.push(`${short(p.label, 20)} 만족도 ${f2(p.performance)}점`); next.push(`${short(p.label, 20)} 개선 과제 수립`); });
   texts.forEach(tx => tx.themes.filter(th => th.negative >= 3).slice(0, 1).forEach(th => improve.push(`주관식 ${th.name} 개선 요구 ${th.negative}건`)));
-  if (P) P.items.filter(i => !(i.primary.p < 0.05)).slice(0, 1).forEach(i => next.push(`${short(i.label, 18)} 관련 활동 보강`));
+  if (P) P.items.filter(i => !isSig(i.primary)).slice(0, 1).forEach(i => next.push(`${short(i.label, 18)} 관련 활동 보강`));
   if (E) next.push("차년도 성과지표 목표(안) 검토");
   if (good.length || improve.length) {
     add({ id: "wrap",

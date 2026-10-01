@@ -78,6 +78,24 @@ export function detectYearKind(header) {
 export const YEAR_PLAUSIBLE_MIN = 1940;
 export const yearPlausibleMax = () => new Date().getFullYear() + 1;
 
+/**
+ * 숫자 척도 열에 섞인 결측 코드 후보 — 9(나머지가 5 이하일 때), 99, 999, -1, -9 가
+ * 응답의 10% 이하로만 나타나고, 그 값을 빼면 나머지가 0~10 정수 척도로 일관될 때만 후보로 본다.
+ * @returns {{codes:string[], rest:number[]} | null}
+ */
+const MISSING_CODES = [9, 99, 999, -1, -9];
+function missingCodeCandidates(finite, nNonBlank) {
+  const isCode = (v, rest) => MISSING_CODES.includes(v) && (v !== 9 || Math.max(...rest) <= 5);
+  let rest = finite.filter(v => !MISSING_CODES.includes(v));
+  if (!rest.length) return null;
+  const codes = [...new Set(finite.filter(v => isCode(v, rest)))];
+  if (!codes.length) return null;
+  rest = finite.filter(v => !codes.includes(v));
+  if (!rest.length || !rest.every(Number.isInteger) || Math.min(...rest) < 0 || Math.max(...rest) > 10 || new Set(rest).size > 11) return null;
+  if (finite.length - rest.length > nNonBlank * 0.1) return null;
+  return { codes: codes.sort((a, b) => a - b).map(String), rest };
+}
+
 const SCALE_CANDIDATES = [[1, 4], [1, 5], [1, 7], [0, 10], [1, 10]];
 function inferScale(min, max) {
   for (const [a, b] of SCALE_CANDIDATES) if (min >= a && max <= b) return { min: a, max: b };
@@ -117,6 +135,14 @@ export function detectColumn(header, values) {
       }
     }
     if (DEMOG_RE.test(h) && d <= 20) return { role: "demographic", confidence: 0.7, reason: "응답자 특성 열 이름(숫자 코드)" };
+    // 결측 코드(99·-1 등)가 소수 섞인 척도 문항: 코드를 빼고 척도 범위를 추정하고 결측 코드 후보로 알려 준다
+    const mc = missingCodeCandidates(finite, n);
+    if (mc && ints) {
+      const rmin = Math.min(...mc.rest), rmax = Math.max(...mc.rest), rd = new Set(mc.rest).size;
+      const tag = ` · 결측 코드 후보 ${mc.codes.join(", ")}`;
+      if (NPS_RE.test(h) && (rmax >= 7 || rmin === 0)) return { role: "nps", scale: { min: 0, max: 10 }, suggestMissing: mc.codes, confidence: 0.8, reason: `추천의향 0~10점${tag}` };
+      if (rd >= 2 || n < 5) return { role: "likert", scale: inferScale(rmin, rmax), suggestMissing: mc.codes, confidence: 0.75, reason: `정수 ${rmin}~${rmax}${tag}` };
+    }
     if (ints && d <= 11 && min >= 0 && max <= 10) {
       if (NPS_RE.test(h) && (max >= 7 || min === 0)) return { role: "nps", scale: { min: 0, max: 10 }, confidence: 0.85, reason: "추천의향 0~10점" };
       if (d >= 2 || n < 5) return { role: "likert", scale: inferScale(min, max), confidence: 0.8, reason: `정수 ${min}~${max}` };
@@ -129,7 +155,8 @@ export function detectColumn(header, values) {
   const ls = matchLabelSet(nonBlank);
   if (ls) {
     const labelMap = Object.fromEntries(ls.map);
-    return { role: "likert", scale: { min: ls.set.min, max: ls.set.max }, labelSetId: ls.set.id, labelMap, labelAmbiguous: ls.ambiguous, confidence: ls.ambiguous ? 0.7 : 0.85, reason: `라벨(${ls.set.name}) ${Math.round(ls.coverage * 100)}% 일치${ls.ambiguous ? " · '보통' 응답 없음(4점/5점 확인 필요)" : ""}` };
+    // '잘 모르겠다'·'해당 없음' 등은 점수로 매기지 않고 결측 코드 후보로 알려 줌(지정 전에는 미변환 응답 → 무응답 처리)
+    return { role: "likert", scale: { min: ls.set.min, max: ls.set.max }, labelSetId: ls.set.id, labelMap, labelAmbiguous: ls.ambiguous, ...(ls.missing.length ? { suggestMissing: ls.missing } : {}), confidence: ls.ambiguous ? 0.7 : 0.85, reason: `라벨(${ls.set.name}) ${Math.round(ls.coverage * 100)}% 일치${ls.ambiguous ? " · '보통' 응답 없음(4점/5점 확인 필요)" : ""}${ls.missing.length ? ` · 결측 후보 ${ls.missing.join(", ")}` : ""}` };
   }
   const lead = nonBlank.map(leadingNumber);
   if (lead.filter(v => v !== null).length / n >= 0.9 && new Set(lead).size <= 11 && !TEXT_RE.test(h)) {
